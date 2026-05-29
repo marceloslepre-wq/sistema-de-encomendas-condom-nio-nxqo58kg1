@@ -1,8 +1,8 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { AuthProvider } from '@/hooks/use-auth'
+import { AuthProvider, useAuth } from '@/hooks/use-auth'
 
 import Layout from './components/Layout'
 import Index from './pages/Index'
@@ -26,6 +26,29 @@ import MoradorDashboard from './pages/morador/Dashboard'
 import MoradorHistorico from './pages/morador/Historico'
 import MoradorDetalhes from './pages/morador/Detalhes'
 
+const ProtectedRoute = ({
+  children,
+  requiredRole,
+}: {
+  children: React.ReactNode
+  requiredRole?: string
+}) => {
+  const { role, isAuthenticated, loading } = useAuth()
+
+  if (loading) return null // Or a loading spinner
+
+  if (!isAuthenticated) return <Navigate to="/cadastro" replace />
+
+  if (requiredRole && role !== requiredRole) {
+    if (role === 'gestor') return <Navigate to="/gestor/dashboard" replace />
+    if (role === 'portaria') return <Navigate to="/portaria/registro" replace />
+    if (role === 'morador') return <Navigate to="/morador/dashboard" replace />
+    return <Navigate to="/" replace />
+  }
+
+  return <>{children}</>
+}
+
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
     <AuthProvider>
@@ -37,19 +60,96 @@ const App = () => (
           <Route path="/cadastro" element={<Cadastro />} />
 
           <Route element={<Layout />}>
-            <Route path="/gestor/dashboard" element={<GestorDashboard />} />
-            <Route path="/gestor/moradores" element={<GestorMoradores />} />
-            <Route path="/gestor/links" element={<GestorLinks />} />
-            <Route path="/gestor/relatorios" element={<GestorRelatorios />} />
-            <Route path="/gestor/configuracoes" element={<GestorConfiguracoes />} />
-            <Route path="/gestor/permissoes" element={<GestorPermissoes />} />
+            <Route
+              path="/gestor/dashboard"
+              element={
+                <ProtectedRoute requiredRole="gestor">
+                  <GestorDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gestor/moradores"
+              element={
+                <ProtectedRoute requiredRole="gestor">
+                  <GestorMoradores />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gestor/links"
+              element={
+                <ProtectedRoute requiredRole="gestor">
+                  <GestorLinks />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gestor/relatorios"
+              element={
+                <ProtectedRoute requiredRole="gestor">
+                  <GestorRelatorios />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gestor/configuracoes"
+              element={
+                <ProtectedRoute requiredRole="gestor">
+                  <GestorConfiguracoes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gestor/permissoes"
+              element={
+                <ProtectedRoute requiredRole="gestor">
+                  <GestorPermissoes />
+                </ProtectedRoute>
+              }
+            />
 
-            <Route path="/portaria/registro" element={<PortariaRegistro />} />
-            <Route path="/portaria/etiqueta" element={<PortariaEtiqueta />} />
+            <Route
+              path="/portaria/registro"
+              element={
+                <ProtectedRoute requiredRole="portaria">
+                  <PortariaRegistro />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portaria/etiqueta"
+              element={
+                <ProtectedRoute requiredRole="portaria">
+                  <PortariaEtiqueta />
+                </ProtectedRoute>
+              }
+            />
 
-            <Route path="/morador/dashboard" element={<MoradorDashboard />} />
-            <Route path="/morador/historico" element={<MoradorHistorico />} />
-            <Route path="/morador/encomenda/:id" element={<MoradorDetalhes />} />
+            <Route
+              path="/morador/dashboard"
+              element={
+                <ProtectedRoute requiredRole="morador">
+                  <MoradorDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/morador/historico"
+              element={
+                <ProtectedRoute requiredRole="morador">
+                  <MoradorHistorico />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/morador/encomenda/:id"
+              element={
+                <ProtectedRoute requiredRole="morador">
+                  <MoradorDetalhes />
+                </ProtectedRoute>
+              }
+            />
           </Route>
 
           <Route path="*" element={<NotFound />} />

@@ -23,11 +23,31 @@ export const createLink = (data: any) => pb.collection('invitation_links').creat
 export const getParcels = () =>
   pb.collection('parcels').getFullList({ expand: 'unit_id,resident_id', sort: '-created' })
 
+export const createParcel = (data: any) => pb.collection('parcels').create(data)
+export const updateParcel = (id: string, data: any) => pb.collection('parcels').update(id, data)
+
+export const sendSms = (phone: string) =>
+  pb.send<{ success: boolean; mockCode?: string }>('/backend/v1/sms/send', {
+    method: 'POST',
+    body: JSON.stringify({ phone }),
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+export const verifySms = (phone: string, code: string) =>
+  pb.send('/backend/v1/sms/verify', {
+    method: 'POST',
+    body: JSON.stringify({ phone, code }),
+    headers: { 'Content-Type': 'application/json' },
+  })
+
 export type Parcel = RecordModel & {
   tracking_code: string
   unit_id: string
   resident_id?: string
   carrier: string
+  courier_name?: string
+  courier_cpf?: string
+  porter_id?: string
   status: string
   entry_date: string
   exit_date?: string
