@@ -1,0 +1,75 @@
+export const MOCK_PACKAGES = [
+  {
+    id: 'PK-1001',
+    resident: 'João Silva',
+    apt: '101',
+    tower: 'Torre A',
+    courier: 'Correios',
+    status: 'ready',
+    date: 'Hoje, 14:30',
+    type: 'Caixa',
+    location: 'Prateleira B2',
+    token: 'A7X9-P',
+  },
+  {
+    id: 'PK-1002',
+    resident: 'Maria Oliveira',
+    apt: '502',
+    tower: 'Torre B',
+    courier: 'Mercado Livre',
+    status: 'storage',
+    date: 'Hoje, 10:15',
+    type: 'Envelope',
+    location: 'Gaveta 4',
+    token: 'M3L1-X',
+  },
+  {
+    id: 'PK-1003',
+    resident: 'Carlos Santos',
+    apt: '304',
+    tower: 'Torre A',
+    courier: 'Amazon',
+    status: 'withdrawn',
+    date: 'Ontem, 16:45',
+    type: 'Pacote Grande',
+    location: '-',
+    token: 'Z9K2-R',
+  },
+]
+
+export const MOCK_RESIDENTS = [
+  {
+    id: '1',
+    name: 'João Silva',
+    unit: '101',
+    tower: 'A',
+    status: 'Ativo',
+    phone: '(11) 98765-4321',
+  },
+  {
+    id: '2',
+    name: 'Maria Oliveira',
+    unit: '502',
+    tower: 'B',
+    status: 'Ativo',
+    phone: '(11) 91234-5678',
+  },
+  {
+    id: '3',
+    name: 'Carlos Santos',
+    unit: '304',
+    tower: 'A',
+    status: 'Pendente',
+    phone: '(11) 99999-8888',
+  },
+]
+
+export const MOCK_CHART_DATA = [
+  { date: '01/10', count: 12 },
+  { date: '02/10', count: 19 },
+  { date: '03/10', count: 15 },
+  { date: '04/10', count: 22 },
+  { date: '05/10', count: 30 },
+  { date: '06/10', count: 25 },
+  { date: '07/10', count: 18 },
+]
