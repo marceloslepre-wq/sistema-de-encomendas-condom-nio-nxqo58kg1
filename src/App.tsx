@@ -13,6 +13,9 @@ import Cadastro from './pages/Cadastro'
 import GestorDashboard from './pages/gestor/Dashboard'
 import GestorMoradores from './pages/gestor/Moradores'
 import GestorLinks from './pages/gestor/Links'
+import GestorRelatorios from './pages/gestor/Relatorios'
+import GestorConfiguracoes from './pages/gestor/Configuracoes'
+import GestorPermissoes from './pages/gestor/Permissoes'
 
 // Portaria Pages
 import PortariaRegistro from './pages/portaria/Registro'
@@ -37,6 +40,9 @@ const App = () => (
             <Route path="/gestor/dashboard" element={<GestorDashboard />} />
             <Route path="/gestor/moradores" element={<GestorMoradores />} />
             <Route path="/gestor/links" element={<GestorLinks />} />
+            <Route path="/gestor/relatorios" element={<GestorRelatorios />} />
+            <Route path="/gestor/configuracoes" element={<GestorConfiguracoes />} />
+            <Route path="/gestor/permissoes" element={<GestorPermissoes />} />
 
             <Route path="/portaria/registro" element={<PortariaRegistro />} />
             <Route path="/portaria/etiqueta" element={<PortariaEtiqueta />} />

@@ -9,6 +9,8 @@ import {
   ClipboardList,
   History,
   User,
+  FileText,
+  Shield,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import {
@@ -32,7 +34,9 @@ export function AppSidebar() {
           { title: 'Dashboard', url: '/gestor/dashboard', icon: BarChart3 },
           { title: 'Moradores', url: '/gestor/moradores', icon: Users },
           { title: 'Gerar Links', url: '/gestor/links', icon: LinkIcon },
-          { title: 'Configurações', url: '#', icon: Settings },
+          { title: 'Relatórios', url: '/gestor/relatorios', icon: FileText },
+          { title: 'Permissões', url: '/gestor/permissoes', icon: Shield },
+          { title: 'Configurações', url: '/gestor/configuracoes', icon: Settings },
         ]
       case 'portaria':
         return [

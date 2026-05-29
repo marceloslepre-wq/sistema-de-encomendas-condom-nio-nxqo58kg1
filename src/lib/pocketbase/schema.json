@@ -1,0 +1,325 @@
+{
+  "generatedAt": "2026-05-29T21:52:21.589Z",
+  "collections": [
+    {
+      "name": "users",
+      "type": "auth",
+      "apiRules": {
+        "list": "id = @request.auth.id",
+        "view": "id = @request.auth.id",
+        "create": "",
+        "update": "id = @request.auth.id",
+        "delete": "id = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "avatar",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "cpf",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "role",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["gestor", "portaria", "morador"]
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Ativo", "Bloqueado", "Pendente"]
+        },
+        {
+          "name": "unit_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "units"
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
+        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
+      ]
+    },
+    {
+      "name": "condos",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.role = \"gestor\"",
+        "update": "@request.auth.role = \"gestor\"",
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "address",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cnpj",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "janitor_settings",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notifications_enabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "units",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.role = \"gestor\"",
+        "update": "@request.auth.role = \"gestor\"",
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "tower",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "apartment",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "condo_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "condos"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "invitation_links",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.role = \"gestor\"",
+        "update": "",
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "unit_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "units"
+        },
+        {
+          "name": "token",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "expires_at",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "used",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "parcels",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.id != \"\"",
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "tracking_code",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "unit_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "units"
+        },
+        {
+          "name": "resident_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "carrier",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "RECEBIDO_PORTARIA",
+            "EM_SALA",
+            "CATALOGADO",
+            "DISPONIVEL_RETIRADA",
+            "RETIRADO",
+            "CANCELADO"
+          ]
+        },
+        {
+          "name": "entry_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "exit_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    }
+  ]
+}
