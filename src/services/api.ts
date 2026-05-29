@@ -58,6 +58,24 @@ export type Unit = RecordModel & {
   apartment: string
 }
 
+export const getInvitationLinkByToken = (token: string) =>
+  pb.collection('invitation_links').getFirstListItem(`token="${token}"`, { expand: 'unit_id' })
+
+export const updateInvitationLink = (id: string, data: any) =>
+  pb.collection('invitation_links').update(id, data)
+
+export const getUnitParcels = (unitId: string, page = 1, filter = '') =>
+  pb.collection('parcels').getList<Parcel>(page, 20, {
+    filter: `unit_id="${unitId}"${filter ? ` && (${filter})` : ''}`,
+    sort: '-created',
+  })
+
+export const getParcelById = (id: string) =>
+  pb.collection('parcels').getOne<Parcel>(id, { expand: 'unit_id' })
+
+export const getParcelAuditLogs = (parcelId: string) =>
+  pb.collection('audit_logs').getFullList({ filter: `parcel_id="${parcelId}"`, sort: '-created' })
+
 export type AppUser = RecordModel & {
   name: string
   email: string
