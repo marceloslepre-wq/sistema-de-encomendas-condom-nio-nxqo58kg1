@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-30T11:54:32.423Z",
+  "generatedAt": "2026-05-30T11:58:35.333Z",
   "collections": [
     {
       "name": "users",
@@ -285,10 +285,9 @@
           "required": true,
           "system": false,
           "selectValues": [
-            "RECEBIDO_PORTARIA",
-            "EM_SALA",
-            "CATALOGADO",
-            "DISPONIVEL_RETIRADA",
+            "ENTRADA_PORTARIA",
+            "EM_TRIAGEM",
+            "LIBERADO_RETIRADA",
             "RETIRADO",
             "CANCELADO"
           ]
@@ -343,9 +342,37 @@
           "type": "number",
           "required": false,
           "system": false
+        },
+        {
+          "name": "photo",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "withdrawal_code",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "shelf_location",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "volume_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["Envelope", "Caixa Pequena", "Caixa Média", "Caixa Grande", "Outros"]
         }
       ],
-      "indexes": []
+      "indexes": [
+        "CREATE INDEX `idx_parcels_withdrawal` ON `parcels` (withdrawal_code)",
+        "CREATE INDEX `idx_parcels_status` ON `parcels` (status)"
+      ]
     },
     {
       "name": "audit_logs",

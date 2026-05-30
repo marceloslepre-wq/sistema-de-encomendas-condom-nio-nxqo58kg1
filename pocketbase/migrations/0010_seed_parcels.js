@@ -29,7 +29,7 @@ migrate((app) => {
   for (const apt of ['101', '102', '103']) {
     let unit
     try {
-      unit = app.findRecordsByFilter('units', 'apartment={:apt}', '', 1, 0, { apt })[0]
+      unit = app.findFirstRecordByData('units', 'apartment', apt)
     } catch (_) {
       unit = new Record(unitsCol)
       unit.set('tower', 'A')

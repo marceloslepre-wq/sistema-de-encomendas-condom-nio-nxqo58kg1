@@ -11,23 +11,31 @@ migrate(
       'CANCELADO',
     ]
 
-    col.fields.add(
-      new FileField({
-        name: 'photo',
-        maxSelect: 1,
-        maxSize: 5242880,
-        mimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
-      }),
-    )
-    col.fields.add(new TextField({ name: 'withdrawal_code' }))
-    col.fields.add(new TextField({ name: 'shelf_location' }))
-    col.fields.add(
-      new SelectField({
-        name: 'volume_type',
-        maxSelect: 1,
-        values: ['Envelope', 'Caixa Pequena', 'Caixa Média', 'Caixa Grande', 'Outros'],
-      }),
-    )
+    if (!col.fields.getByName('photo')) {
+      col.fields.add(
+        new FileField({
+          name: 'photo',
+          maxSelect: 1,
+          maxSize: 5242880,
+          mimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+        }),
+      )
+    }
+    if (!col.fields.getByName('withdrawal_code')) {
+      col.fields.add(new TextField({ name: 'withdrawal_code' }))
+    }
+    if (!col.fields.getByName('shelf_location')) {
+      col.fields.add(new TextField({ name: 'shelf_location' }))
+    }
+    if (!col.fields.getByName('volume_type')) {
+      col.fields.add(
+        new SelectField({
+          name: 'volume_type',
+          maxSelect: 1,
+          values: ['Envelope', 'Caixa Pequena', 'Caixa Média', 'Caixa Grande', 'Outros'],
+        }),
+      )
+    }
 
     col.addIndex('idx_parcels_withdrawal', false, 'withdrawal_code', '')
     col.addIndex('idx_parcels_status', false, 'status', '')
