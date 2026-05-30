@@ -123,12 +123,6 @@ export default function PortariaRegistro() {
           title: 'SMS Enviado',
           description: 'O código foi enviado para o celular do entregador.',
         })
-        if (res.mockCode) {
-          toast({
-            title: 'Ambiente de Teste',
-            description: `O código gerado é: ${res.mockCode}`,
-          })
-        }
       }
     } catch (err: any) {
       toast({

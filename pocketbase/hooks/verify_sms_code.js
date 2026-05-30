@@ -7,17 +7,15 @@ routerAdd(
       return e.badRequestError('Phone and code are required')
     }
 
-    const now = new Date().toISOString()
-
     const phoneNum = String(body.phone || '').replace(/\D/g, '')
 
     const records = $app.findRecordsByFilter(
       'sms_verifications',
-      'phone = {:phone} && code = {:code} && used = false && expires_at > {:now}',
+      'phone = {:phone} && code = {:code} && used = false',
       '-created',
       1,
       0,
-      { phone: phoneNum, code: body.code, now: now },
+      { phone: phoneNum, code: body.code },
     )
 
     if (records.length === 0) {
@@ -25,6 +23,12 @@ routerAdd(
     }
 
     const record = records[0]
+
+    // Check expiration manually to avoid date format discrepancies in SQLite
+    const expiresAtStr = record.getString('expires_at')
+    if (new Date(expiresAtStr).getTime() < Date.now()) {
+      return e.badRequestError('Invalid or expired code')
+    }
     record.set('used', true)
     $app.save(record)
 
