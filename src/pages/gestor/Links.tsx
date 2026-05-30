@@ -182,7 +182,7 @@ export default function GestorLinks() {
                             size="icon"
                             onClick={() => {
                               const text = encodeURIComponent(
-                                `Olá! Aqui está o seu convite para acessar o sistema do condomínio: ${window.location.origin}/cadastro?token=${l.token}`,
+                                `Olá! Segue o seu link de convite para o sistema de encomendas do condomínio: ${window.location.origin}/cadastro?token=${l.token}`,
                               )
                               window.open(`https://wa.me/?text=${text}`, '_blank')
                             }}
@@ -199,9 +199,11 @@ export default function GestorLinks() {
                             variant="outline"
                             size="icon"
                             onClick={() => {
-                              const subject = encodeURIComponent('Convite de Acesso - Condomínio')
+                              const subject = encodeURIComponent(
+                                'Convite para Sistema de Encomendas',
+                              )
                               const body = encodeURIComponent(
-                                `Olá! Aqui está o seu convite para acessar o sistema do condomínio:\n\n${window.location.origin}/cadastro?token=${l.token}`,
+                                `Olá! Segue o seu link de convite para o sistema de encomendas do condomínio:\n\n${window.location.origin}/cadastro?token=${l.token}`,
                               )
                               window.location.href = `mailto:?subject=${subject}&body=${body}`
                             }}

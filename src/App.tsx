@@ -17,6 +17,7 @@ import GestorLinks from './pages/gestor/Links'
 import GestorRelatorios from './pages/gestor/Relatorios'
 import GestorConfiguracoes from './pages/gestor/Configuracoes'
 import GestorPermissoes from './pages/gestor/Permissoes'
+import GestorTransportadoras from './pages/gestor/Carriers'
 
 // Portaria / Sala Pages
 import PortariaRegistro from './pages/portaria/Registro'
@@ -43,10 +44,18 @@ const ProtectedRoute = ({
   if (!isAuthenticated) return <Navigate to="/cadastro" replace />
 
   if (requiredRole && role !== requiredRole) {
-    if (role === 'gestor') return <Navigate to="/gestor/dashboard" replace />
-    if (role === 'portaria') return <Navigate to="/portaria/registro" replace />
-    if (role === 'morador') return <Navigate to="/morador/dashboard" replace />
-    return <Navigate to="/" replace />
+    if (
+      (requiredRole === 'portaria' || requiredRole === 'triagem') &&
+      (role === 'portaria' || role === 'triagem')
+    ) {
+      // allow interchangeable access based on layout needs
+    } else {
+      if (role === 'gestor') return <Navigate to="/gestor/dashboard" replace />
+      if (role === 'portaria') return <Navigate to="/portaria/registro" replace />
+      if (role === 'triagem') return <Navigate to="/sala/triagem" replace />
+      if (role === 'morador') return <Navigate to="/morador/dashboard" replace />
+      return <Navigate to="/" replace />
+    }
   }
 
   return <>{children}</>
@@ -76,6 +85,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="gestor">
                   <GestorUnidades />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gestor/transportadoras"
+              element={
+                <ProtectedRoute requiredRole="gestor">
+                  <GestorTransportadoras />
                 </ProtectedRoute>
               }
             />

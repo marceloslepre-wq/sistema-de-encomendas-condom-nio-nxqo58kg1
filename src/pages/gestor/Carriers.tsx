@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Search, Plus, Trash2, Edit } from 'lucide-react'
-import { getUnits, createUnit, updateUnit, deleteUnit, getCondo, Unit } from '@/services/api'
+import { getCarriers, createCarrier, updateCarrier, deleteCarrier, Carrier } from '@/services/api'
 import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -33,20 +33,19 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Label } from '@/components/ui/label'
 
-export default function GestorUnidades() {
-  const [units, setUnits] = useState<Unit[]>([])
+export default function GestorTransportadoras() {
+  const [carriers, setCarriers] = useState<Carrier[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const { toast } = useToast()
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [editingUnit, setEditingUnit] = useState<Unit | null>(null)
-  const [formData, setFormData] = useState({ tower: '', apartment: '' })
-  const [condoId, setCondoId] = useState<string>('')
+  const [editingCarrier, setEditingCarrier] = useState<Carrier | null>(null)
+  const [formData, setFormData] = useState({ name: '', phone: '' })
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [unitToDelete, setUnitToDelete] = useState<Unit | null>(null)
+  const [carrierToDelete, setCarrierToDelete] = useState<Carrier | null>(null)
 
   useEffect(() => {
     loadData()
@@ -54,10 +53,8 @@ export default function GestorUnidades() {
 
   const loadData = async () => {
     try {
-      const data = await getUnits()
-      const condoData = await getCondo()
-      if (condoData) setCondoId(condoData.id)
-      setUnits(data as Unit[])
+      const data = await getCarriers()
+      setCarriers(data as Carrier[])
     } catch (e) {
       console.error(e)
     } finally {
@@ -65,16 +62,16 @@ export default function GestorUnidades() {
     }
   }
 
-  const handleSaveUnit = async (e: React.FormEvent) => {
+  const handleSaveCarrier = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
     try {
-      if (editingUnit) {
-        await updateUnit(editingUnit.id, { ...formData, condo_id: condoId })
-        toast({ title: 'Unidade atualizada com sucesso.' })
+      if (editingCarrier) {
+        await updateCarrier(editingCarrier.id, formData)
+        toast({ title: 'Transportadora atualizada com sucesso.' })
       } else {
-        await createUnit({ ...formData, condo_id: condoId })
-        toast({ title: 'Unidade criada com sucesso.' })
+        await createCarrier(formData)
+        toast({ title: 'Transportadora criada com sucesso.' })
       }
       setIsFormOpen(false)
       loadData()
@@ -89,47 +86,47 @@ export default function GestorUnidades() {
     }
   }
 
-  const handleDeleteUnit = async () => {
-    if (!unitToDelete) return
+  const handleDeleteCarrier = async () => {
+    if (!carrierToDelete) return
     setSubmitting(true)
     try {
-      await deleteUnit(unitToDelete.id)
-      toast({ title: 'Unidade removida com sucesso.' })
+      await deleteCarrier(carrierToDelete.id)
+      toast({ title: 'Transportadora removida com sucesso.' })
       loadData()
     } catch (e: any) {
       toast({
         title: 'Erro',
-        description: 'Não foi possível remover a unidade.',
+        description: 'Não foi possível remover a transportadora.',
         variant: 'destructive',
       })
     } finally {
       setSubmitting(false)
       setIsDeleteDialogOpen(false)
-      setUnitToDelete(null)
+      setCarrierToDelete(null)
     }
   }
 
   const openNewForm = () => {
-    setEditingUnit(null)
-    setFormData({ tower: '', apartment: '' })
+    setEditingCarrier(null)
+    setFormData({ name: '', phone: '' })
     setIsFormOpen(true)
   }
 
-  const openEditForm = (unit: Unit) => {
-    setEditingUnit(unit)
-    setFormData({ tower: unit.tower, apartment: unit.apartment })
+  const openEditForm = (carrier: Carrier) => {
+    setEditingCarrier(carrier)
+    setFormData({ name: carrier.name, phone: carrier.phone || '' })
     setIsFormOpen(true)
   }
 
-  const openDeleteConfirm = (unit: Unit) => {
-    setUnitToDelete(unit)
+  const openDeleteConfirm = (carrier: Carrier) => {
+    setCarrierToDelete(carrier)
     setIsDeleteDialogOpen(true)
   }
 
-  const filtered = units.filter(
-    (u) =>
-      u.tower.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.apartment.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filtered = carriers.filter(
+    (c) =>
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.phone?.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   if (loading) {
@@ -144,26 +141,28 @@ export default function GestorUnidades() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-primary">Gestão de Unidades</h2>
-        <p className="text-muted-foreground">Adicione e gerencie as torres e apartamentos.</p>
+        <h2 className="text-2xl font-bold tracking-tight text-primary">
+          Gestão de Transportadoras
+        </h2>
+        <p className="text-muted-foreground">Adicione e gerencie as transportadoras cadastradas.</p>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <CardTitle>Lista de Unidades</CardTitle>
+            <CardTitle>Lista de Transportadoras</CardTitle>
             <div className="flex flex-col sm:flex-row gap-4 items-center w-full sm:w-auto">
               <div className="relative w-full sm:w-72">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar torre ou apto..."
+                  placeholder="Buscar por nome..."
                   className="pl-8"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               <Button onClick={openNewForm} className="w-full sm:w-auto">
-                <Plus className="h-4 w-4 mr-2" /> Adicionar Unidade
+                <Plus className="h-4 w-4 mr-2" /> Adicionar
               </Button>
             </div>
           </div>
@@ -173,22 +172,22 @@ export default function GestorUnidades() {
             <Table>
               <TableHeader className="bg-neutralBg">
                 <TableRow>
-                  <TableHead>Torre / Bloco</TableHead>
-                  <TableHead>Apartamento</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Telefone</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell className="font-medium">Torre {u.tower}</TableCell>
-                    <TableCell>Apto {u.apartment}</TableCell>
+                {filtered.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium">{c.name}</TableCell>
+                    <TableCell>{c.phone || '-'}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => openEditForm(u)}
+                          onClick={() => openEditForm(c)}
                           title="Editar"
                         >
                           <Edit className="h-4 w-4" />
@@ -196,7 +195,7 @@ export default function GestorUnidades() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => openDeleteConfirm(u)}
+                          onClick={() => openDeleteConfirm(c)}
                           title="Excluir"
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
@@ -208,7 +207,7 @@ export default function GestorUnidades() {
                 {filtered.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
-                      Nenhuma unidade encontrada.
+                      Nenhuma transportadora encontrada.
                     </TableCell>
                   </TableRow>
                 )}
@@ -221,26 +220,29 @@ export default function GestorUnidades() {
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>{editingUnit ? 'Editar Unidade' : 'Nova Unidade'}</DialogTitle>
-            <DialogDescription>Preencha os dados da unidade.</DialogDescription>
+            <DialogTitle>
+              {editingCarrier ? 'Editar Transportadora' : 'Nova Transportadora'}
+            </DialogTitle>
+            <DialogDescription>Preencha os dados da transportadora.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSaveUnit} className="space-y-4">
+          <form onSubmit={handleSaveCarrier} className="space-y-4">
             <div className="space-y-2">
-              <Label>Torre / Bloco</Label>
+              <Label>
+                Nome <span className="text-destructive">*</span>
+              </Label>
               <Input
                 required
-                value={formData.tower}
-                onChange={(e) => setFormData({ ...formData, tower: e.target.value })}
-                placeholder="Ex: A, 1, Sul"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ex: Correios"
               />
             </div>
             <div className="space-y-2">
-              <Label>Apartamento</Label>
+              <Label>Telefone</Label>
               <Input
-                required
-                value={formData.apartment}
-                onChange={(e) => setFormData({ ...formData, apartment: e.target.value })}
-                placeholder="Ex: 101, 102A"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="Ex: (11) 99999-9999"
               />
             </div>
             <div className="flex justify-end gap-2 mt-6">
@@ -253,7 +255,7 @@ export default function GestorUnidades() {
                 Cancelar
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? 'Salvando...' : 'Salvar Unidade'}
+                {submitting ? 'Salvando...' : 'Salvar'}
               </Button>
             </div>
           </form>
@@ -263,14 +265,10 @@ export default function GestorUnidades() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir unidade?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir transportadora?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir a unidade{' '}
-              <strong>
-                Torre {unitToDelete?.tower} - Apto {unitToDelete?.apartment}
-              </strong>
-              ? Esta ação não pode ser desfeita e pode falhar se houver moradores ou encomendas
-              vinculadas.
+              Tem certeza que deseja excluir a transportadora{' '}
+              <strong>{carrierToDelete?.name}</strong>? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -278,7 +276,7 @@ export default function GestorUnidades() {
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault()
-                handleDeleteUnit()
+                handleDeleteCarrier()
               }}
               disabled={submitting}
               className="bg-destructive hover:bg-destructive/90"

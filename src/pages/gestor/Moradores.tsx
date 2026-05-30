@@ -163,6 +163,7 @@ export default function GestorMoradores() {
   const filtered = users.filter(
     (u) =>
       u.role === 'morador' &&
+      units.some((unit) => unit.id === u.unit_id) &&
       (u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.expand?.unit_id?.apartment?.includes(searchTerm)),
   )

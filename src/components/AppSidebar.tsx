@@ -12,6 +12,7 @@ import {
   FileText,
   Shield,
   Home,
+  Truck,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import {
@@ -35,12 +36,14 @@ export function AppSidebar() {
           { title: 'Dashboard', url: '/gestor/dashboard', icon: BarChart3 },
           { title: 'Unidades', url: '/gestor/unidades', icon: Home },
           { title: 'Moradores', url: '/gestor/moradores', icon: Users },
+          { title: 'Transportadoras', url: '/gestor/transportadoras', icon: Truck },
           { title: 'Gerar Links', url: '/gestor/links', icon: LinkIcon },
           { title: 'Relatórios', url: '/gestor/relatorios', icon: FileText },
           { title: 'Permissões', url: '/gestor/permissoes', icon: Shield },
           { title: 'Configurações', url: '/gestor/configuracoes', icon: Settings },
         ]
       case 'portaria':
+      case 'triagem':
         return [
           { title: 'Recepção (Lobby)', url: '/portaria/registro', icon: Package },
           { title: 'Triagem & Etiqueta', url: '/sala/triagem', icon: ClipboardList },

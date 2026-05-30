@@ -21,7 +21,17 @@ import {
   Send,
   ShieldCheck,
 } from 'lucide-react'
-import { getUnits, getUsers, createParcel, Unit, AppUser, sendSms, verifySms } from '@/services/api'
+import {
+  getUnits,
+  getUsers,
+  createParcel,
+  getCarriers,
+  Unit,
+  AppUser,
+  Carrier,
+  sendSms,
+  verifySms,
+} from '@/services/api'
 import { useAuth } from '@/hooks/use-auth'
 
 const formatCpf = (value: string) => {
@@ -48,6 +58,7 @@ export default function PortariaRegistro() {
 
   const [units, setUnits] = useState<Unit[]>([])
   const [users, setUsers] = useState<AppUser[]>([])
+  const [carriers, setCarriers] = useState<Carrier[]>([])
 
   const [unitId, setUnitId] = useState('')
   const [residentId, setResidentId] = useState('')
@@ -72,6 +83,9 @@ export default function PortariaRegistro() {
       .catch(() => {})
     getUsers()
       .then(setUsers)
+      .catch(() => {})
+    getCarriers()
+      .then(setCarriers)
       .catch(() => {})
   }, [])
 
@@ -297,11 +311,11 @@ export default function PortariaRegistro() {
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Correios">Correios</SelectItem>
-                  <SelectItem value="Mercado Livre">Mercado Livre</SelectItem>
-                  <SelectItem value="Amazon">Amazon</SelectItem>
-                  <SelectItem value="Loggi">Loggi</SelectItem>
-                  <SelectItem value="Sedex">Sedex</SelectItem>
+                  {carriers.map((c) => (
+                    <SelectItem key={c.id} value={c.name}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
                   <SelectItem value="Outros">Outros</SelectItem>
                 </SelectContent>
               </Select>

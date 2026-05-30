@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-30T12:28:56.785Z",
+  "generatedAt": "2026-05-30T12:45:01.933Z",
   "collections": [
     {
       "name": "users",
@@ -55,7 +55,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["gestor", "portaria", "morador"]
+          "selectValues": ["gestor", "portaria", "morador", "triagem"]
         },
         {
           "name": "status",
@@ -168,7 +168,7 @@
         {
           "name": "condo_id",
           "type": "relation",
-          "required": false,
+          "required": true,
           "system": false,
           "collectionRef": "condos"
         },
@@ -454,6 +454,46 @@
         {
           "name": "used",
           "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "carriers",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.role = 'gestor'",
+        "update": "@request.auth.role = 'gestor'",
+        "delete": "@request.auth.role = 'gestor'"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
           "required": false,
           "system": false
         },

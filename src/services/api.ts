@@ -20,6 +20,11 @@ export const updateUser = (id: string, data: any) => pb.collection('users').upda
 export const createUser = (data: any) => pb.collection('users').create(data)
 export const deleteUser = (id: string) => pb.collection('users').delete(id)
 
+export const getCarriers = () => pb.collection('carriers').getFullList({ sort: 'name' })
+export const createCarrier = (data: any) => pb.collection('carriers').create(data)
+export const updateCarrier = (id: string, data: any) => pb.collection('carriers').update(id, data)
+export const deleteCarrier = (id: string) => pb.collection('carriers').delete(id)
+
 export const getLinks = () =>
   pb.collection('invitation_links').getFullList({ expand: 'unit_id', sort: '-created' })
 
@@ -69,6 +74,11 @@ export type Parcel = RecordModel & {
 export type Unit = RecordModel & {
   tower: string
   apartment: string
+}
+
+export type Carrier = RecordModel & {
+  name: string
+  phone?: string
 }
 
 export const getInvitationLinkByToken = (token: string) =>
