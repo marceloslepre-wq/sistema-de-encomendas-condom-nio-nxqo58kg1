@@ -15,6 +15,4 @@ onRecordAfterCreateSuccess((e) => {
       'url',
       `/cadastro?token=${token}`,
     )
-
-  e.next()
 }, 'invitation_links')

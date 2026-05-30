@@ -11,7 +11,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Link2, Copy, Trash2 } from 'lucide-react'
+import { Link2, Copy, Mail, MessageCircle } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { getUnits, getLinks, createLink, Unit } from '@/services/api'
 import { format } from 'date-fns'
 
@@ -160,9 +161,57 @@ export default function GestorLinks() {
                         Expira em: {format(new Date(l.expires_at), 'dd/MM HH:mm')}
                       </p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => copyToClipboard(l.token)}>
-                      <Copy className="h-4 w-4 mr-2" /> Copiar
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => copyToClipboard(l.token)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Copiar Link</TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                              const text = encodeURIComponent(
+                                `Olá! Aqui está o seu convite para acessar o sistema do condomínio: ${window.location.origin}/cadastro?token=${l.token}`,
+                              )
+                              window.open(`https://wa.me/?text=${text}`, '_blank')
+                            }}
+                          >
+                            <MessageCircle className="h-4 w-4 text-green-600" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Enviar por WhatsApp</TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                              const subject = encodeURIComponent('Convite de Acesso - Condomínio')
+                              const body = encodeURIComponent(
+                                `Olá! Aqui está o seu convite para acessar o sistema do condomínio:\n\n${window.location.origin}/cadastro?token=${l.token}`,
+                              )
+                              window.location.href = `mailto:?subject=${subject}&body=${body}`
+                            }}
+                          >
+                            <Mail className="h-4 w-4 text-blue-600" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Enviar por Email</TooltipContent>
+                      </Tooltip>
+                    </div>
                   </div>
                 )
               })}
