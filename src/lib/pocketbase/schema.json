@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-05-30T12:55:18.498Z",
+  "generatedAt": "2026-05-30T13:16:30.601Z",
   "collections": [
     {
       "name": "users",
       "type": "auth",
       "apiRules": {
-        "list": "id = @request.auth.id || @request.auth.role = 'portaria' || @request.auth.role = 'gestor'",
-        "view": "id = @request.auth.id || @request.auth.role = 'portaria' || @request.auth.role = 'gestor'",
-        "create": "",
+        "list": "id = @request.auth.id || @request.auth.role = 'portaria' || @request.auth.role = 'gestor' || @request.auth.role = 'triagem'",
+        "view": "id = @request.auth.id || @request.auth.role = 'portaria' || @request.auth.role = 'gestor' || @request.auth.role = 'triagem'",
+        "create": "@request.auth.role = 'gestor'",
         "update": "id = @request.auth.id || @request.auth.role = 'gestor'",
         "delete": "id = @request.auth.id || @request.auth.role = 'gestor'"
       },
