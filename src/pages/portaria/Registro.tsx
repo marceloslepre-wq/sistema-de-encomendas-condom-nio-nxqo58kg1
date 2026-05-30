@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -10,9 +11,34 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { CheckCircle2, Package as PkgIcon, Loader2, Truck, Hash, Plus } from 'lucide-react'
-import { getUnits, getUsers, createParcel, Unit, AppUser } from '@/services/api'
+import {
+  CheckCircle2,
+  Package as PkgIcon,
+  Loader2,
+  Truck,
+  Hash,
+  Plus,
+  Send,
+  ShieldCheck,
+} from 'lucide-react'
+import { getUnits, getUsers, createParcel, Unit, AppUser, sendSms, verifySms } from '@/services/api'
 import { useAuth } from '@/hooks/use-auth'
+
+const formatCpf = (value: string) => {
+  const v = value.replace(/\D/g, '').substring(0, 11)
+  return v
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+}
+
+const formatPhone = (value: string) => {
+  const v = value.replace(/\D/g, '').substring(0, 11)
+  if (v.length <= 10) {
+    return v.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d)/, '$1-$2')
+  }
+  return v.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2')
+}
 
 export default function PortariaRegistro() {
   const { toast } = useToast()
@@ -25,8 +51,18 @@ export default function PortariaRegistro() {
 
   const [unitId, setUnitId] = useState('')
   const [residentId, setResidentId] = useState('')
-  const [volumes, setVolumes] = useState(1)
+  const [volumes, setVolumes] = useState<number | ''>(1)
   const [carrier, setCarrier] = useState('')
+
+  const [courierName, setCourierName] = useState('')
+  const [courierCpf, setCourierCpf] = useState('')
+  const [courierPhone, setCourierPhone] = useState('')
+
+  const [smsCode, setSmsCode] = useState('')
+  const [isSmsSent, setIsSmsSent] = useState(false)
+  const [isSmsSending, setIsSmsSending] = useState(false)
+  const [isSmsVerified, setIsSmsVerified] = useState(false)
+  const [isSmsVerifying, setIsSmsVerifying] = useState(false)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -51,8 +87,66 @@ export default function PortariaRegistro() {
   }, [filteredResidents, residentId])
 
   const isFormValid = useMemo(() => {
-    return unitId && carrier
-  }, [unitId, carrier])
+    return (
+      unitId &&
+      carrier &&
+      Number(volumes) > 0 &&
+      courierName &&
+      courierCpf.length === 14 &&
+      isSmsVerified
+    )
+  }, [unitId, carrier, volumes, courierName, courierCpf, isSmsVerified])
+
+  const handleSendSms = async () => {
+    if (courierPhone.length < 14) return
+    setIsSmsSending(true)
+    try {
+      const res = await sendSms(courierPhone)
+      if (res.success) {
+        setIsSmsSent(true)
+        toast({
+          title: 'SMS Enviado',
+          description: 'O código foi enviado para o celular do entregador.',
+        })
+        if (res.mockCode) {
+          toast({
+            title: 'Ambiente de Teste',
+            description: `O código gerado é: ${res.mockCode}`,
+          })
+        }
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Erro',
+        description: 'Falha ao enviar o SMS.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSmsSending(false)
+    }
+  }
+
+  const handleVerifySms = async () => {
+    if (!smsCode) return
+    setIsSmsVerifying(true)
+    try {
+      await verifySms(courierPhone, smsCode)
+      setIsSmsVerified(true)
+      toast({
+        title: 'Entregador Verificado',
+        description: 'O código foi validado com sucesso.',
+        className: 'bg-success text-white',
+      })
+    } catch (err: any) {
+      toast({
+        title: 'Erro de Verificação',
+        description: 'Código inválido ou expirado.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSmsVerifying(false)
+    }
+  }
 
   const handleFinish = async () => {
     if (!isFormValid) return
@@ -62,8 +156,10 @@ export default function PortariaRegistro() {
       await createParcel({
         unit_id: unitId,
         resident_id: residentId || null,
-        volumes,
+        volumes: Number(volumes),
         carrier,
+        courier_name: courierName,
+        courier_cpf: courierCpf,
         status: 'ENTRADA_PORTARIA',
         entry_date: new Date().toISOString(),
         porter_id: user?.id,
@@ -92,6 +188,12 @@ export default function PortariaRegistro() {
     setResidentId('')
     setVolumes(1)
     setCarrier('')
+    setCourierName('')
+    setCourierCpf('')
+    setCourierPhone('')
+    setSmsCode('')
+    setIsSmsSent(false)
+    setIsSmsVerified(false)
   }
 
   if (isSuccess) {
@@ -210,25 +312,121 @@ export default function PortariaRegistro() {
                 <Hash className="w-4 h-4 text-muted-foreground" /> Volumes{' '}
                 <span className="text-destructive">*</span>
               </Label>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map((num) => (
-                  <Button
-                    key={num}
-                    type="button"
-                    variant={volumes === num ? 'default' : 'outline'}
-                    onClick={() => setVolumes(num)}
-                    className="flex-1 text-base h-10"
-                  >
-                    {num}
-                    {num === 5 && '+'}
-                  </Button>
-                ))}
+              <Input
+                type="number"
+                min="1"
+                value={volumes}
+                onChange={(e) =>
+                  setVolumes(e.target.value === '' ? '' : parseInt(e.target.value, 10))
+                }
+                className="h-10"
+                placeholder="Quantidade de volumes"
+              />
+            </div>
+          </div>
+
+          <div className="border-t pt-6 mt-6 space-y-6">
+            <h3 className="text-lg font-medium flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-primary" /> Identificação do Entregador
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <Label>
+                  Nome <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  value={courierName}
+                  onChange={(e) => setCourierName(e.target.value)}
+                  placeholder="Ex: João da Silva"
+                  disabled={isSmsVerified}
+                />
               </div>
+
+              <div className="space-y-2">
+                <Label>
+                  CPF <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  value={courierCpf}
+                  onChange={(e) => setCourierCpf(formatCpf(e.target.value))}
+                  placeholder="000.000.000-00"
+                  maxLength={14}
+                  disabled={isSmsVerified}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>
+                  Celular <span className="text-destructive">*</span>
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={courierPhone}
+                    onChange={(e) => {
+                      setCourierPhone(formatPhone(e.target.value))
+                      setIsSmsSent(false)
+                      setSmsCode('')
+                    }}
+                    placeholder="(00) 00000-0000"
+                    maxLength={15}
+                    disabled={isSmsVerified || isSmsSending}
+                  />
+                  {!isSmsVerified && (
+                    <Button
+                      type="button"
+                      onClick={handleSendSms}
+                      disabled={isSmsSending || courierPhone.length < 14}
+                      className="shrink-0"
+                      variant={isSmsSent ? 'outline' : 'default'}
+                    >
+                      {isSmsSending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4 mr-2" />
+                      )}
+                      {isSmsSent ? 'Reenviar' : 'Enviar SMS'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {isSmsSent && !isSmsVerified && (
+                <div className="space-y-2 animate-fade-in">
+                  <Label>
+                    Código de Verificação <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={smsCode}
+                      onChange={(e) => setSmsCode(e.target.value)}
+                      placeholder="000000"
+                      maxLength={6}
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleVerifySms}
+                      disabled={isSmsVerifying || smsCode.length < 4}
+                      variant="secondary"
+                    >
+                      {isSmsVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verificar'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {isSmsVerified && (
+                <div className="space-y-2 flex items-end">
+                  <div className="flex items-center gap-2 text-success font-medium h-10 px-3 bg-success/10 rounded-md w-full border border-success/20">
+                    <CheckCircle2 className="w-5 h-5" /> Entregador Verificado
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           <Button
-            className="w-full bg-success hover:bg-success/90 text-white mt-4"
+            className="w-full bg-success hover:bg-success/90 text-white mt-8"
             size="lg"
             onClick={handleFinish}
             disabled={isSubmitting || !isFormValid}
