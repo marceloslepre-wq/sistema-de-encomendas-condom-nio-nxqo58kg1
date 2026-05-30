@@ -7,17 +7,7 @@ migrate(
     for (let i = 0; i < users.length; i++) {
       try {
         app.delete(users[i])
-      } catch (_) {
-        // Fallback: if app.delete fails due to some foreign key relation that
-        // is not set to cascade, force delete via raw SQL.
-        try {
-          app
-            .db()
-            .newQuery('DELETE FROM _pb_users_auth_ WHERE id = {:id}')
-            .bind({ id: users[i].id })
-            .execute()
-        } catch (__) {}
-      }
+      } catch (_) {}
     }
 
     // Create the single admin user
