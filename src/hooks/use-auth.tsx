@@ -2,13 +2,12 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import pb from '@/lib/pocketbase/client'
 import { AppUser } from '@/services/api'
 
-export type UserRole = 'gestor' | 'portaria' | 'morador' | null
+export type UserRole = 'gestor' | 'portaria' | 'triagem' | 'morador' | null
 
 interface AuthContextType {
   user: AppUser | null
   role: UserRole
   isAuthenticated: boolean
-  login: (role: UserRole) => void
   signIn: (email: string, password: string) => Promise<{ error: any }>
   signOut: () => void
   logout: () => void
@@ -23,9 +22,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
   const [isAuthenticated, setIsAuthenticated] = useState(pb.authStore.isValid)
   const [loading, setLoading] = useState(true)
-
-  // Keep this for backwards compatibility if some mock code is still using it
-  const [mockRole, setMockRole] = useState<UserRole>(null)
 
   useEffect(() => {
     const unsubscribe = pb.authStore.onChange((_token, record) => {
@@ -50,7 +46,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       await pb.collection('users').authWithPassword(email, password)
-      setMockRole(null)
       return { error: null }
     } catch (error) {
       return { error }
@@ -59,23 +54,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = () => {
     pb.authStore.clear()
-    setMockRole(null)
   }
 
-  // Compat methods
-  const login = (role: UserRole) => setMockRole(role)
   const logout = () => signOut()
 
-  const role = mockRole || (user?.role as UserRole) || null
-  const isAppAuthenticated = isAuthenticated || mockRole !== null
+  const role = (user?.role as UserRole) || null
 
   return (
     <AuthContext.Provider
       value={{
         user,
         role,
-        isAuthenticated: isAppAuthenticated,
-        login,
+        isAuthenticated,
         signIn,
         signOut,
         logout,

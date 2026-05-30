@@ -42,7 +42,7 @@ const ProtectedRoute = ({
 
   if (loading) return null // Or a loading spinner
 
-  if (!isAuthenticated) return <Navigate to="/cadastro" replace />
+  if (!isAuthenticated) return <Navigate to="/" replace />
 
   if (requiredRole && role !== requiredRole) {
     if (
