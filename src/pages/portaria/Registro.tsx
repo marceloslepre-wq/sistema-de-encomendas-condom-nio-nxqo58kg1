@@ -12,11 +12,18 @@ import {
 } from '@/components/ui/select'
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/ui/input-otp'
 import { useToast } from '@/hooks/use-toast'
-import { Smartphone, CheckCircle2, User, Package as PkgIcon, Loader2 } from 'lucide-react'
+import {
+  Smartphone,
+  CheckCircle2,
+  Package as PkgIcon,
+  Loader2,
+  Truck,
+  Hash,
+  ShieldCheck,
+  Plus,
+} from 'lucide-react'
 import { getUnits, getUsers, createParcel, sendSms, verifySms, Unit, AppUser } from '@/services/api'
 import { useAuth } from '@/hooks/use-auth'
-import { extractFieldErrors } from '@/lib/pocketbase/errors'
-import { cn } from '@/lib/utils'
 
 const formatCpf = (val: string) => {
   return val
@@ -38,23 +45,27 @@ const formatPhone = (val: string) => {
 export default function PortariaRegistro() {
   const { toast } = useToast()
   const { user } = useAuth()
-  const [step, setStep] = useState(1)
+
+  const [isSuccess, setIsSuccess] = useState(false)
 
   const [units, setUnits] = useState<Unit[]>([])
   const [users, setUsers] = useState<AppUser[]>([])
 
   const [unitId, setUnitId] = useState('')
   const [residentId, setResidentId] = useState('')
+  const [volumes, setVolumes] = useState(1)
+  const [trackingCode, setTrackingCode] = useState('')
+
   const [courierName, setCourierName] = useState('')
   const [courierCpf, setCourierCpf] = useState('')
   const [carrier, setCarrier] = useState('')
-  const [phone, setPhone] = useState('')
 
+  const [phone, setPhone] = useState('')
   const [smsSent, setSmsSent] = useState(false)
   const [smsCode, setSmsCode] = useState('')
   const [smsMockCode, setSmsMockCode] = useState('')
   const [isSending, setIsSending] = useState(false)
-  const [isVerifying, setIsVerifying] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     getUnits()
@@ -70,11 +81,28 @@ export default function PortariaRegistro() {
     return users.filter((u) => u.unit_id === unitId)
   }, [unitId, users])
 
-  const selectedUnit = useMemo(() => units.find((u) => u.id === unitId), [unitId, units])
   const selectedResident = useMemo(
     () => users.find((u) => u.id === residentId),
     [residentId, users],
   )
+
+  useEffect(() => {
+    if (filteredResidents.length === 1 && !residentId) {
+      setResidentId(filteredResidents[0].id)
+    }
+  }, [filteredResidents, residentId])
+
+  useEffect(() => {
+    if (selectedResident?.phone) {
+      setPhone(formatPhone(selectedResident.phone))
+    } else {
+      setPhone('')
+    }
+  }, [selectedResident])
+
+  const isFormValid = useMemo(() => {
+    return unitId && carrier && courierName.trim() !== '' && courierCpf.length === 14
+  }, [unitId, carrier, courierName, courierCpf])
 
   const handleSendSMS = async () => {
     if (!phone || phone.length < 14) {
@@ -86,7 +114,7 @@ export default function PortariaRegistro() {
       const res = await sendSms(phone)
       setSmsSent(true)
       if (res.mockCode) setSmsMockCode(res.mockCode)
-      toast({ title: 'SMS Enviado', description: 'Código enviado para o celular do entregador.' })
+      toast({ title: 'SMS Enviado', description: 'Código enviado para o celular informado.' })
     } catch (err) {
       toast({ title: 'Erro', description: 'Falha ao enviar SMS.', variant: 'destructive' })
     } finally {
@@ -95,8 +123,8 @@ export default function PortariaRegistro() {
   }
 
   const handleFinish = async () => {
-    if (smsCode.length < 6) return
-    setIsVerifying(true)
+    if (smsCode.length < 6 || !isFormValid) return
+    setIsSubmitting(true)
 
     try {
       await verifySms(phone, smsCode)
@@ -104,6 +132,8 @@ export default function PortariaRegistro() {
       await createParcel({
         unit_id: unitId,
         resident_id: residentId || null,
+        volumes,
+        tracking_code: trackingCode,
         carrier,
         courier_name: courierName,
         courier_cpf: courierCpf,
@@ -112,22 +142,12 @@ export default function PortariaRegistro() {
         porter_id: user?.id,
       })
 
+      setIsSuccess(true)
       toast({
         title: 'Sucesso!',
         description: 'Encomenda registrada com sucesso.',
         className: 'bg-success text-white',
       })
-
-      // Reset form
-      setStep(1)
-      setSmsSent(false)
-      setSmsCode('')
-      setUnitId('')
-      setResidentId('')
-      setCourierName('')
-      setCourierCpf('')
-      setCarrier('')
-      setPhone('')
     } catch (err: any) {
       toast({
         title: 'Erro',
@@ -135,252 +155,314 @@ export default function PortariaRegistro() {
         variant: 'destructive',
       })
     } finally {
-      setIsVerifying(false)
+      setIsSubmitting(false)
     }
   }
 
-  return (
-    <div className="space-y-6 max-w-2xl mx-auto pb-20">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">Registrar Nova Encomenda</h2>
-        <p className="text-muted-foreground">
-          Siga os passos para garantir a segurança da entrega.
-        </p>
-      </div>
+  const handleReset = () => {
+    setIsSuccess(false)
+    setSmsSent(false)
+    setSmsCode('')
+    setSmsMockCode('')
+    setUnitId('')
+    setResidentId('')
+    setVolumes(1)
+    setTrackingCode('')
+    setCourierName('')
+    setCourierCpf('')
+    setCarrier('')
+    setPhone('')
+  }
 
-      <div className="flex items-center justify-between mb-8 relative">
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-muted z-0"></div>
-        <div
-          className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-primary z-0 transition-all duration-300"
-          style={{ width: step === 1 ? '0%' : step === 2 ? '50%' : '100%' }}
-        ></div>
-
-        {[1, 2, 3].map((s) => (
-          <div
-            key={s}
-            className={cn(
-              'w-8 h-8 rounded-full flex items-center justify-center z-10 transition-colors duration-300',
-              step >= s ? 'bg-primary text-white' : 'bg-muted text-muted-foreground',
-            )}
-          >
-            {s}
-          </div>
-        ))}
-      </div>
-
-      {step === 1 && (
-        <Card className="animate-fade-in-up">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" /> Dados do Destinatário
-            </CardTitle>
-            <CardDescription>Busque pelo apartamento ou nome do morador.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Unidade (Torre - Apto)</Label>
-              <Select
-                value={unitId}
-                onValueChange={(val) => {
-                  setUnitId(val)
-                  setResidentId('')
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a unidade..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {units.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.tower} - {u.apartment}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+  if (isSuccess) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[70vh] animate-fade-in-up">
+        <Card className="max-w-md w-full border-success/50 shadow-lg">
+          <CardContent className="pt-10 pb-8 space-y-6 text-center">
+            <div className="mx-auto w-20 h-20 bg-success/10 rounded-full flex items-center justify-center">
+              <CheckCircle2 className="w-10 h-10 text-success" />
             </div>
-
-            {unitId && (
-              <div className="space-y-2 animate-fade-in">
-                <Label>Morador</Label>
-                <Select value={residentId} onValueChange={setResidentId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o morador..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredResidents.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        {r.name}
-                      </SelectItem>
-                    ))}
-                    {filteredResidents.length === 0 && (
-                      <SelectItem value="none" disabled>
-                        Nenhum morador cadastrado
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {(selectedUnit || selectedResident) && (
-              <div className="p-3 bg-muted/50 rounded-md border text-sm animate-fade-in">
-                <strong>Destino:</strong>{' '}
-                {selectedResident ? selectedResident.name : 'Morador não selecionado'}
-                {selectedUnit && ` (${selectedUnit.tower} - ${selectedUnit.apartment})`}
-              </div>
-            )}
-
-            <Button className="w-full mt-4" onClick={() => setStep(2)} disabled={!unitId}>
-              Avançar
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-foreground">
+                Encomenda registrada com sucesso!
+              </h2>
+              <p className="text-muted-foreground">
+                O morador foi notificado e a encomenda está pronta para retirada.
+              </p>
+            </div>
+            <Button onClick={handleReset} size="lg" className="w-full gap-2 mt-4">
+              <Plus className="w-4 h-4" /> Registrar Nova Encomenda
             </Button>
           </CardContent>
         </Card>
-      )}
+      </div>
+    )
+  }
 
-      {step === 2 && (
-        <Card className="animate-fade-in-up">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PkgIcon className="h-5 w-5" /> Dados do Entregador
-            </CardTitle>
-            <CardDescription>Registre quem está realizando a entrega.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Transportadora</Label>
-              <Select value={carrier} onValueChange={setCarrier}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Correios">Correios</SelectItem>
-                  <SelectItem value="Mercado Envios">Mercado Envios</SelectItem>
-                  <SelectItem value="UPS">UPS</SelectItem>
-                  <SelectItem value="Fedex">Fedex</SelectItem>
-                  <SelectItem value="Outros">Outros</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Nome do Entregador</Label>
-              <Input
-                placeholder="Ex: Carlos Silva"
-                value={courierName}
-                onChange={(e) => setCourierName(e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>CPF</Label>
-                <Input
-                  placeholder="000.000.000-00"
-                  value={courierCpf}
-                  onChange={(e) => setCourierCpf(formatCpf(e.target.value))}
-                  maxLength={14}
-                />
+  return (
+    <div className="max-w-5xl mx-auto space-y-6 pb-20 animate-fade-in">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">Registrar Encomenda</h2>
+        <p className="text-muted-foreground">
+          Preencha os dados em uma única tela para agilizar o recebimento.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader className="border-b bg-muted/20">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <PkgIcon className="h-5 w-5 text-primary" /> Dados da Encomenda
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <Label>
+                    Unidade (Torre - Apto) <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={unitId}
+                    onValueChange={(val) => {
+                      setUnitId(val)
+                      setResidentId('')
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a unidade..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {units.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.tower} - {u.apartment}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Morador</Label>
+                  <Select
+                    value={residentId}
+                    onValueChange={setResidentId}
+                    disabled={!unitId || filteredResidents.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={
+                          !unitId ? 'Selecione a unidade primeiro' : 'Selecione o morador...'
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredResidents.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <Hash className="w-4 h-4 text-muted-foreground" /> Quantidade de Volumes{' '}
+                    <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((num) => (
+                      <Button
+                        key={num}
+                        type="button"
+                        variant={volumes === num ? 'default' : 'outline'}
+                        onClick={() => setVolumes(num)}
+                        className="flex-1 text-base h-10"
+                      >
+                        {num}
+                        {num === 5 && '+'}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Código de Rastreio (Opcional)</Label>
+                  <Input
+                    placeholder="Ex: AB123456789BR"
+                    value={trackingCode}
+                    onChange={(e) => setTrackingCode(e.target.value)}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="border-b bg-muted/20">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Truck className="h-5 w-5 text-primary" /> Dados do Entregador
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="space-y-2">
+                  <Label>
+                    Transportadora <span className="text-destructive">*</span>
+                  </Label>
+                  <Select value={carrier} onValueChange={setCarrier}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Correios">Correios</SelectItem>
+                      <SelectItem value="Mercado Livre">Mercado Livre</SelectItem>
+                      <SelectItem value="Amazon">Amazon</SelectItem>
+                      <SelectItem value="Loggi">Loggi</SelectItem>
+                      <SelectItem value="Sedex">Sedex</SelectItem>
+                      <SelectItem value="Outros">Outros</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    Nome <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    placeholder="Ex: Carlos Silva"
+                    value={courierName}
+                    onChange={(e) => setCourierName(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    CPF <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    placeholder="000.000.000-00"
+                    value={courierCpf}
+                    onChange={(e) => setCourierCpf(formatCpf(e.target.value))}
+                    maxLength={14}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card className="border-primary shadow-md lg:sticky lg:top-6">
+            <CardHeader className="bg-primary/5 border-b">
+              <CardTitle className="flex items-center gap-2 text-primary">
+                <ShieldCheck className="h-5 w-5" /> Validação do Morador
+              </CardTitle>
+              <CardDescription>Confirme com o morador para liberar a entrega.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-5">
               <div className="space-y-2">
-                <Label>Celular (Para validação SMS)</Label>
+                <Label>Celular do Morador</Label>
                 <Input
                   placeholder="(11) 90000-0000"
                   value={phone}
                   onChange={(e) => setPhone(formatPhone(e.target.value))}
                   maxLength={15}
+                  disabled={smsSent || isSubmitting}
                 />
               </div>
-            </div>
-            <div className="flex gap-2 pt-4">
-              <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>
-                Voltar
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={() => setStep(3)}
-                disabled={!carrier || !courierName || courierCpf.length < 14 || phone.length < 14}
-              >
-                Avançar
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {step === 3 && (
-        <Card className="animate-fade-in-up border-primary">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Smartphone className="h-5 w-5" /> Validação SMS
-            </CardTitle>
-            <CardDescription>Confirme a identidade do entregador.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6 flex flex-col items-center text-center">
-            {!smsSent ? (
-              <>
-                <p className="text-sm">
-                  Um código de 6 dígitos será enviado para o celular: <strong>{phone}</strong>
-                </p>
-                <Button onClick={handleSendSMS} size="lg" className="w-full" disabled={isSending}>
-                  {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {isSending ? 'Enviando...' : 'Enviar SMS Agora'}
+              {!smsSent ? (
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={handleSendSMS}
+                  disabled={phone.length < 14 || isSending}
+                >
+                  {isSending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Smartphone className="mr-2 h-4 w-4" />
+                  )}
+                  Enviar Código SMS
                 </Button>
-              </>
-            ) : (
-              <>
-                <p className="text-sm font-medium">Digite o código recebido pelo entregador:</p>
-                {smsMockCode && (
-                  <p className="text-xs text-muted-foreground bg-muted p-2 rounded">
-                    (Mock code para testes: {smsMockCode})
-                  </p>
-                )}
-                <InputOTP maxLength={6} value={smsCode} onChange={setSmsCode}>
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                  </InputOTPGroup>
-                  <InputOTPSeparator />
-                  <InputOTPGroup>
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-                <div className="flex gap-2 w-full pt-4">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={handleSendSMS}
-                    disabled={isSending}
-                  >
-                    Reenviar
-                  </Button>
-                  <Button
-                    className="flex-1 bg-success hover:bg-success/90 text-white"
-                    onClick={handleFinish}
-                    disabled={smsCode.length < 6 || isVerifying}
-                  >
-                    {isVerifying ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
+              ) : (
+                <div className="space-y-5 pt-2 animate-fade-in">
+                  <div className="space-y-2 flex flex-col items-center">
+                    <Label className="text-primary font-medium w-full text-left">
+                      Código Recebido
+                    </Label>
+                    {smsMockCode && (
+                      <p className="text-xs text-muted-foreground bg-muted p-2 rounded w-full text-center mb-2 border border-dashed">
+                        Mock code para testes: <strong>{smsMockCode}</strong>
+                      </p>
                     )}
-                    Validar e Concluir
+                    <InputOTP
+                      maxLength={6}
+                      value={smsCode}
+                      onChange={setSmsCode}
+                      disabled={isSubmitting}
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} className="w-10 h-12 text-lg" />
+                        <InputOTPSlot index={1} className="w-10 h-12 text-lg" />
+                        <InputOTPSlot index={2} className="w-10 h-12 text-lg" />
+                      </InputOTPGroup>
+                      <InputOTPSeparator />
+                      <InputOTPGroup>
+                        <InputOTPSlot index={3} className="w-10 h-12 text-lg" />
+                        <InputOTPSlot index={4} className="w-10 h-12 text-lg" />
+                        <InputOTPSlot index={5} className="w-10 h-12 text-lg" />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setSmsSent(false)}
+                      disabled={isSubmitting}
+                    >
+                      Alterar Celular
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={handleSendSMS}
+                      disabled={isSending || isSubmitting}
+                    >
+                      {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reenviar'}
+                    </Button>
+                  </div>
+
+                  <Button
+                    className="w-full bg-success hover:bg-success/90 text-white shadow-sm"
+                    size="lg"
+                    onClick={handleFinish}
+                    disabled={smsCode.length < 6 || isSubmitting || !isFormValid}
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="mr-2 h-5 w-5" />
+                    )}
+                    Validar e Registrar
                   </Button>
+                  {!isFormValid && smsCode.length === 6 && (
+                    <p className="text-xs text-destructive text-center mt-2 animate-fade-in">
+                      Preencha todos os campos obrigatórios (*) antes de registrar.
+                    </p>
+                  )}
                 </div>
-              </>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full mt-2"
-              onClick={() => setStep(2)}
-              disabled={isSending || isVerifying}
-            >
-              Voltar para edição
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }
