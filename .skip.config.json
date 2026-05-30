@@ -32,6 +32,9 @@
     "README.md"
   ],
   "deployment": {
-    "lastDevBuildRef": "1656c75"
+    "lastDevBuildRef": "eb20e86",
+    "lastProdBuildRef": "eb20e86",
+    "publishedAt": "2026-05-29T22:16:55.150Z",
+    "lastPublishedRef": "eb20e86"
   }
 }

@@ -33,7 +33,7 @@ export function Header() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative text-muted-foreground hover:text-primary"
+          className="relative text-muted-foreground hover:text-primary min-h-[44px] min-w-[44px]"
         >
           <Bell className="h-5 w-5" />
           <span className="absolute top-2 right-2 w-2 h-2 bg-warning rounded-full"></span>
@@ -41,8 +41,11 @@ export function Header() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-              <Avatar className="h-8 w-8">
+            <Button
+              variant="ghost"
+              className="relative h-11 w-11 rounded-full min-h-[44px] min-w-[44px]"
+            >
+              <Avatar className="h-11 w-11">
                 <AvatarFallback className="bg-primary text-primary-foreground">
                   {role.charAt(0).toUpperCase()}
                 </AvatarFallback>

@@ -30,7 +30,7 @@ export function MobileNav() {
             key={link.title}
             to={link.url}
             className={cn(
-              'flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors',
+              'flex flex-col items-center justify-center w-full h-full min-h-[44px] min-w-[44px] space-y-1 transition-colors',
               isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
             )}
           >
