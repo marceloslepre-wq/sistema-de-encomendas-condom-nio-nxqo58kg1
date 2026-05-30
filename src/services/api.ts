@@ -14,6 +14,8 @@ export const getUsers = () =>
   pb.collection('users').getFullList({ expand: 'unit_id', sort: '-created' })
 
 export const updateUser = (id: string, data: any) => pb.collection('users').update(id, data)
+export const createUser = (data: any) => pb.collection('users').create(data)
+export const deleteUser = (id: string) => pb.collection('users').delete(id)
 
 export const getLinks = () =>
   pb.collection('invitation_links').getFullList({ expand: 'unit_id', sort: '-created' })

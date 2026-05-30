@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Package, AlertCircle } from 'lucide-react'
-import { Progress } from '@/components/ui/progress'
 import { getInvitationLinkByToken, updateInvitationLink } from '@/services/api'
+import { ResidentForm } from '@/components/ResidentForm'
 import pb from '@/lib/pocketbase/client'
 import { useToast } from '@/hooks/use-toast'
 
@@ -20,14 +20,6 @@ export default function Cadastro() {
   const [error, setError] = useState('')
   const [linkData, setLinkData] = useState<any>(null)
 
-  const [formData, setFormData] = useState({
-    name: '',
-    cpf: '',
-    phone: '',
-    email: '',
-    password: '',
-    confirm: '',
-  })
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -47,36 +39,21 @@ export default function Cadastro() {
       .finally(() => setLoading(false))
   }, [token])
 
-  const getPwdStrength = (pwd: string) => {
-    if (pwd.length === 0) return 0
-    if (pwd.length < 6) return 33
-    if (pwd.match(/[a-z]/) && pwd.match(/[A-Z]/) && pwd.match(/[0-9]/)) return 100
-    return 66
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (formData.password !== formData.confirm) {
-      return toast({
-        title: 'Erro',
-        description: 'As senhas não conferem.',
-        variant: 'destructive',
-      })
-    }
+  const handleSubmit = async (data: any) => {
     setSubmitting(true)
     try {
       await pb.collection('users').create({
-        name: formData.name,
-        cpf: formData.cpf,
-        phone: formData.phone,
-        email: formData.email,
-        password: formData.password,
-        passwordConfirm: formData.confirm,
+        name: data.name,
+        cpf: data.cpf,
+        phone: data.phone,
+        email: data.email,
+        password: data.password,
+        passwordConfirm: data.confirm,
         role: 'morador',
         status: 'Ativo',
-        unit_id: linkData.unit_id,
+        unit_id: data.unit_id,
       })
-      await pb.collection('users').authWithPassword(formData.email, formData.password)
+      await pb.collection('users').authWithPassword(data.email, data.password)
       await updateInvitationLink(linkData.id, { used: true })
       navigate('/morador/dashboard')
     } catch (err: any) {
@@ -110,7 +87,6 @@ export default function Cadastro() {
     )
 
   const unit = linkData?.expand?.unit_id
-  const pwdScore = getPwdStrength(formData.password)
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-neutralBg">
@@ -125,75 +101,12 @@ export default function Cadastro() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nome Completo</Label>
-              <Input
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ex: João da Silva"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>CPF</Label>
-                <Input
-                  required
-                  value={formData.cpf}
-                  onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
-                  placeholder="000.000.000-00"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Celular</Label>
-                <Input
-                  required
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="(00) 00000-0000"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>E-mail</Label>
-              <Input
-                required
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="joao@exemplo.com"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Criar Senha</Label>
-                <Input
-                  required
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                />
-                <Progress value={pwdScore} className="h-1.5 mt-2" />
-              </div>
-              <div className="space-y-2">
-                <Label>Confirmar Senha</Label>
-                <Input
-                  required
-                  type="password"
-                  value={formData.confirm}
-                  onChange={(e) => setFormData({ ...formData, confirm: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <Button type="submit" className="w-full mt-6" disabled={submitting}>
-              {submitting ? 'Salvando...' : 'Finalizar Cadastro'}
-            </Button>
-          </form>
+          <ResidentForm
+            fixedUnit={unit}
+            units={[]}
+            onSubmit={handleSubmit}
+            submitting={submitting}
+          />
         </CardContent>
       </Card>
     </div>

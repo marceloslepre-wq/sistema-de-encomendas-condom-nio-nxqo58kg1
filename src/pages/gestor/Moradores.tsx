@@ -12,30 +12,130 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Search, Mail, Ban, CheckCircle } from 'lucide-react'
-import { getUsers, updateUser, AppUser } from '@/services/api'
+import { Search, Mail, Ban, CheckCircle, Plus, Edit, Trash2 } from 'lucide-react'
+import {
+  getUsers,
+  getUnits,
+  updateUser,
+  createUser,
+  deleteUser,
+  AppUser,
+  Unit,
+} from '@/services/api'
 import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { ResidentForm } from '@/components/ResidentForm'
 
 export default function GestorMoradores() {
   const [users, setUsers] = useState<AppUser[]>([])
+  const [units, setUnits] = useState<Unit[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const { toast } = useToast()
 
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState<AppUser | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<AppUser | null>(null)
+
   useEffect(() => {
-    loadUsers()
+    loadData()
   }, [])
 
-  const loadUsers = async () => {
+  const loadData = async () => {
     try {
-      const data = await getUsers()
-      setUsers(data as AppUser[])
+      const [userData, unitData] = await Promise.all([getUsers(), getUnits()])
+      setUsers(userData as AppUser[])
+      setUnits(unitData as Unit[])
     } catch (e) {
       console.error(e)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSaveUser = async (data: any) => {
+    setSubmitting(true)
+    try {
+      const payload = { ...data, role: 'morador' }
+      if (editingUser) {
+        if (!payload.password) {
+          delete payload.password
+          delete payload.confirm
+        } else {
+          payload.passwordConfirm = payload.confirm
+        }
+        await updateUser(editingUser.id, payload)
+        toast({ title: 'Morador atualizado com sucesso.' })
+      } else {
+        payload.passwordConfirm = payload.confirm
+        payload.status = 'Ativo'
+        await createUser(payload)
+        toast({ title: 'Morador criado com sucesso.' })
+      }
+      setIsFormOpen(false)
+      loadData()
+    } catch (e: any) {
+      toast({
+        title: 'Erro ao salvar',
+        description: e.message || 'Verifique os dados informados. CPF pode já estar em uso.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return
+    try {
+      await deleteUser(userToDelete.id)
+      toast({ title: 'Morador removido com sucesso.' })
+      loadData()
+    } catch (e: any) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível remover o morador.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsDeleteDialogOpen(false)
+      setUserToDelete(null)
+    }
+  }
+
+  const openNewForm = () => {
+    setEditingUser(null)
+    setIsFormOpen(true)
+  }
+
+  const openEditForm = (user: AppUser) => {
+    setEditingUser(user)
+    setIsFormOpen(true)
+  }
+
+  const openDeleteConfirm = (user: AppUser) => {
+    setUserToDelete(user)
+    setIsDeleteDialogOpen(true)
   }
 
   const toggleStatus = async (user: AppUser) => {
@@ -90,14 +190,19 @@ export default function GestorMoradores() {
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <CardTitle>Lista de Moradores</CardTitle>
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome ou apto..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div className="flex flex-col sm:flex-row gap-4 items-center w-full sm:w-auto">
+              <div className="relative w-full sm:w-72">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome ou apto..."
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Button onClick={openNewForm} className="w-full sm:w-auto">
+                <Plus className="h-4 w-4 mr-2" /> Novo Morador
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -151,13 +256,36 @@ export default function GestorMoradores() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => toggleStatus(r)}>
-                            {r.status === 'Ativo' ? (
-                              <Ban className="h-4 w-4 text-destructive" />
-                            ) : (
-                              <CheckCircle className="h-4 w-4 text-success" />
-                            )}
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => toggleStatus(r)}
+                              title={r.status === 'Ativo' ? 'Bloquear' : 'Ativar'}
+                            >
+                              {r.status === 'Ativo' ? (
+                                <Ban className="h-4 w-4 text-destructive" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4 text-success" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditForm(r)}
+                              title="Editar"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openDeleteConfirm(r)}
+                              title="Excluir"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -197,9 +325,27 @@ export default function GestorMoradores() {
                           <Badge variant="secondary">{r.status}</Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => resendInvite(r)}>
-                            <Mail className="h-4 w-4 mr-2" /> Reenviar
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => resendInvite(r)}>
+                              <Mail className="h-4 w-4 mr-2" /> Reenviar
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditForm(r)}
+                              title="Editar"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openDeleteConfirm(r)}
+                              title="Excluir"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -217,6 +363,51 @@ export default function GestorMoradores() {
           </Tabs>
         </CardContent>
       </Card>
+
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editingUser ? 'Editar Morador' : 'Novo Morador'}</DialogTitle>
+            <DialogDescription>
+              {editingUser
+                ? 'Altere os dados do morador abaixo.'
+                : 'Preencha os dados para cadastrar um novo morador.'}
+            </DialogDescription>
+          </DialogHeader>
+          <ResidentForm
+            initialData={editingUser}
+            units={units}
+            onSubmit={handleSaveUser}
+            onCancel={() => setIsFormOpen(false)}
+            submitting={submitting}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir morador?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o morador <strong>{userToDelete?.name}</strong>? Esta
+              ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={submitting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                handleDeleteUser()
+              }}
+              disabled={submitting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {submitting ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

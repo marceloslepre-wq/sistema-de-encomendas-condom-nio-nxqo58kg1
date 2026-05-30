@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-30T10:43:12.174Z",
+  "generatedAt": "2026-05-30T11:04:21.687Z",
   "collections": [
     {
       "name": "users",
@@ -8,8 +8,8 @@
         "list": "id = @request.auth.id || @request.auth.role = 'portaria' || @request.auth.role = 'gestor'",
         "view": "id = @request.auth.id || @request.auth.role = 'portaria' || @request.auth.role = 'gestor'",
         "create": "",
-        "update": "id = @request.auth.id",
-        "delete": "id = @request.auth.id"
+        "update": "id = @request.auth.id || @request.auth.role = 'gestor'",
+        "delete": "id = @request.auth.id || @request.auth.role = 'gestor'"
       },
       "fields": [
         {
