@@ -33,6 +33,7 @@ import {
   verifySms,
 } from '@/services/api'
 import { useAuth } from '@/hooks/use-auth'
+import pb from '@/lib/pocketbase/client'
 
 const formatCpf = (value: string) => {
   const v = value.replace(/\D/g, '').substring(0, 11)
@@ -76,8 +77,16 @@ export default function PortariaRegistro() {
   const [isSmsVerifying, setIsSmsVerifying] = useState(false)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [exigeSms, setExigeSms] = useState(true)
 
   useEffect(() => {
+    pb.collection('condos')
+      .getFullList()
+      .then((res) => {
+        if (res.length > 0) setExigeSms(res[0].exige_validacao_sms)
+      })
+      .catch(() => {})
+
     getUnits()
       .then(setUnits)
       .catch(() => {})
@@ -101,15 +110,16 @@ export default function PortariaRegistro() {
   }, [filteredResidents, residentId])
 
   const isFormValid = useMemo(() => {
+    const validSms = exigeSms ? isSmsVerified : true
     return (
       unitId &&
       carrier &&
       Number(volumes) > 0 &&
       courierName &&
       courierCpf.length === 14 &&
-      isSmsVerified
+      validSms
     )
-  }, [unitId, carrier, volumes, courierName, courierCpf, isSmsVerified])
+  }, [unitId, carrier, volumes, courierName, courierCpf, isSmsVerified, exigeSms])
 
   const handleSendSms = async () => {
     const rawPhone = courierPhone.replace(/\D/g, '')
@@ -368,9 +378,7 @@ export default function PortariaRegistro() {
               </div>
 
               <div className="space-y-2">
-                <Label>
-                  Celular <span className="text-destructive">*</span>
-                </Label>
+                <Label>Celular {exigeSms && <span className="text-destructive">*</span>}</Label>
                 <div className="flex gap-2">
                   <Input
                     value={courierPhone}
@@ -381,9 +389,9 @@ export default function PortariaRegistro() {
                     }}
                     placeholder="(00) 00000-0000"
                     maxLength={15}
-                    disabled={isSmsVerified || isSmsSending}
+                    disabled={exigeSms ? isSmsVerified || isSmsSending : false}
                   />
-                  {!isSmsVerified && (
+                  {exigeSms && !isSmsVerified && (
                     <Button
                       type="button"
                       onClick={handleSendSms}
@@ -402,7 +410,7 @@ export default function PortariaRegistro() {
                 </div>
               </div>
 
-              {isSmsSent && !isSmsVerified && (
+              {exigeSms && isSmsSent && !isSmsVerified && (
                 <div className="space-y-2 animate-fade-in">
                   <Label>
                     Código de Verificação <span className="text-destructive">*</span>
@@ -426,7 +434,7 @@ export default function PortariaRegistro() {
                 </div>
               )}
 
-              {isSmsVerified && (
+              {exigeSms && isSmsVerified && (
                 <div className="space-y-2 flex items-end">
                   <div className="flex items-center gap-2 text-success font-medium h-10 px-3 bg-success/10 rounded-md w-full border border-success/20">
                     <CheckCircle2 className="w-5 h-5" /> Entregador Verificado

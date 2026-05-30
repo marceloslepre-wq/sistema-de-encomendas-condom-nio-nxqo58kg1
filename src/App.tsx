@@ -30,6 +30,7 @@ import MoradorDashboard from './pages/morador/Dashboard'
 import MoradorHistorico from './pages/morador/Historico'
 import MoradorDetalhes from './pages/morador/Detalhes'
 import MoradorDados from './pages/morador/Dados'
+import MoradorRetirada from './pages/morador/Retirada'
 
 const ProtectedRoute = ({
   children,
@@ -200,6 +201,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="morador">
                   <MoradorDados />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/morador/retirada"
+              element={
+                <ProtectedRoute requiredRole="morador">
+                  <MoradorRetirada />
                 </ProtectedRoute>
               }
             />

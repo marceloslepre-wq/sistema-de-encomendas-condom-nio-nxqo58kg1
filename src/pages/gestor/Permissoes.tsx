@@ -1,8 +1,24 @@
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
+import pb from '@/lib/pocketbase/client'
 
 export default function GestorPermissoes() {
+  const [condo, setCondo] = useState<any>(null)
+
+  useEffect(() => {
+    pb.collection('condos')
+      .getFullList()
+      .then((res) => setCondo(res[0]))
+  }, [])
+
+  const handleSmsToggle = async (checked: boolean) => {
+    if (!condo) return
+    setCondo({ ...condo, exige_validacao_sms: checked })
+    await pb.collection('condos').update(condo.id, { exige_validacao_sms: checked })
+  }
+
   return (
     <div className="space-y-6 max-w-5xl">
       <div>
@@ -48,7 +64,11 @@ export default function GestorPermissoes() {
             </div>
             <div className="flex items-center justify-between">
               <Label className="font-normal">Validar retirada via SMS</Label>
-              <Switch checked={true} />
+              <Switch
+                checked={condo?.exige_validacao_sms ?? true}
+                onCheckedChange={handleSmsToggle}
+                disabled={!condo}
+              />
             </div>
             <div className="flex items-center justify-between">
               <Label className="font-normal">Cancelar registro</Label>

@@ -3,18 +3,24 @@ import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { VerticalTimeline } from '@/components/Timeline'
-import { Package, ArrowRight, Box, CalendarClock } from 'lucide-react'
+import { Package, ArrowRight, Box, CalendarClock, ListChecks } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { getUnitParcels, getFileUrl, Parcel } from '@/services/api'
 import useRealtime from '@/hooks/use-realtime'
 import { format } from 'date-fns'
+import pb from '@/lib/pocketbase/client'
+import { useToast } from '@/hooks/use-toast'
 
 const STATUS_STEPS = ['ENTRADA_PORTARIA', 'EM_TRIAGEM', 'LIBERADO_RETIRADA', 'RETIRADO']
 
 export default function MoradorDashboard() {
   const { user } = useAuth()
+  const { toast } = useToast()
   const [parcels, setParcels] = useState<Parcel[]>([])
+  const [privacy, setPrivacy] = useState(user?.autoriza_retirada_terceiros ?? true)
 
   const loadData = async () => {
     if (!user?.unit_id) return
@@ -28,8 +34,20 @@ export default function MoradorDashboard() {
 
   useEffect(() => {
     loadData()
+    if (user) setPrivacy(user.autoriza_retirada_terceiros ?? true)
   }, [user])
   useRealtime('parcels', () => loadData())
+
+  const handlePrivacyToggle = async (checked: boolean) => {
+    setPrivacy(checked)
+    try {
+      await pb.collection('users').update(user.id, { autoriza_retirada_terceiros: checked })
+      toast({ title: 'Privacidade atualizada' })
+    } catch {
+      setPrivacy(!checked)
+      toast({ title: 'Erro', description: 'Não foi possível atualizar.', variant: 'destructive' })
+    }
+  }
 
   const activePackage = parcels[0]
   const pendingPackages = parcels.slice(1)
@@ -38,11 +56,29 @@ export default function MoradorDashboard() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-20">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">
-          Olá, {user?.name?.split(' ')[0] || 'Morador'}!
-        </h2>
-        <p className="text-muted-foreground">Acompanhe suas encomendas em tempo real.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Olá, {user?.name?.split(' ')[0] || 'Morador'}!
+          </h2>
+          <p className="text-muted-foreground">Acompanhe suas encomendas em tempo real.</p>
+        </div>
+        <Button asChild className="gap-2" variant="outline">
+          <Link to="/morador/retirada">
+            <ListChecks className="w-4 h-4" />
+            Retirada em Massa
+          </Link>
+        </Button>
+      </div>
+
+      <div className="flex items-center justify-between bg-muted/30 p-4 rounded-lg border shadow-sm">
+        <div className="space-y-0.5">
+          <Label className="text-base font-semibold">Permitir retirada por vizinhos</Label>
+          <p className="text-sm text-muted-foreground">
+            Autoriza outros moradores da sua unidade a visualizarem e retirarem suas encomendas.
+          </p>
+        </div>
+        <Switch checked={privacy} onCheckedChange={handlePrivacyToggle} />
       </div>
 
       <div className="grid gap-6">
