@@ -3,14 +3,14 @@ import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { HorizontalTimeline } from '@/components/Timeline'
-import { Package, ArrowRight, Box } from 'lucide-react'
+import { VerticalTimeline } from '@/components/Timeline'
+import { Package, ArrowRight, Box, CalendarClock } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
-import { getUnitParcels, Parcel } from '@/services/api'
+import { getUnitParcels, getFileUrl, Parcel } from '@/services/api'
 import useRealtime from '@/hooks/use-realtime'
 import { format } from 'date-fns'
 
-const STATUS_STEPS = ['RECEBIDO_PORTARIA', 'EM_SALA', 'CATALOGADO', 'DISPONIVEL_RETIRADA']
+const STATUS_STEPS = ['ENTRADA_PORTARIA', 'EM_TRIAGEM', 'LIBERADO_RETIRADA', 'RETIRADO']
 
 export default function MoradorDashboard() {
   const { user } = useAuth()
@@ -37,7 +37,7 @@ export default function MoradorDashboard() {
   const getStep = (status: string) => Math.max(0, STATUS_STEPS.indexOf(status))
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl mx-auto pb-20">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">
           Olá, {user?.name?.split(' ')[0] || 'Morador'}!
@@ -56,32 +56,68 @@ export default function MoradorDashboard() {
                 </CardTitle>
                 <Badge
                   className={
-                    activePackage.status === 'DISPONIVEL_RETIRADA' ? 'bg-success' : 'bg-primary'
+                    activePackage.status === 'LIBERADO_RETIRADA'
+                      ? 'bg-success hover:bg-success'
+                      : 'bg-primary'
                   }
                 >
                   {activePackage.status.replace(/_/g, ' ')}
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="pt-6 space-y-8">
-              <HorizontalTimeline currentStep={getStep(activePackage.status)} />
+            <CardContent className="pt-6 grid md:grid-cols-2 gap-8">
+              <div>
+                <VerticalTimeline currentStep={getStep(activePackage.status)} />
 
-              <div className="flex flex-col md:flex-row justify-between items-center bg-muted/50 p-4 rounded-lg border">
-                <div className="text-center md:text-left mb-4 md:mb-0">
-                  <p className="text-sm text-muted-foreground">Transportadora</p>
-                  <p className="font-semibold">{activePackage.carrier || 'Não informada'}</p>
+                <div className="mt-8 space-y-4 text-sm bg-muted/50 p-4 rounded-lg border">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Transportadora</span>
+                    <span className="font-semibold">{activePackage.carrier || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Chegou em</span>
+                    <span className="font-semibold">
+                      {activePackage.entry_date
+                        ? format(new Date(activePackage.entry_date), 'dd/MM/yyyy HH:mm')
+                        : '-'}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-center md:text-left mb-4 md:mb-0">
-                  <p className="text-sm text-muted-foreground">Chegou em</p>
-                  <p className="font-semibold">
-                    {activePackage.entry_date
-                      ? format(new Date(activePackage.entry_date), 'dd/MM/yyyy HH:mm')
-                      : '-'}
-                  </p>
-                </div>
-                <Button asChild>
+              </div>
+
+              <div className="flex flex-col items-center justify-center gap-6">
+                {activePackage.photo ? (
+                  <div className="w-full flex flex-col items-center">
+                    <p className="text-sm text-muted-foreground mb-2 font-medium">Foto do Pacote</p>
+                    <img
+                      src={getFileUrl(activePackage, activePackage.photo)}
+                      alt="Pacote"
+                      className="rounded-lg shadow-sm w-full max-w-[240px] h-48 object-cover border"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full max-w-[240px] h-48 bg-muted rounded-lg flex items-center justify-center border border-dashed">
+                    <Box className="w-10 h-10 text-muted-foreground/30" />
+                  </div>
+                )}
+
+                {activePackage.status === 'LIBERADO_RETIRADA' && activePackage.withdrawal_code && (
+                  <div className="w-full p-6 bg-success/10 rounded-xl border-2 border-success/30 text-center animate-fade-in-up">
+                    <p className="text-sm font-bold text-success mb-2 uppercase tracking-wider">
+                      Código de Retirada
+                    </p>
+                    <p className="text-4xl font-black tracking-[0.2em] text-success">
+                      {activePackage.withdrawal_code}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-3">
+                      Apresente este código na sala de encomendas
+                    </p>
+                  </div>
+                )}
+
+                <Button variant="outline" className="w-full" asChild>
                   <Link to={`/morador/encomenda/${activePackage.id}`}>
-                    Ver Detalhes <ArrowRight className="ml-2 h-4 w-4" />
+                    Ver Histórico Completo <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
               </div>
@@ -89,42 +125,39 @@ export default function MoradorDashboard() {
           </Card>
         ) : (
           <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <Box className="w-12 h-12 mb-4 opacity-50" />
-              <p>Nenhuma encomenda no momento.</p>
+            <CardContent className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <CalendarClock className="w-16 h-16 mb-4 opacity-20" />
+              <p className="text-lg">Nenhuma encomenda a caminho no momento.</p>
             </CardContent>
           </Card>
         )}
 
         {pendingPackages.length > 0 && (
-          <>
-            <h3 className="font-semibold mt-4">Outras Pendentes</h3>
+          <div className="animate-fade-in">
+            <h3 className="font-semibold mt-4 mb-2">Outras Encomendas</h3>
             <Card>
-              <CardContent className="p-0">
+              <CardContent className="p-0 divide-y">
                 {pendingPackages.map((pkg) => (
-                  <div
-                    key={pkg.id}
-                    className="flex items-center justify-between p-4 border-b last:border-0"
-                  >
+                  <div key={pkg.id} className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
                         <Package className="h-5 w-5 text-muted-foreground" />
                       </div>
                       <div>
                         <p className="font-medium">{pkg.carrier || 'Pacote'}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {pkg.entry_date ? format(new Date(pkg.entry_date), 'dd/MM HH:mm') : ''}
+                        <p className="text-xs text-muted-foreground">
+                          {pkg.status.replace(/_/g, ' ')}
                         </p>
                       </div>
                     </div>
                     <Button variant="ghost" size="sm" asChild>
-                      <Link to={`/morador/encomenda/${pkg.id}`}>Ver</Link>
+                      <Link to={`/morador/encomenda/${pkg.id}`}>Detalhes</Link>
                     </Button>
                   </div>
                 ))}
               </CardContent>
             </Card>
-          </>
+          </div>
         )}
       </div>
     </div>

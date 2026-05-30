@@ -7,8 +7,9 @@ onRecordAfterUpdateSuccess((e) => {
   }
 
   if (
-    newStatus !== 'RECEBIDO_PORTARIA' &&
-    newStatus !== 'DISPONIVEL_RETIRADA' &&
+    newStatus !== 'ENTRADA_PORTARIA' &&
+    newStatus !== 'EM_TRIAGEM' &&
+    newStatus !== 'LIBERADO_RETIRADA' &&
     newStatus !== 'RETIRADO'
   ) {
     return e.next()
@@ -57,10 +58,10 @@ onRecordAfterUpdateSuccess((e) => {
     const subject = `Update on your parcel - ${condoName}`
     let html = ''
 
-    if (newStatus === 'RECEBIDO_PORTARIA') {
+    if (newStatus === 'ENTRADA_PORTARIA') {
       html = `<p>Olá ${resident.getString('name')},</p><p>Sua encomenda (Rastreio: ${tracking}, Transportadora: ${carrier}) foi <strong>Recebida na Portaria</strong>.</p>`
-    } else if (newStatus === 'DISPONIVEL_RETIRADA') {
-      html = `<p>Olá ${resident.getString('name')},</p><p>Sua encomenda (Rastreio: ${tracking}) está <strong>Disponível para Retirada</strong>.</p><p>Por favor, dirija-se à portaria.</p>`
+    } else if (newStatus === 'LIBERADO_RETIRADA') {
+      html = `<p>Olá ${resident.getString('name')},</p><p>Sua encomenda (Rastreio: ${tracking}) está <strong>Disponível para Retirada</strong>.</p><p>Seu código de retirada é: <strong>${e.record.getString('withdrawal_code')}</strong>.</p>`
     } else if (newStatus === 'RETIRADO') {
       html = `<p>Olá ${resident.getString('name')},</p><p>Sua encomenda (Rastreio: ${tracking}) foi <strong>Retirada</strong> com sucesso. Obrigado!</p>`
     }
@@ -82,17 +83,17 @@ onRecordAfterUpdateSuccess((e) => {
       }
     }
 
-    if (phone && newStatus === 'DISPONIVEL_RETIRADA') {
+    if (phone && newStatus === 'LIBERADO_RETIRADA') {
       try {
         const url =
-          ($secrets.get('PB_INSTANCE_URL') || 'http://localhost:8090') + '/backend/v1/send-sms'
+          ($secrets.get('PB_INSTANCE_URL') || 'http://localhost:8090') + '/backend/v1/sms/send'
         $http.send({
           url: url,
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             phone: phone,
-            message: `Encomenda disponível para retirada em ${condoName}. Rastreio: ${tracking}`,
+            message: `Encomenda disponível para retirada em ${condoName}. Código: ${e.record.getString('withdrawal_code')}`,
           }),
           timeout: 5,
         })

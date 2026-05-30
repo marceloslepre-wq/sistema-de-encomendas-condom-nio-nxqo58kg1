@@ -42,9 +42,9 @@ export function AppSidebar() {
         ]
       case 'portaria':
         return [
-          { title: 'Registrar Encomenda', url: '/portaria/registro', icon: Package },
-          { title: 'Ativas', url: '#', icon: ClipboardList },
-          { title: 'Imprimir Etiqueta', url: '/portaria/etiqueta', icon: QrCode },
+          { title: 'Recepção (Lobby)', url: '/portaria/registro', icon: Package },
+          { title: 'Triagem & Etiqueta', url: '/sala/triagem', icon: ClipboardList },
+          { title: 'Validar Retirada', url: '/sala/retirada', icon: QrCode },
         ]
       case 'morador':
         return [

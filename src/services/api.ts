@@ -30,6 +30,9 @@ export const getParcels = () =>
 
 export const createParcel = (data: any) => pb.collection('parcels').create(data)
 export const updateParcel = (id: string, data: any) => pb.collection('parcels').update(id, data)
+export const updateParcelWithFormData = (id: string, formData: FormData) =>
+  pb.collection('parcels').update(id, formData)
+export const getFileUrl = (record: any, filename: string) => pb.files.getUrl(record, filename)
 
 export const sendSms = (phone: string) =>
   pb.send<{ success: boolean; mockCode?: string }>('/backend/v1/sms/send', {
@@ -56,6 +59,11 @@ export type Parcel = RecordModel & {
   status: string
   entry_date: string
   exit_date?: string
+  volumes?: number
+  photo?: string
+  withdrawal_code?: string
+  shelf_location?: string
+  volume_type?: string
 }
 
 export type Unit = RecordModel & {

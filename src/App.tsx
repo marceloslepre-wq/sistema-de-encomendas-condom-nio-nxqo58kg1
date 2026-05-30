@@ -18,9 +18,10 @@ import GestorRelatorios from './pages/gestor/Relatorios'
 import GestorConfiguracoes from './pages/gestor/Configuracoes'
 import GestorPermissoes from './pages/gestor/Permissoes'
 
-// Portaria Pages
+// Portaria / Sala Pages
 import PortariaRegistro from './pages/portaria/Registro'
-import PortariaEtiqueta from './pages/portaria/Etiqueta'
+import SalaTriagem from './pages/sala/Triagem'
+import SalaRetirada from './pages/sala/Retirada'
 
 // Morador Pages
 import MoradorDashboard from './pages/morador/Dashboard'
@@ -128,10 +129,18 @@ const App = () => (
               }
             />
             <Route
-              path="/portaria/etiqueta"
+              path="/sala/triagem"
               element={
                 <ProtectedRoute requiredRole="portaria">
-                  <PortariaEtiqueta />
+                  <SalaTriagem />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sala/retirada"
+              element={
+                <ProtectedRoute requiredRole="portaria">
+                  <SalaRetirada />
                 </ProtectedRoute>
               }
             />
