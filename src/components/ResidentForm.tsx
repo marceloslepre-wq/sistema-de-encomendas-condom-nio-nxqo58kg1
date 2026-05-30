@@ -128,7 +128,14 @@ export function ResidentForm({
         <div className="space-y-2">
           <Label>Torre / Bloco</Label>
           {fixedUnit ? (
-            <Input value={`Torre ${fixedUnit.tower}`} disabled />
+            <Select disabled value={fixedUnit.tower}>
+              <SelectTrigger className="bg-neutralBg">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={fixedUnit.tower}>Torre {fixedUnit.tower}</SelectItem>
+              </SelectContent>
+            </Select>
           ) : (
             <Select
               value={selectedTower}
@@ -153,7 +160,14 @@ export function ResidentForm({
         <div className="space-y-2">
           <Label>Apartamento</Label>
           {fixedUnit ? (
-            <Input value={`Apto ${fixedUnit.apartment}`} disabled />
+            <Select disabled value={fixedUnit.apartment}>
+              <SelectTrigger className="bg-neutralBg">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={fixedUnit.apartment}>Apto {fixedUnit.apartment}</SelectItem>
+              </SelectContent>
+            </Select>
           ) : (
             <Select value={selectedApt} onValueChange={setSelectedApt} disabled={!selectedTower}>
               <SelectTrigger>

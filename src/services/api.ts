@@ -9,6 +9,9 @@ export const getCondo = async () => {
 export const updateCondo = (id: string, data: any) => pb.collection('condos').update(id, data)
 
 export const getUnits = () => pb.collection('units').getFullList({ sort: 'tower,apartment' })
+export const createUnit = (data: any) => pb.collection('units').create(data)
+export const updateUnit = (id: string, data: any) => pb.collection('units').update(id, data)
+export const deleteUnit = (id: string) => pb.collection('units').delete(id)
 
 export const getUsers = () =>
   pb.collection('users').getFullList({ expand: 'unit_id', sort: '-created' })

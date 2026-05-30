@@ -12,6 +12,7 @@ import Cadastro from './pages/Cadastro'
 // Gestor Pages
 import GestorDashboard from './pages/gestor/Dashboard'
 import GestorMoradores from './pages/gestor/Moradores'
+import GestorUnidades from './pages/gestor/Unidades'
 import GestorLinks from './pages/gestor/Links'
 import GestorRelatorios from './pages/gestor/Relatorios'
 import GestorConfiguracoes from './pages/gestor/Configuracoes'
@@ -25,6 +26,7 @@ import PortariaEtiqueta from './pages/portaria/Etiqueta'
 import MoradorDashboard from './pages/morador/Dashboard'
 import MoradorHistorico from './pages/morador/Historico'
 import MoradorDetalhes from './pages/morador/Detalhes'
+import MoradorDados from './pages/morador/Dados'
 
 const ProtectedRoute = ({
   children,
@@ -65,6 +67,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="gestor">
                   <GestorDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gestor/unidades"
+              element={
+                <ProtectedRoute requiredRole="gestor">
+                  <GestorUnidades />
                 </ProtectedRoute>
               }
             />
@@ -147,6 +157,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="morador">
                   <MoradorDetalhes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/morador/dados"
+              element={
+                <ProtectedRoute requiredRole="morador">
+                  <MoradorDados />
                 </ProtectedRoute>
               }
             />

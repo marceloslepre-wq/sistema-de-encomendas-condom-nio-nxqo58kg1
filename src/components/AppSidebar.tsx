@@ -11,6 +11,7 @@ import {
   User,
   FileText,
   Shield,
+  Home,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import {
@@ -32,6 +33,7 @@ export function AppSidebar() {
       case 'gestor':
         return [
           { title: 'Dashboard', url: '/gestor/dashboard', icon: BarChart3 },
+          { title: 'Unidades', url: '/gestor/unidades', icon: Home },
           { title: 'Moradores', url: '/gestor/moradores', icon: Users },
           { title: 'Gerar Links', url: '/gestor/links', icon: LinkIcon },
           { title: 'Relatórios', url: '/gestor/relatorios', icon: FileText },
@@ -48,7 +50,7 @@ export function AppSidebar() {
         return [
           { title: 'Minhas Encomendas', url: '/morador/dashboard', icon: Package },
           { title: 'Histórico', url: '/morador/historico', icon: History },
-          { title: 'Meus Dados', url: '#', icon: User },
+          { title: 'Meus Dados', url: '/morador/dados', icon: User },
         ]
       default:
         return []
