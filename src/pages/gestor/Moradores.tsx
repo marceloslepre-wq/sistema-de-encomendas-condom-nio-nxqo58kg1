@@ -66,8 +66,8 @@ export default function GestorMoradores() {
       const [userData, unitData] = await Promise.all([getUsers(), getUnits()])
       setUsers(userData as AppUser[])
       setUnits(unitData as Unit[])
-    } catch (e) {
-      console.error(e)
+    } catch (e: any) {
+      console.error('Failed to load users or units:', e, e.response)
     } finally {
       setLoading(false)
     }
@@ -84,10 +84,12 @@ export default function GestorMoradores() {
         } else {
           payload.passwordConfirm = payload.confirm
         }
+        delete payload.confirm
         await updateUser(editingUser.id, payload)
         toast({ title: 'Morador atualizado com sucesso.' })
       } else {
         payload.passwordConfirm = payload.confirm
+        delete payload.confirm
         payload.status = 'Ativo'
         await createUser(payload)
         toast({ title: 'Morador criado com sucesso.' })
@@ -95,9 +97,14 @@ export default function GestorMoradores() {
       setIsFormOpen(false)
       loadData()
     } catch (e: any) {
+      console.error('Failed to save resident:', e, e.response)
       toast({
         title: 'Erro ao salvar',
-        description: e.message || 'Verifique os dados informados. CPF pode já estar em uso.',
+        description:
+          e.response?.data?.email?.message ||
+          e.response?.data?.cpf?.message ||
+          e.message ||
+          'Verifique os dados informados. CPF ou Email pode já estar em uso.',
         variant: 'destructive',
       })
     } finally {
@@ -112,6 +119,7 @@ export default function GestorMoradores() {
       toast({ title: 'Morador removido com sucesso.' })
       loadData()
     } catch (e: any) {
+      console.error('Failed to delete user:', e, e.response)
       toast({
         title: 'Erro',
         description: 'Não foi possível remover o morador.',
@@ -144,7 +152,8 @@ export default function GestorMoradores() {
       await updateUser(user.id, { status: newStatus })
       setUsers(users.map((u) => (u.id === user.id ? { ...u, status: newStatus } : u)))
       toast({ title: 'Status atualizado', description: `${user.name} agora está ${newStatus}.` })
-    } catch (e) {
+    } catch (e: any) {
+      console.error('Failed to update status:', e, e.response)
       toast({
         title: 'Erro',
         description: 'Não foi possível atualizar o status.',

@@ -76,6 +76,7 @@ export default function GestorTransportadoras() {
       setIsFormOpen(false)
       loadData()
     } catch (err: any) {
+      console.error('Failed to save carrier:', err, err.response)
       toast({
         title: 'Erro ao salvar',
         description: err.message || 'Verifique os dados.',
@@ -94,6 +95,7 @@ export default function GestorTransportadoras() {
       toast({ title: 'Transportadora removida com sucesso.' })
       loadData()
     } catch (e: any) {
+      console.error('Failed to delete carrier:', e, e.response)
       toast({
         title: 'Erro',
         description: 'Não foi possível remover a transportadora.',

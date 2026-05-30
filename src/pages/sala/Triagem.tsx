@@ -56,7 +56,8 @@ export default function SalaTriagem() {
       setShelfLocation(parcel.shelf_location || 'Prateleira A - Nível 1')
       setPhoto(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
-    } catch (err) {
+    } catch (err: any) {
+      console.error('Failed to start triage:', err, err.response)
       toast({ title: 'Erro', description: 'Falha ao iniciar triagem.', variant: 'destructive' })
     }
   }
@@ -80,7 +81,8 @@ export default function SalaTriagem() {
       toast({ title: 'Sucesso', description: 'Encomenda liberada para retirada.' })
       setSelectedParcel(null)
       loadData()
-    } catch (err) {
+    } catch (err: any) {
+      console.error('Failed to finish triage:', err, err.response)
       toast({ title: 'Erro', description: 'Falha ao finalizar.', variant: 'destructive' })
     } finally {
       setIsSubmitting(false)

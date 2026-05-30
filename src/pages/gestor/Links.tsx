@@ -59,7 +59,8 @@ export default function GestorLinks() {
       setLinks([linkWithUnit, ...links])
       toast({ title: 'Link gerado com sucesso!', description: 'O link é válido por 48 horas.' })
       setSelectedApt('')
-    } catch (err) {
+    } catch (err: any) {
+      console.error('Failed to generate link:', err, err.response)
       toast({ title: 'Erro', description: 'Falha ao gerar link.', variant: 'destructive' })
     }
   }

@@ -54,12 +54,15 @@ export default function GestorUnidades() {
 
   const loadData = async () => {
     try {
-      const data = await getUnits()
-      const condoData = await getCondo()
+      let condoData = await getCondo()
+      if (!condoData) {
+        condoData = await createCondo({ name: 'Condomínio Principal' })
+      }
       if (condoData) setCondoId(condoData.id)
+      const data = await getUnits()
       setUnits(data as Unit[])
-    } catch (e) {
-      console.error(e)
+    } catch (e: any) {
+      console.error('Failed to load units or condo:', e, e.response)
     } finally {
       setLoading(false)
     }
@@ -67,6 +70,16 @@ export default function GestorUnidades() {
 
   const handleSaveUnit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!condoId) {
+      toast({
+        title: 'Erro de Validação',
+        description: 'ID do Condomínio não encontrado. Não é possível salvar a unidade.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setSubmitting(true)
     try {
       if (editingUnit) {
@@ -79,6 +92,7 @@ export default function GestorUnidades() {
       setIsFormOpen(false)
       loadData()
     } catch (err: any) {
+      console.error('Failed to save unit:', err, err.response)
       toast({
         title: 'Erro ao salvar',
         description: err.message || 'Verifique os dados.',
@@ -97,6 +111,7 @@ export default function GestorUnidades() {
       toast({ title: 'Unidade removida com sucesso.' })
       loadData()
     } catch (e: any) {
+      console.error('Failed to delete unit:', e, e.response)
       toast({
         title: 'Erro',
         description: 'Não foi possível remover a unidade.',

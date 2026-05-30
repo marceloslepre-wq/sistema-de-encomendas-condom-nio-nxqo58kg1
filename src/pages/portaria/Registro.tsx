@@ -169,14 +169,14 @@ export default function PortariaRegistro() {
     try {
       await createParcel({
         unit_id: unitId,
-        resident_id: residentId || null,
+        resident_id: residentId || '',
         volumes: Number(volumes),
         carrier,
         courier_name: courierName,
         courier_cpf: courierCpf,
         status: 'ENTRADA_PORTARIA',
         entry_date: new Date().toISOString(),
-        porter_id: user?.id,
+        porter_id: user?.id || '',
       })
 
       setIsSuccess(true)
@@ -186,6 +186,7 @@ export default function PortariaRegistro() {
         className: 'bg-success text-white',
       })
     } catch (err: any) {
+      console.error('Failed to create parcel:', err, err.response)
       toast({
         title: 'Erro',
         description: 'Falha ao registrar encomenda.',

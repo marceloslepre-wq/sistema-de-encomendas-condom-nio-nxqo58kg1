@@ -6,6 +6,8 @@ export const getCondo = async () => {
   return records[0]
 }
 
+export const createCondo = (data: any) => pb.collection('condos').create(data)
+
 export const updateCondo = (id: string, data: any) => pb.collection('condos').update(id, data)
 
 export const getUnits = () => pb.collection('units').getFullList({ sort: 'tower,apartment' })

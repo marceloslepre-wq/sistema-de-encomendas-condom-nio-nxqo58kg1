@@ -108,7 +108,7 @@ export function ResidentForm({
 
     if (!unit_id) {
       return toast({
-        title: 'Erro',
+        title: 'Erro de Validação',
         description: 'Selecione a Torre e o Apartamento.',
         variant: 'destructive',
       })
