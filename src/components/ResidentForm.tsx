@@ -116,6 +116,8 @@ export function ResidentForm({
 
     onSubmit({
       ...formData,
+      cpf: formData.cpf.replace(/\D/g, ''),
+      phone: formData.phone.replace(/\D/g, ''),
       unit_id,
     })
   }

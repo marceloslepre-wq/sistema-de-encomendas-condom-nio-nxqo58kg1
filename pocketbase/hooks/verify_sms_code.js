@@ -9,13 +9,15 @@ routerAdd(
 
     const now = new Date().toISOString()
 
+    const phoneNum = String(body.phone || '').replace(/\D/g, '')
+
     const records = $app.findRecordsByFilter(
       'sms_verifications',
       'phone = {:phone} && code = {:code} && used = false && expires_at > {:now}',
       '-created',
       1,
       0,
-      { phone: body.phone, code: body.code, now: now },
+      { phone: phoneNum, code: body.code, now: now },
     )
 
     if (records.length === 0) {

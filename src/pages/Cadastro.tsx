@@ -52,6 +52,7 @@ export default function Cadastro() {
         role: 'morador',
         status: 'Ativo',
         unit_id: data.unit_id,
+        token: token,
       })
       await pb.collection('users').authWithPassword(data.email, data.password)
       await updateInvitationLink(linkData.id, { used: true })

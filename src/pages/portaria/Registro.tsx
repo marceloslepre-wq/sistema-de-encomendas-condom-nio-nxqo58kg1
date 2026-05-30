@@ -112,10 +112,11 @@ export default function PortariaRegistro() {
   }, [unitId, carrier, volumes, courierName, courierCpf, isSmsVerified])
 
   const handleSendSms = async () => {
-    if (courierPhone.length < 14) return
+    const rawPhone = courierPhone.replace(/\D/g, '')
+    if (rawPhone.length < 10) return
     setIsSmsSending(true)
     try {
-      const res = await sendSms(courierPhone)
+      const res = await sendSms(rawPhone)
       if (res.success) {
         setIsSmsSent(true)
         toast({
@@ -142,9 +143,10 @@ export default function PortariaRegistro() {
 
   const handleVerifySms = async () => {
     if (!smsCode) return
+    const rawPhone = courierPhone.replace(/\D/g, '')
     setIsSmsVerifying(true)
     try {
-      await verifySms(courierPhone, smsCode)
+      await verifySms(rawPhone, smsCode)
       setIsSmsVerified(true)
       toast({
         title: 'Entregador Verificado',
@@ -173,7 +175,7 @@ export default function PortariaRegistro() {
         volumes: Number(volumes),
         carrier,
         courier_name: courierName,
-        courier_cpf: courierCpf,
+        courier_cpf: courierCpf.replace(/\D/g, ''),
         status: 'ENTRADA_PORTARIA',
         entry_date: new Date().toISOString(),
         porter_id: user?.id || '',

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-30T13:59:41.142Z",
+  "generatedAt": "2026-05-30T14:49:14.098Z",
   "collections": [
     {
       "name": "users",
@@ -7,7 +7,7 @@
       "apiRules": {
         "list": "id = @request.auth.id || @request.auth.role = 'portaria' || @request.auth.role = 'gestor' || @request.auth.role = 'triagem'",
         "view": "id = @request.auth.id || @request.auth.role = 'portaria' || @request.auth.role = 'gestor' || @request.auth.role = 'triagem'",
-        "create": "@request.auth.role = 'gestor'",
+        "create": "",
         "update": "id = @request.auth.id || @request.auth.role = 'gestor'",
         "delete": "id = @request.auth.id || @request.auth.role = 'gestor'"
       },
@@ -75,7 +75,8 @@
       "indexes": [
         "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
         "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''",
-        "CREATE UNIQUE INDEX `idx_users_cpf` ON `users` (cpf) WHERE cpf != ''"
+        "CREATE UNIQUE INDEX `idx_users_cpf` ON `users` (cpf) WHERE cpf != ''",
+        "CREATE INDEX `idx_users_phone` ON `users` (phone)"
       ]
     },
     {
@@ -472,7 +473,7 @@
           "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_sms_phone` ON `sms_verifications` (phone)"]
     },
     {
       "name": "carriers",

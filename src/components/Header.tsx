@@ -6,18 +6,19 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useNavigate } from 'react-router-dom'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 
 export function Header() {
-  const { role, logout } = useAuth()
+  const { user, role, logout } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = () => {
     logout()
-    navigate('/')
+    navigate('/', { replace: true })
   }
 
   if (!role) return null
@@ -47,19 +48,27 @@ export function Header() {
             >
               <Avatar className="h-11 w-11">
                 <AvatarFallback className="bg-primary text-primary-foreground">
-                  {role.charAt(0).toUpperCase()}
+                  {user?.name?.charAt(0).toUpperCase() || role.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem className="flex items-center gap-2">
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="flex items-center justify-start gap-2 p-2">
+              <div className="flex flex-col space-y-1 leading-none">
+                {user?.name && <p className="font-medium">{user.name}</p>}
+                <p className="text-sm text-muted-foreground capitalize">{role}</p>
+              </div>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
               <User className="h-4 w-4" />
-              <span>Perfil ({role})</span>
+              <span>Meu Perfil</span>
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}
-              className="flex items-center gap-2 text-destructive focus:text-destructive"
+              className="flex items-center gap-2 text-destructive focus:text-destructive cursor-pointer"
             >
               <LogOut className="h-4 w-4" />
               <span>Sair</span>
