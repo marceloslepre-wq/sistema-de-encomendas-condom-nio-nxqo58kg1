@@ -175,9 +175,12 @@ export default function GestorUsuarios() {
         unit_id: formData.role === 'morador' ? formData.unit_id : '',
       }
 
-      if (formData.password) {
+      if (formData.password && formData.password.trim() !== '') {
         dataToSave.password = formData.password
         dataToSave.passwordConfirm = formData.password
+      } else {
+        delete dataToSave.password
+        delete dataToSave.passwordConfirm
       }
 
       if (editingUser) {

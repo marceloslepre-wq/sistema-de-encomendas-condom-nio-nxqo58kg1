@@ -18,7 +18,17 @@ export const deleteUnit = (id: string) => pb.collection('units').delete(id)
 export const getUsers = () =>
   pb.collection('users').getFullList({ expand: 'unit_id', sort: '-created' })
 
-export const updateUser = (id: string, data: any) => pb.collection('users').update(id, data)
+export const updateUser = (id: string, data: any) => {
+  if (pb.authStore.record?.role === 'gestor') {
+    const isFormData = typeof FormData !== 'undefined' && data instanceof FormData
+    return pb.send(`/backend/v1/admin/users/${id}`, {
+      method: 'PATCH',
+      body: isFormData ? data : JSON.stringify(data),
+      headers: isFormData ? undefined : { 'Content-Type': 'application/json' },
+    })
+  }
+  return pb.collection('users').update(id, data)
+}
 export const createUser = (data: any) => pb.collection('users').create(data)
 export const deleteUser = (id: string) => pb.collection('users').delete(id)
 
