@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Check, Copy } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { getParcelById, getParcelAuditLogs, Parcel } from '@/services/api'
+import { getParcelById, getParcelAuditLogs, Parcel, getFileUrl } from '@/services/api'
 import useRealtime from '@/hooks/use-realtime'
 import { format } from 'date-fns'
 
@@ -76,6 +76,16 @@ export default function MoradorDetalhes() {
               <Copy className="h-4 w-4 mr-2" /> Copiar Código
             </Button>
           </div>
+        </Card>
+      )}
+
+      {pkg.photo && (
+        <Card className="overflow-hidden shadow-sm">
+          <img
+            src={getFileUrl(pkg, pkg.photo)}
+            alt="Foto do pacote"
+            className="w-full max-h-72 object-cover"
+          />
         </Card>
       )}
 

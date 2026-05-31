@@ -12,7 +12,14 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { Package, Camera, Printer, CheckCircle2, Loader2, ArrowRight } from 'lucide-react'
-import { getParcels, updateParcelWithFormData, updateParcel, Parcel } from '@/services/api'
+import {
+  getParcels,
+  updateParcelWithFormData,
+  updateParcel,
+  Parcel,
+  getVolumeTypes,
+  getShelfLocations,
+} from '@/services/api'
 import useRealtime from '@/hooks/use-realtime'
 import { format } from 'date-fns'
 
@@ -22,17 +29,23 @@ export default function SalaTriagem() {
   const [selectedParcel, setSelectedParcel] = useState<Parcel | null>(null)
 
   const [trackingCode, setTrackingCode] = useState('')
-  const [volumeType, setVolumeType] = useState('Caixa Média')
-  const [shelfLocation, setShelfLocation] = useState('Prateleira A - Nível 1')
+  const [volumeType, setVolumeType] = useState('')
+  const [shelfLocation, setShelfLocation] = useState('')
   const [photo, setPhoto] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const [volumeTypes, setVolumeTypes] = useState<any[]>([])
+  const [shelfLocations, setShelfLocations] = useState<any[]>([])
+
   const loadData = async () => {
     try {
       const data = await getParcels()
       setParcels(data.filter((p) => p.status === 'ENTRADA_PORTARIA' || p.status === 'EM_TRIAGEM'))
+      const [vTypes, sLocs] = await Promise.all([getVolumeTypes(), getShelfLocations()])
+      setVolumeTypes(vTypes)
+      setShelfLocations(sLocs)
     } catch {
       /* intentionally ignored */
     }
@@ -52,8 +65,10 @@ export default function SalaTriagem() {
         setSelectedParcel(parcel)
       }
       setTrackingCode(parcel.tracking_code || '')
-      setVolumeType(parcel.volume_type || 'Caixa Média')
-      setShelfLocation(parcel.shelf_location || 'Prateleira A - Nível 1')
+      setVolumeType(parcel.volume_type || (volumeTypes.length > 0 ? volumeTypes[0].name : ''))
+      setShelfLocation(
+        parcel.shelf_location || (shelfLocations.length > 0 ? shelfLocations[0].name : ''),
+      )
       setPhoto(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
     } catch (err: any) {
@@ -157,14 +172,14 @@ export default function SalaTriagem() {
                       <Label>Tipo de Volume</Label>
                       <Select value={volumeType} onValueChange={setVolumeType}>
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Envelope">Envelope</SelectItem>
-                          <SelectItem value="Caixa Pequena">Caixa Pequena</SelectItem>
-                          <SelectItem value="Caixa Média">Caixa Média</SelectItem>
-                          <SelectItem value="Caixa Grande">Caixa Grande</SelectItem>
-                          <SelectItem value="Outros">Outros</SelectItem>
+                          {volumeTypes.map((v) => (
+                            <SelectItem key={v.id} value={v.name}>
+                              {v.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -172,17 +187,14 @@ export default function SalaTriagem() {
                       <Label>Localização na Sala</Label>
                       <Select value={shelfLocation} onValueChange={setShelfLocation}>
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Prateleira A - Nível 1">
-                            Prateleira A - Nível 1
-                          </SelectItem>
-                          <SelectItem value="Prateleira B - Nível 2">
-                            Prateleira B - Nível 2
-                          </SelectItem>
-                          <SelectItem value="Gaveta de Envelopes">Gaveta de Envelopes</SelectItem>
-                          <SelectItem value="Chão (Grande Volume)">Chão (Grande Volume)</SelectItem>
+                          {shelfLocations.map((s) => (
+                            <SelectItem key={s.id} value={s.name}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>

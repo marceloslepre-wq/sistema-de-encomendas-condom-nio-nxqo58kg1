@@ -15,17 +15,7 @@ routerAdd(
       throw new NotFoundError('Usuário não encontrado.')
     }
 
-    let rawBody = e.requestInfo().body || {}
-    let body = rawBody
-    if (typeof rawBody === 'string') {
-      try {
-        body = JSON.parse(rawBody)
-      } catch (err) {
-        throw new BadRequestError('Payload JSON inválido.', {
-          geral: new ValidationError('validation_invalid_json', 'O formato do JSON é inválido.'),
-        })
-      }
-    }
+    let body = e.requestInfo().body || {}
 
     if (body.email !== undefined && body.email !== record.email()) {
       try {
@@ -61,7 +51,6 @@ routerAdd(
       'status',
       'unit_id',
       'autoriza_retirada_terceiros',
-      'avatar',
     ]
 
     for (const field of allowedFields) {

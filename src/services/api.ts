@@ -43,6 +43,26 @@ export const createLink = (data: any) => pb.collection('invitation_links').creat
 export const getParcels = () =>
   pb.collection('parcels').getFullList({ expand: 'unit_id,resident_id', sort: '-created' })
 
+export const getVolumeTypes = () => pb.collection('volume_types').getFullList()
+export const createVolumeType = (data: any) => pb.collection('volume_types').create(data)
+export const updateVolumeType = (id: string, data: any) =>
+  pb.collection('volume_types').update(id, data)
+export const deleteVolumeType = (id: string) => pb.collection('volume_types').delete(id)
+
+export const getShelfLocations = () => pb.collection('shelf_locations').getFullList()
+export const createShelfLocation = (data: any) => pb.collection('shelf_locations').create(data)
+export const updateShelfLocation = (id: string, data: any) =>
+  pb.collection('shelf_locations').update(id, data)
+export const deleteShelfLocation = (id: string) => pb.collection('shelf_locations').delete(id)
+
+export const getNotificationTemplates = () => pb.collection('notification_templates').getFullList()
+export const createNotificationTemplate = (data: any) =>
+  pb.collection('notification_templates').create(data)
+export const updateNotificationTemplate = (id: string, data: any) =>
+  pb.collection('notification_templates').update(id, data)
+export const deleteNotificationTemplate = (id: string) =>
+  pb.collection('notification_templates').delete(id)
+
 export const createParcel = (data: any) => pb.collection('parcels').create(data)
 export const updateParcel = (id: string, data: any) => pb.collection('parcels').update(id, data)
 export const updateParcelWithFormData = (id: string, formData: FormData) =>
