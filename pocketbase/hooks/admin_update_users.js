@@ -4,12 +4,44 @@ routerAdd(
   (e) => {
     const auth = e.auth
     if (!auth || auth.getString('role') !== 'gestor') {
-      return e.forbiddenError('Acesso negado. Apenas gestores podem realizar esta ação.')
+      throw new ForbiddenError('Acesso negado. Apenas gestores podem realizar esta ação.')
     }
 
     const id = e.request.pathValue('id')
-    const record = $app.findRecordById('users', id)
+    let record
+    try {
+      record = $app.findRecordById('users', id)
+    } catch (err) {
+      throw new NotFoundError('Usuário não encontrado.')
+    }
+
     const body = e.requestInfo().body || {}
+
+    if (body.email !== undefined && body.email !== record.email()) {
+      try {
+        const existing = $app.findAuthRecordByEmail('users', body.email)
+        if (existing && existing.id !== record.id) {
+          throw new BadRequestError('E-mail já cadastrado.', {
+            email: new ValidationError('validation_not_unique', 'Este e-mail já está em uso.'),
+          })
+        }
+      } catch (err) {
+        if (err instanceof BadRequestError) throw err
+      }
+    }
+
+    if (body.cpf !== undefined && body.cpf !== record.getString('cpf') && body.cpf !== '') {
+      try {
+        const existing = $app.findFirstRecordByData('users', 'cpf', body.cpf)
+        if (existing && existing.id !== record.id) {
+          throw new BadRequestError('CPF já cadastrado.', {
+            cpf: new ValidationError('validation_not_unique', 'Este CPF já está em uso.'),
+          })
+        }
+      } catch (err) {
+        if (err instanceof BadRequestError) throw err
+      }
+    }
 
     const allowedFields = [
       'name',
@@ -33,6 +65,14 @@ routerAdd(
     }
 
     if (body.password && String(body.password).trim() !== '') {
+      if (body.passwordConfirm && body.password !== body.passwordConfirm) {
+        throw new BadRequestError('As senhas não coincidem.', {
+          passwordConfirm: new ValidationError(
+            'validation_password_mismatch',
+            'As senhas não coincidem.',
+          ),
+        })
+      }
       record.setPassword(String(body.password))
     }
 
@@ -41,8 +81,17 @@ routerAdd(
       record.set('avatar', avatarFiles[0])
     }
 
-    $app.save(record)
-    return e.json(200, record)
+    try {
+      $app.save(record)
+      return e.json(200, record)
+    } catch (err) {
+      throw new BadRequestError(
+        'Erro de validação ao salvar o usuário. Verifique os dados informados.',
+        {
+          geral: new ValidationError('validation_error', err.message || 'Erro de processamento.'),
+        },
+      )
+    }
   },
   $apis.requireAuth(),
 )
