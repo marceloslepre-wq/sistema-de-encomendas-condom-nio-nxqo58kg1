@@ -20,6 +20,7 @@ interface ResidentFormProps {
   onSubmit: (data: any) => Promise<void>
   onCancel?: () => void
   submitting?: boolean
+  fieldErrors?: Record<string, string>
 }
 
 export function ResidentForm({
@@ -29,6 +30,7 @@ export function ResidentForm({
   onSubmit,
   onCancel,
   submitting,
+  fieldErrors = {},
 }: ResidentFormProps) {
   const { toast } = useToast()
 
@@ -195,6 +197,7 @@ export function ResidentForm({
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           placeholder="Ex: João da Silva"
         />
+        {fieldErrors.name && <p className="text-xs text-destructive">{fieldErrors.name}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -207,6 +210,7 @@ export function ResidentForm({
             placeholder="000.000.000-00"
             maxLength={14}
           />
+          {fieldErrors.cpf && <p className="text-xs text-destructive">{fieldErrors.cpf}</p>}
         </div>
         <div className="space-y-2">
           <Label>Celular</Label>
@@ -217,6 +221,7 @@ export function ResidentForm({
             placeholder="(00) 00000-0000"
             maxLength={15}
           />
+          {fieldErrors.phone && <p className="text-xs text-destructive">{fieldErrors.phone}</p>}
         </div>
       </div>
 
@@ -229,6 +234,7 @@ export function ResidentForm({
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           placeholder="joao@exemplo.com"
         />
+        {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -240,6 +246,9 @@ export function ResidentForm({
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           />
+          {fieldErrors.password && (
+            <p className="text-xs text-destructive">{fieldErrors.password}</p>
+          )}
           {(!isEdit || formData.password) && (
             <div className="space-y-1 mt-2">
               <Progress value={pwdScore} className="h-1.5" />

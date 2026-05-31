@@ -204,7 +204,8 @@ export default function GestorUsuarios() {
     } catch (err: any) {
       const errors = extractFieldErrors(err)
       setFieldErrors(errors)
-      toast({ title: 'Erro', description: 'Falha ao salvar usuário.', variant: 'destructive' })
+      const errorMsg = Object.values(errors)[0] || 'Falha ao salvar usuário. Verifique os dados.'
+      toast({ title: 'Erro', description: errorMsg, variant: 'destructive' })
     } finally {
       setIsSubmitting(false)
     }

@@ -42,6 +42,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { ResidentForm } from '@/components/ResidentForm'
+import { extractFieldErrors } from '@/lib/pocketbase/errors'
 
 export default function GestorMoradores() {
   const [users, setUsers] = useState<AppUser[]>([])
@@ -53,6 +54,7 @@ export default function GestorMoradores() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<AppUser | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState<AppUser | null>(null)
@@ -75,6 +77,7 @@ export default function GestorMoradores() {
 
   const handleSaveUser = async (data: any) => {
     setSubmitting(true)
+    setFieldErrors({})
     try {
       const payload = { ...data, role: 'morador' }
       if (editingUser) {
@@ -98,13 +101,14 @@ export default function GestorMoradores() {
       loadData()
     } catch (e: any) {
       console.error('Failed to save resident:', e, e.response)
+      const errors = extractFieldErrors(e)
+      setFieldErrors(errors)
+      const errorMsg =
+        Object.values(errors)[0] ||
+        'Verifique os dados informados. CPF ou Email pode já estar em uso.'
       toast({
         title: 'Erro ao salvar',
-        description:
-          e.response?.data?.email?.message ||
-          e.response?.data?.cpf?.message ||
-          e.message ||
-          'Verifique os dados informados. CPF ou Email pode já estar em uso.',
+        description: errorMsg,
         variant: 'destructive',
       })
     } finally {
@@ -133,11 +137,13 @@ export default function GestorMoradores() {
 
   const openNewForm = () => {
     setEditingUser(null)
+    setFieldErrors({})
     setIsFormOpen(true)
   }
 
   const openEditForm = (user: AppUser) => {
     setEditingUser(user)
+    setFieldErrors({})
     setIsFormOpen(true)
   }
 
@@ -390,6 +396,7 @@ export default function GestorMoradores() {
             onSubmit={handleSaveUser}
             onCancel={() => setIsFormOpen(false)}
             submitting={submitting}
+            fieldErrors={fieldErrors}
           />
         </DialogContent>
       </Dialog>

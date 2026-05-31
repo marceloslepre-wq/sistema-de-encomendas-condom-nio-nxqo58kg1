@@ -15,7 +15,17 @@ routerAdd(
       throw new NotFoundError('Usuário não encontrado.')
     }
 
-    const body = e.requestInfo().body || {}
+    let rawBody = e.requestInfo().body || {}
+    let body = rawBody
+    if (typeof rawBody === 'string') {
+      try {
+        body = JSON.parse(rawBody)
+      } catch (err) {
+        throw new BadRequestError('Payload JSON inválido.', {
+          geral: new ValidationError('validation_invalid_json', 'O formato do JSON é inválido.'),
+        })
+      }
+    }
 
     if (body.email !== undefined && body.email !== record.email()) {
       try {

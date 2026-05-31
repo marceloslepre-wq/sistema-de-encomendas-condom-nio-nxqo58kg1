@@ -20,11 +20,9 @@ export const getUsers = () =>
 
 export const updateUser = (id: string, data: any) => {
   if (pb.authStore.record?.role === 'gestor') {
-    const isFormData = typeof FormData !== 'undefined' && data instanceof FormData
     return pb.send(`/backend/v1/admin/users/${id}`, {
       method: 'PATCH',
-      body: isFormData ? data : JSON.stringify(data),
-      headers: isFormData ? undefined : { 'Content-Type': 'application/json' },
+      body: data,
     })
   }
   return pb.collection('users').update(id, data)
