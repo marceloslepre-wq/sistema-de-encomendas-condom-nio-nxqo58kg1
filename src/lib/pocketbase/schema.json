@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-01T16:07:20.491Z",
+  "generatedAt": "2026-06-01T16:10:22.066Z",
   "collections": [
     {
       "name": "users",
@@ -647,7 +647,7 @@
       "apiRules": {
         "list": "@request.auth.role = 'gestor' || @request.auth.role = 'portaria'",
         "view": "@request.auth.role = 'gestor' || @request.auth.role = 'portaria'",
-        "create": null,
+        "create": "@request.auth.role = 'portaria' || @request.auth.role = 'gestor'",
         "update": null,
         "delete": null
       },
@@ -697,9 +697,9 @@
       "name": "whatsapp_verifications",
       "type": "base",
       "apiRules": {
-        "list": null,
-        "view": null,
-        "create": null,
+        "list": "@request.auth.role = 'portaria' || @request.auth.role = 'gestor'",
+        "view": "@request.auth.role = 'portaria' || @request.auth.role = 'gestor'",
+        "create": "@request.auth.id != ''",
         "update": null,
         "delete": null
       },
