@@ -29,37 +29,55 @@ routerAdd(
       $app.save(verif)
     }
 
-    const instanceId = $secrets.get('ZAPI_INSTANCE_ID') || '3F3FE6AB8AF55107542D6627BE24201D'
-    const token = $secrets.get('ZAPI_TOKEN') || 'D41BBA7471F8F494D528DB60'
+    const instanceId = $os.getenv('ZAPI_INSTANCE_ID') || $secrets.get('ZAPI_INSTANCE_ID')
+    const token = $os.getenv('ZAPI_TOKEN') || $secrets.get('ZAPI_TOKEN')
 
     let logStatus = 'error'
 
-    if (instanceId && token) {
-      try {
-        const toPhone = phoneNum.startsWith('55') ? phoneNum : '55' + phoneNum
-        const res = $http.send({
-          url: `https://api.z-api.io/instances/${instanceId}/token/${token}/send-text`,
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ phone: toPhone, message: message }),
-          timeout: 10,
-        })
-
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          logStatus = 'success'
-        } else {
-          $app.logger().error('Z-API Error', 'status', res.statusCode, 'body', res.json)
-          logStatus = res.json && res.json.error ? String(res.json.error) : 'error'
-        }
-      } catch (err) {
-        $app.logger().error('Z-API Request Error', 'error', err)
-        logStatus = err.message ? String(err.message) : 'error'
-      }
-    } else {
+    if (!instanceId || !token) {
       $app.logger().warn('Z-API secrets missing, WhatsApp not physically sent')
-      logStatus = 'success'
+      logStatus = 'Credenciais ZAPI ausentes'
+
+      const logCol = $app.findCollectionByNameOrId('whatsapp_logs')
+      const log = new Record(logCol)
+      log.set('phone', phoneNum)
+      log.set('message', message)
+      log.set('tipo', tipo)
+      log.set('status', logStatus)
+      $app.save(log)
+
+      return e.json(200, {
+        success: false,
+        error: 'Erro de configuração: Credenciais do WhatsApp (Z-API) não encontradas no sistema.',
+      })
+    }
+
+    try {
+      const toPhone = phoneNum.startsWith('55') ? phoneNum : '55' + phoneNum
+      const res = $http.send({
+        url: `https://api.z-api.io/instances/${instanceId}/token/${token}/send-text`,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone: toPhone, message: message }),
+        timeout: 10,
+      })
+
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        logStatus = 'success'
+      } else {
+        $app.logger().error('Z-API Error', 'status', res.statusCode, 'body', res.json)
+        logStatus =
+          res.json && res.json.error
+            ? String(res.json.error)
+            : res.json && res.json.message
+              ? String(res.json.message)
+              : 'error'
+      }
+    } catch (err) {
+      $app.logger().error('Z-API Request Error', 'error', err)
+      logStatus = err.message ? String(err.message) : 'error'
     }
 
     const logCol = $app.findCollectionByNameOrId('whatsapp_logs')
