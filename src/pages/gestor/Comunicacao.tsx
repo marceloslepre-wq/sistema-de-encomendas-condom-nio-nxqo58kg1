@@ -66,7 +66,7 @@ export default function GestorComunicacao() {
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Comunicação e Notificações</h2>
         <p className="text-muted-foreground">
-          Configure as mensagens enviadas aos moradores pelo WhatsApp.
+          Configure as mensagens enviadas aos moradores por E-mail.
         </p>
       </div>
 

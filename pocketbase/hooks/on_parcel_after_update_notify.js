@@ -66,30 +66,6 @@ onRecordAfterUpdateSuccess((e) => {
       }
     }
 
-    if (phone) {
-      try {
-        let phoneStr = phone.replace(/\D/g, '')
-        if (!phoneStr.startsWith('55')) {
-          phoneStr = '55' + phoneStr
-        }
-
-        const url = `https://api.z-api.io/instances/3F3FE6AB8AF55107542D6627BE24201D/token/D41BBA7471F8F494D528DB60/send-text`
-        $http.send({
-          url: url,
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Client-Token': 'D41BBA7471F8F494D528DB60',
-          },
-          body: JSON.stringify({ phone: phoneStr, message: message }),
-          timeout: 10,
-        })
-        sent = true
-      } catch (err) {
-        $app.logger().error('Z-API WhatsApp attempt failed', 'phone', phone, 'error', err.message)
-      }
-    }
-
     try {
       const auditCol = $app.findCollectionByNameOrId('audit_logs')
       const audit = new Record(auditCol)
