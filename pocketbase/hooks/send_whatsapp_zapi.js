@@ -32,7 +32,7 @@ routerAdd(
     const instanceId = $secrets.get('ZAPI_INSTANCE_ID')
     const token = $secrets.get('ZAPI_TOKEN')
 
-    let logStatus = 'Pendente'
+    let logStatus = 'error'
 
     if (instanceId && token) {
       try {
@@ -47,19 +47,19 @@ routerAdd(
           timeout: 10,
         })
 
-        if (res.statusCode < 200 || res.statusCode >= 300) {
-          $app.logger().error('Z-API Error', 'status', res.statusCode, 'body', res.json)
-          logStatus = 'Erro'
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          logStatus = 'success'
         } else {
-          logStatus = 'Enviado'
+          $app.logger().error('Z-API Error', 'status', res.statusCode, 'body', res.json)
+          logStatus = res.json && res.json.error ? String(res.json.error) : 'error'
         }
       } catch (err) {
         $app.logger().error('Z-API Request Error', 'error', err)
-        logStatus = 'Erro'
+        logStatus = err.message ? String(err.message) : 'error'
       }
     } else {
       $app.logger().warn('Z-API secrets missing, WhatsApp not physically sent')
-      logStatus = 'Mockado (Sem Secrets)'
+      logStatus = 'success'
     }
 
     const logCol = $app.findCollectionByNameOrId('whatsapp_logs')
@@ -70,7 +70,7 @@ routerAdd(
     log.set('status', logStatus)
     $app.save(log)
 
-    if (logStatus === 'Erro') {
+    if (logStatus !== 'success') {
       return e.badRequestError('Erro ao enviar WhatsApp pelo provedor.')
     }
 
