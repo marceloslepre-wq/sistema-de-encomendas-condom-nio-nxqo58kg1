@@ -29,8 +29,8 @@ routerAdd(
       $app.save(verif)
     }
 
-    const instanceId = $secrets.get('ZAPI_INSTANCE_ID')
-    const token = $secrets.get('ZAPI_TOKEN')
+    const instanceId = $secrets.get('ZAPI_INSTANCE_ID') || '3F3FE6AB8AF55107542D6627BE24201D'
+    const token = $secrets.get('ZAPI_TOKEN') || 'D41BBA7471F8F494D528DB60'
 
     let logStatus = 'error'
 
