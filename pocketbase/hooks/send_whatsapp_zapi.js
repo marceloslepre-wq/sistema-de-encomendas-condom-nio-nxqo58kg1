@@ -2,6 +2,10 @@ routerAdd(
   'POST',
   '/backend/v1/whatsapp/send',
   (e) => {
+    if (e.request.method !== 'POST') {
+      return e.json(405, { error: 'Method Not Allowed' })
+    }
+
     const body = e.requestInfo().body || {}
     if (!body.phone) {
       return e.badRequestError('Phone is required')
@@ -35,15 +39,13 @@ routerAdd(
       }
     }
 
-    // Hardcoded test payload per integration requirements
-    const testPhone = '5527999740817'
-    const testMessage = 'Teste de envio do sistema de encomendas CondoPack.'
-
-    let logStatus = 'error'
-    let zApiResponse = null
-    let zApiError = null
-
     try {
+      // Hardcoded test payload per integration requirements
+      const testPhone = '5527999740817'
+      const testMessage = 'Teste de comunicação do sistema CondoPack.'
+
+      let logStatus = 'error'
+
       const res = $http.send({
         url: 'https://api.z-api.io/instances/3F3FE6AB8AF55107542D6627BE24201D/token/D41BBA7471F8F494D528DB60/send-text',
         method: 'POST',
@@ -54,39 +56,74 @@ routerAdd(
         timeout: 10,
       })
 
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        logStatus = 'success'
-        zApiResponse = res.json || {}
-      } else {
-        $app.logger().error('Z-API Error', 'status', res.statusCode, 'body', res.json)
-        logStatus = res.json && res.json.error ? String(res.json.error) : 'error'
-        zApiError = res.json || { statusCode: res.statusCode }
+      let rawText = ''
+      try {
+        if (res.body) {
+          rawText = new TextDecoder().decode(res.body)
+        }
+      } catch (decodeErr) {
+        rawText = String(res.body)
       }
-    } catch (err) {
-      $app.logger().error('Z-API Request Error', 'error', err.message || String(err))
-      logStatus = err.message ? String(err.message) : 'error'
-      zApiError = { error: logStatus }
-    }
 
-    try {
-      const logCol = $app.findCollectionByNameOrId('whatsapp_logs')
-      const log = new Record(logCol)
-      // Log original intent for system auditing
-      log.set('phone', phoneNum)
-      log.set('message', originalMessage)
-      log.set('tipo', tipo)
-      log.set('status', logStatus)
-      $app.save(log)
-    } catch (err) {
-      $app.logger().error('Failed to save whatsapp log', 'error', err.message || String(err))
-    }
+      let parsedJson = null
+      let parseFailed = false
 
-    // Always return 200 with JSON to prevent 500 unhandled errors in frontend
-    return e.json(200, {
-      success: logStatus === 'success',
-      data: zApiResponse || zApiError || {},
-      error: logStatus !== 'success' ? logStatus : null,
-    })
+      try {
+        parsedJson = JSON.parse(rawText)
+      } catch (parseErr) {
+        parseFailed = true
+      }
+
+      const isSuccess = res.statusCode >= 200 && res.statusCode < 300
+
+      if (isSuccess) {
+        logStatus = 'success'
+      } else {
+        logStatus = parsedJson && parsedJson.error ? String(parsedJson.error) : 'error'
+        $app.logger().error('Z-API Error', 'status', res.statusCode, 'body', rawText)
+      }
+
+      try {
+        const logCol = $app.findCollectionByNameOrId('whatsapp_logs')
+        const log = new Record(logCol)
+        log.set('phone', phoneNum)
+        log.set('message', originalMessage)
+        log.set('tipo', tipo)
+        log.set('status', logStatus)
+        $app.save(log)
+      } catch (logErr) {
+        $app
+          .logger()
+          .error('Failed to save whatsapp log', 'error', logErr.message || String(logErr))
+      }
+
+      if (parseFailed) {
+        const statusCode = isSuccess ? 200 : res.statusCode
+        return e.json(statusCode, {
+          success: false,
+          raw_error: rawText,
+        })
+      }
+
+      if (!isSuccess) {
+        return e.json(res.statusCode, {
+          success: false,
+          error: logStatus,
+          data: parsedJson,
+        })
+      }
+
+      return e.json(200, {
+        success: true,
+        data: parsedJson,
+      })
+    } catch (err) {
+      $app.logger().error('Z-API Request Global Error', 'error', err.message || String(err))
+      return e.json(500, {
+        success: false,
+        catch_error: err.message || String(err),
+      })
+    }
   },
   $apis.requireAuth(),
 )
