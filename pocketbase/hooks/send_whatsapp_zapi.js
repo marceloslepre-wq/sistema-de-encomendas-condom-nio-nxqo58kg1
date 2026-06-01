@@ -38,6 +38,7 @@ routerAdd(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'client-token': 'D41BBA7471F8F494D528DB60',
         },
         body: JSON.stringify({ phone: toPhone, message: message }),
         timeout: 10,
