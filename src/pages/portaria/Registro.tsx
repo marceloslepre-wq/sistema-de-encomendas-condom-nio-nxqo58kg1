@@ -32,6 +32,7 @@ import {
 } from '@/services/api'
 import { useAuth } from '@/hooks/use-auth'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
+import pb from '@/lib/pocketbase/client'
 
 const formatCpf = (value: string) => {
   const v = value.replace(/\D/g, '').substring(0, 11)
@@ -67,8 +68,10 @@ export default function PortariaRegistro() {
   const [courierName, setCourierName] = useState('')
   const [courierCpf, setCourierCpf] = useState('')
   const [courierPhone, setCourierPhone] = useState('')
+  const [validationCode, setValidationCode] = useState('')
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSendingCode, setIsSendingCode] = useState(false)
 
   useEffect(() => {
     getUnits()
@@ -155,6 +158,49 @@ export default function PortariaRegistro() {
     setCourierName('')
     setCourierCpf('')
     setCourierPhone('')
+    setValidationCode('')
+  }
+
+  const handleSendCode = async () => {
+    const digits = courierPhone.replace(/\D/g, '')
+    if (!digits) {
+      toast({
+        title: 'Erro',
+        description: 'Celular obrigatório',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsSendingCode(true)
+    const code = Math.floor(100000 + Math.random() * 900000).toString()
+    sessionStorage.setItem('codigo_validacao', code)
+    sessionStorage.setItem('codigo_timestamp', Date.now().toString())
+
+    try {
+      await pb.send('/backend/v1/enviar_codigo_whatsapp', {
+        method: 'POST',
+        body: JSON.stringify({
+          phone: digits,
+          message: `Seu código é: ${code}`,
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      })
+      toast({
+        title: 'Sucesso',
+        description: 'Código enviado via WhatsApp',
+        className: 'bg-success text-white',
+      })
+    } catch (err: any) {
+      console.error('Failed to send code', err)
+      toast({
+        title: 'Erro',
+        description: 'Falha ao enviar. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSendingCode(false)
+    }
   }
 
   if (isSuccess) {
@@ -323,6 +369,30 @@ export default function PortariaRegistro() {
                     onChange={(e) => setCourierPhone(formatPhone(e.target.value))}
                     placeholder="(00) 00000-0000"
                     maxLength={15}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 md:col-span-2 pt-4 border-t mt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleSendCode}
+                  disabled={isSendingCode}
+                  className="w-full sm:w-auto mb-2"
+                >
+                  {isSendingCode ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Enviar Código via WhatsApp
+                </Button>
+
+                <div className="space-y-2 mt-2">
+                  <Label>Código de Validação</Label>
+                  <Input
+                    value={validationCode}
+                    onChange={(e) => setValidationCode(e.target.value)}
+                    placeholder="000000"
+                    maxLength={6}
+                    className="max-w-[200px]"
                   />
                 </div>
               </div>
