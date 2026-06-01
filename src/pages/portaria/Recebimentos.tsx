@@ -68,21 +68,11 @@ export default function PortariaRecebimentos() {
       const allRecords = await pb
         .collection('recebimentos_auditoria')
         .getFullList({ filter: buildFilter(), sort: '-data_hora_recebimento' })
-      const headers = [
-        'Nome',
-        'CPF',
-        'Celular',
-        'Código Enviado',
-        'Validado',
-        'Data/Hora',
-        'Status',
-      ]
+      const headers = ['Nome', 'CPF', 'Celular', 'Data/Hora', 'Status']
       const rows = allRecords.map((r: any) => [
         r.morador_nome,
         r.morador_cpf,
         r.morador_celular,
-        r.codigo_enviado || '-',
-        r.codigo_validado ? 'Sim' : 'Não',
         format(new Date(r.data_hora_recebimento), 'dd/MM/yyyy HH:mm'),
         r.status,
       ])
@@ -152,7 +142,6 @@ export default function PortariaRecebimentos() {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>CPF / Celular</TableHead>
-                <TableHead>Código</TableHead>
                 <TableHead>Data/Hora</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
@@ -160,14 +149,14 @@ export default function PortariaRecebimentos() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Carregando registros...
                   </TableCell>
                 </TableRow>
               ) : records.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
                     Nenhum registro encontrado.
                   </TableCell>
                 </TableRow>
@@ -178,18 +167,6 @@ export default function PortariaRecebimentos() {
                     <TableCell>
                       <div className="text-sm">{r.morador_cpf}</div>
                       <div className="text-xs text-muted-foreground">{r.morador_celular}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm tracking-wider">
-                          {r.codigo_enviado || '-'}
-                        </span>
-                        {r.codigo_validado && (
-                          <span className="text-[10px] uppercase bg-success/10 text-success px-2 py-0.5 rounded-full border border-success/20 font-bold">
-                            Validado
-                          </span>
-                        )}
-                      </div>
                     </TableCell>
                     <TableCell className="text-sm whitespace-nowrap">
                       {format(new Date(r.data_hora_recebimento), 'dd/MM/yyyy')}

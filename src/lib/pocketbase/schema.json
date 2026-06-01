@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-01T17:52:16.938Z",
+  "generatedAt": "2026-06-01T19:00:38.013Z",
   "collections": [
     {
       "name": "users",
@@ -127,12 +127,6 @@
           "system": false
         },
         {
-          "name": "notifications_enabled",
-          "type": "bool",
-          "required": false,
-          "system": false
-        },
-        {
           "name": "created",
           "type": "autodate",
           "required": false,
@@ -145,12 +139,6 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
-        },
-        {
-          "name": "exige_validacao_whatsapp",
-          "type": "bool",
-          "required": false,
-          "system": false
         }
       ],
       "indexes": []
@@ -363,12 +351,6 @@
           "system": false
         },
         {
-          "name": "withdrawal_code",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
           "name": "shelf_location",
           "type": "text",
           "required": false,
@@ -381,10 +363,7 @@
           "system": false
         }
       ],
-      "indexes": [
-        "CREATE INDEX `idx_parcels_withdrawal` ON `parcels` (withdrawal_code)",
-        "CREATE INDEX `idx_parcels_status` ON `parcels` (status)"
-      ]
+      "indexes": ["CREATE INDEX `idx_parcels_status` ON `parcels` (status)"]
     },
     {
       "name": "audit_logs",
@@ -433,58 +412,6 @@
         }
       ],
       "indexes": []
-    },
-    {
-      "name": "sms_verifications",
-      "type": "base",
-      "apiRules": {
-        "list": null,
-        "view": null,
-        "create": null,
-        "update": null,
-        "delete": null
-      },
-      "fields": [
-        {
-          "name": "phone",
-          "type": "text",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "code",
-          "type": "text",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "expires_at",
-          "type": "date",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "used",
-          "type": "bool",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "created",
-          "type": "autodate",
-          "required": false,
-          "system": false,
-          "autodateTriggers": ["onCreate"]
-        },
-        {
-          "name": "updated",
-          "type": "autodate",
-          "required": false,
-          "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
-        }
-      ],
-      "indexes": ["CREATE INDEX `idx_sms_phone` ON `sms_verifications` (phone)"]
     },
     {
       "name": "carriers",
@@ -595,169 +522,6 @@
       "indexes": []
     },
     {
-      "name": "notification_templates",
-      "type": "base",
-      "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.role = 'gestor'",
-        "update": "@request.auth.role = 'gestor'",
-        "delete": "@request.auth.role = 'gestor'"
-      },
-      "fields": [
-        {
-          "name": "status",
-          "type": "select",
-          "required": true,
-          "system": false,
-          "selectValues": [
-            "ENTRADA_PORTARIA",
-            "EM_TRIAGEM",
-            "LIBERADO_RETIRADA",
-            "RETIRADO",
-            "CANCELADO"
-          ]
-        },
-        {
-          "name": "message",
-          "type": "text",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "created",
-          "type": "autodate",
-          "required": false,
-          "system": false,
-          "autodateTriggers": ["onCreate"]
-        },
-        {
-          "name": "updated",
-          "type": "autodate",
-          "required": false,
-          "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
-        }
-      ],
-      "indexes": ["CREATE UNIQUE INDEX idx_nt_status ON notification_templates (status)"]
-    },
-    {
-      "name": "whatsapp_logs",
-      "type": "base",
-      "apiRules": {
-        "list": "@request.auth.role = 'portaria' || @request.auth.role = 'gestor' || @request.auth.role = 'triagem'",
-        "view": "@request.auth.role = 'portaria' || @request.auth.role = 'gestor' || @request.auth.role = 'triagem'",
-        "create": "@request.auth.role = 'portaria' || @request.auth.role = 'gestor' || @request.auth.role = 'triagem'",
-        "update": null,
-        "delete": null
-      },
-      "fields": [
-        {
-          "name": "phone",
-          "type": "text",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "message",
-          "type": "text",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "tipo",
-          "type": "text",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "status",
-          "type": "text",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "created",
-          "type": "autodate",
-          "required": false,
-          "system": false,
-          "autodateTriggers": ["onCreate"]
-        },
-        {
-          "name": "updated",
-          "type": "autodate",
-          "required": false,
-          "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
-        }
-      ],
-      "indexes": []
-    },
-    {
-      "name": "whatsapp_verifications",
-      "type": "base",
-      "apiRules": {
-        "list": "@request.auth.role = 'portaria' || @request.auth.role = 'gestor' || @request.auth.role = 'triagem'",
-        "view": "@request.auth.role = 'portaria' || @request.auth.role = 'gestor' || @request.auth.role = 'triagem'",
-        "create": "@request.auth.id != ''",
-        "update": null,
-        "delete": null
-      },
-      "fields": [
-        {
-          "name": "phone",
-          "type": "text",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "code",
-          "type": "text",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "expires_at",
-          "type": "date",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "used",
-          "type": "bool",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "attempts",
-          "type": "number",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "locked_until",
-          "type": "date",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "created",
-          "type": "autodate",
-          "required": false,
-          "system": false,
-          "autodateTriggers": ["onCreate"]
-        },
-        {
-          "name": "updated",
-          "type": "autodate",
-          "required": false,
-          "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
-        }
-      ],
-      "indexes": []
-    },
-    {
       "name": "recebimentos_auditoria",
       "type": "base",
       "apiRules": {
@@ -783,18 +547,6 @@
         {
           "name": "morador_celular",
           "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "codigo_enviado",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "codigo_validado",
-          "type": "bool",
           "required": false,
           "system": false
         },

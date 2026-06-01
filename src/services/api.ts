@@ -55,33 +55,11 @@ export const updateShelfLocation = (id: string, data: any) =>
   pb.collection('shelf_locations').update(id, data)
 export const deleteShelfLocation = (id: string) => pb.collection('shelf_locations').delete(id)
 
-export const getNotificationTemplates = () => pb.collection('notification_templates').getFullList()
-export const createNotificationTemplate = (data: any) =>
-  pb.collection('notification_templates').create(data)
-export const updateNotificationTemplate = (id: string, data: any) =>
-  pb.collection('notification_templates').update(id, data)
-export const deleteNotificationTemplate = (id: string) =>
-  pb.collection('notification_templates').delete(id)
-
 export const createParcel = (data: any) => pb.collection('parcels').create(data)
 export const updateParcel = (id: string, data: any) => pb.collection('parcels').update(id, data)
 export const updateParcelWithFormData = (id: string, formData: FormData) =>
   pb.collection('parcels').update(id, formData)
 export const getFileUrl = (record: any, filename: string) => pb.files.getUrl(record, filename)
-
-export const sendWhatsapp = (phone: string, tipo: string = 'codigo', message?: string) =>
-  pb.send<{ success: boolean; mockCode?: string }>('/backend/v1/whatsapp/send', {
-    method: 'POST',
-    body: JSON.stringify({ phone, tipo, message }),
-    headers: { 'Content-Type': 'application/json' },
-  })
-
-export const verifyWhatsapp = (phone: string, code: string) =>
-  pb.send('/backend/v1/whatsapp/verify', {
-    method: 'POST',
-    body: JSON.stringify({ phone, code }),
-    headers: { 'Content-Type': 'application/json' },
-  })
 
 export const createRecebimentoAuditoria = (data: any) =>
   pb.collection('recebimentos_auditoria').create(data)
@@ -105,7 +83,7 @@ export type Parcel = RecordModel & {
   exit_date?: string
   volumes?: number
   photo?: string
-  withdrawal_code?: string
+
   shelf_location?: string
   volume_type?: string
 }
@@ -142,8 +120,7 @@ export type RecebimentoAuditoria = RecordModel & {
   morador_nome: string
   morador_cpf: string
   morador_celular: string
-  codigo_enviado: string
-  codigo_validado: boolean
+
   data_hora_recebimento: string
   status: string
 }

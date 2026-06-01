@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/ui/input-otp'
 import { useToast } from '@/hooks/use-toast'
-import { Search, Package, ShieldCheck, CheckCircle2, Loader2 } from 'lucide-react'
+import { Search, Package, CheckCircle2, Loader2, Info } from 'lucide-react'
 import { getParcels, updateParcel, Parcel } from '@/services/api'
 import useRealtime from '@/hooks/use-realtime'
 import { format } from 'date-fns'
@@ -15,7 +14,6 @@ export default function SalaRetirada() {
   const [search, setSearch] = useState('')
   const [selectedParcel, setSelectedParcel] = useState<Parcel | null>(null)
 
-  const [token, setToken] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const loadData = async () => {
@@ -41,23 +39,12 @@ export default function SalaRetirada() {
 
   const handleSelect = (p: Parcel) => {
     setSelectedParcel(p)
-    setToken('')
   }
 
   const handleValidate = async () => {
     if (!selectedParcel) return
     setIsSubmitting(true)
     try {
-      if (token !== selectedParcel.withdrawal_code) {
-        toast({
-          title: 'Código Inválido',
-          description: 'O token informado não confere.',
-          variant: 'destructive',
-        })
-        setIsSubmitting(false)
-        return
-      }
-
       await updateParcel(selectedParcel.id, {
         status: 'RETIRADO',
         exit_date: new Date().toISOString(),
@@ -81,10 +68,8 @@ export default function SalaRetirada() {
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-20">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Validação de Retirada</h2>
-        <p className="text-muted-foreground">
-          Solicite o código gerado no app do morador para entregar o pacote.
-        </p>
+        <h2 className="text-3xl font-bold tracking-tight">Registro de Retirada</h2>
+        <p className="text-muted-foreground">Confirme a entrega da encomenda para o morador.</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
@@ -135,10 +120,10 @@ export default function SalaRetirada() {
             <Card className="border-primary shadow-md animate-fade-in">
               <CardHeader className="bg-primary/5 border-b">
                 <CardTitle className="flex items-center gap-2 text-primary">
-                  <ShieldCheck className="h-5 w-5" /> Token de Segurança
+                  <Info className="h-5 w-5" /> Confirmar Retirada
                 </CardTitle>
                 <CardDescription>
-                  Insira os 6 dígitos (enviados via WhatsApp) fornecidos pelo morador.
+                  Verifique a identidade do morador antes de confirmar a entrega.
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-8 space-y-8 flex flex-col items-center">
@@ -158,26 +143,10 @@ export default function SalaRetirada() {
                   </div>
                 </div>
 
-                <div className="space-y-4 flex flex-col items-center">
-                  <InputOTP maxLength={6} value={token} onChange={setToken} disabled={isSubmitting}>
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} className="w-12 h-14 text-2xl" />
-                      <InputOTPSlot index={1} className="w-12 h-14 text-2xl" />
-                      <InputOTPSlot index={2} className="w-12 h-14 text-2xl" />
-                    </InputOTPGroup>
-                    <InputOTPSeparator />
-                    <InputOTPGroup>
-                      <InputOTPSlot index={3} className="w-12 h-14 text-2xl" />
-                      <InputOTPSlot index={4} className="w-12 h-14 text-2xl" />
-                      <InputOTPSlot index={5} className="w-12 h-14 text-2xl" />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-
                 <Button
                   className="w-full h-12 text-lg bg-success hover:bg-success/90 text-white"
                   onClick={handleValidate}
-                  disabled={token.length < 6 || isSubmitting}
+                  disabled={isSubmitting}
                 >
                   {isSubmitting ? (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -190,9 +159,9 @@ export default function SalaRetirada() {
             </Card>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground border-2 border-dashed rounded-lg p-10">
-              <ShieldCheck className="w-16 h-16 opacity-20 mb-4" />
+              <Info className="w-16 h-16 opacity-20 mb-4" />
               <p className="text-center">
-                Selecione uma encomenda na lista para validar a retirada.
+                Selecione uma encomenda na lista para registrar a retirada.
               </p>
             </div>
           )}

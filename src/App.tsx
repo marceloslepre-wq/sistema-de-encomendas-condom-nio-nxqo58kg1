@@ -20,7 +20,6 @@ import GestorConfiguracoes from './pages/gestor/Configuracoes'
 import GestorPermissoes from './pages/gestor/Permissoes'
 import GestorTransportadoras from './pages/gestor/Carriers'
 import GestorLogistica from './pages/gestor/Logistica'
-import GestorComunicacao from './pages/gestor/Comunicacao'
 
 // Portaria / Sala Pages
 import PortariaRegistro from './pages/portaria/Registro'
@@ -163,15 +162,6 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/gestor/comunicacao"
-              element={
-                <ProtectedRoute requiredRole="gestor">
-                  <GestorComunicacao />
-                </ProtectedRoute>
-              }
-            />
-
             <Route
               path="/portaria/registro"
               element={

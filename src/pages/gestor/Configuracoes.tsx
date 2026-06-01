@@ -24,8 +24,6 @@ import {
   getShelfLocations,
   createShelfLocation,
   deleteShelfLocation,
-  getNotificationTemplates,
-  updateNotificationTemplate,
 } from '@/services/api'
 
 export default function GestorConfiguracoes() {
@@ -37,7 +35,6 @@ export default function GestorConfiguracoes() {
     phone: '',
     shifts: '',
     guards: 0,
-    notifications_enabled: false,
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -48,34 +45,27 @@ export default function GestorConfiguracoes() {
   const [shelfLocations, setShelfLocations] = useState<any[]>([])
   const [newShelfLocation, setNewShelfLocation] = useState('')
 
-  const [templates, setTemplates] = useState<any[]>([])
-
   const { toast } = useToast()
 
   useEffect(() => {
-    Promise.all([
-      getCondo(),
-      getVolumeTypes(),
-      getShelfLocations(),
-      getNotificationTemplates(),
-    ]).then(([condo, vTypes, sLocs, tmpls]) => {
-      if (condo) {
-        setCondoId(condo.id)
-        setFormData({
-          name: condo.name || '',
-          address: condo.address || '',
-          cnpj: condo.cnpj || '',
-          phone: condo.phone || '',
-          shifts: condo.janitor_settings?.shifts || '',
-          guards: condo.janitor_settings?.guards || 0,
-          notifications_enabled: condo.notifications_enabled ?? true,
-        })
-      }
-      setVolumeTypes(vTypes)
-      setShelfLocations(sLocs)
-      setTemplates(tmpls)
-      setLoading(false)
-    })
+    Promise.all([getCondo(), getVolumeTypes(), getShelfLocations()]).then(
+      ([condo, vTypes, sLocs]) => {
+        if (condo) {
+          setCondoId(condo.id)
+          setFormData({
+            name: condo.name || '',
+            address: condo.address || '',
+            cnpj: condo.cnpj || '',
+            phone: condo.phone || '',
+            shifts: condo.janitor_settings?.shifts || '',
+            guards: condo.janitor_settings?.guards || 0,
+          })
+        }
+        setVolumeTypes(vTypes)
+        setShelfLocations(sLocs)
+        setLoading(false)
+      },
+    )
   }, [])
 
   const handleSaveCondo = async () => {
@@ -87,7 +77,6 @@ export default function GestorConfiguracoes() {
         cnpj: formData.cnpj,
         phone: formData.phone,
         janitor_settings: { shifts: formData.shifts, guards: Number(formData.guards) },
-        notifications_enabled: formData.notifications_enabled,
       })
       toast({ title: 'Sucesso', description: 'Configurações atualizadas com sucesso!' })
     } catch (e) {
@@ -145,15 +134,6 @@ export default function GestorConfiguracoes() {
     }
   }
 
-  const handleUpdateTemplate = async (id: string, message: string) => {
-    try {
-      await updateNotificationTemplate(id, { message })
-      toast({ title: 'Template atualizado com sucesso' })
-    } catch (e) {
-      toast({ title: 'Erro ao atualizar template', variant: 'destructive' })
-    }
-  }
-
   if (loading) return <Skeleton className="h-[400px] w-full max-w-3xl" />
 
   return (
@@ -169,7 +149,6 @@ export default function GestorConfiguracoes() {
         <TabsList className="mb-4">
           <TabsTrigger value="geral">Geral</TabsTrigger>
           <TabsTrigger value="logistica">Logística</TabsTrigger>
-          <TabsTrigger value="comunicacao">Comunicação</TabsTrigger>
         </TabsList>
 
         <TabsContent value="geral" className="space-y-6">
@@ -312,59 +291,6 @@ export default function GestorConfiguracoes() {
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="comunicacao" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Avisos Globais</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between border p-4 rounded-lg bg-neutralBg">
-                <div>
-                  <Label className="text-base font-semibold">Notificações Automáticas</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Ativar o envio de e-mails/WhatsApp para moradores.
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.notifications_enabled}
-                  onCheckedChange={(v) => {
-                    setFormData({ ...formData, notifications_enabled: v })
-                    handleSaveCondo()
-                  }}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Templates de Notificação</CardTitle>
-              <CardDescription>
-                Personalize as mensagens para cada status. Variáveis:{' '}
-                {'{name}, {tracking}, {code}, {condoName}'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {templates.map((t) => (
-                <div key={t.id} className="space-y-2 border-b pb-4 last:border-0">
-                  <Label className="font-semibold text-primary">
-                    {t.status.replace(/_/g, ' ')}
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      defaultValue={t.message}
-                      onBlur={(e) => handleUpdateTemplate(t.id, e.target.value)}
-                    />
-                  </div>
-                </div>
-              ))}
-              {templates.length === 0 && (
-                <p className="text-sm text-muted-foreground">Nenhum template encontrado.</p>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
