@@ -1,3 +1,21 @@
+/*
+  ====================================================================================================
+  ATENÇÃO CRÍTICA - INTEGRAÇÃO Z-API
+  ====================================================================================================
+  NÃO MUDAR PARA VARIÁVEIS DE AMBIENTE!
+  NÃO USAR secrets, process.env, import.meta.env ou qualquer configuração dinâmica para credenciais.
+
+  A Z-API DESTE PROJETO EXIGE que INSTÂNCIA e TOKEN estejam DIRETAMENTE na URL do endpoint.
+  Tentar enviar por headers de autenticação (ex: Client-Token) ou por secrets quebra o fluxo no Skip.
+
+  REGRA OBRIGATÓRIA:
+  - URL hardcoded com instância + token
+  - Método POST
+  - Body JSON com: { phone, message }
+  - Sem headers de autenticação
+  ====================================================================================================
+*/
+
 routerAdd(
   'POST',
   '/backend/v1/enviar-codigo-whatsapp',
@@ -9,10 +27,16 @@ routerAdd(
     if (typeof phone !== 'string' || !phone.trim()) {
       return e.badRequestError('Phone is required')
     }
+
     if (typeof message !== 'string' || !message.trim()) {
       return e.badRequestError('Message is required')
     }
 
+    /*
+      ATENÇÃO: NÃO MUDAR PARA VARIÁVEIS DE AMBIENTE!
+      A Z-API EXIGE que instância e token estejam DIRETAMENTE na URL.
+      NÃO funciona com headers de autenticação ou secrets neste projeto.
+    */
     const apiUrl =
       'https://api.z-api.io/instances/3F3FE6AB8AF55107542D6627BE24201D/token/D41BBA7471F8F494D528DB60/send-text'
 
@@ -70,16 +94,16 @@ routerAdd(
           success: true,
           messageId: messageId,
         })
-      } else {
-        logRecord.set('status', 'error')
-        logRecord.set('response', parsedJson)
-        $app.save(logRecord)
-
-        return e.json(res.statusCode, {
-          success: false,
-          error: parsedJson && parsedJson.error ? String(parsedJson.error) : 'API request failed',
-        })
       }
+
+      logRecord.set('status', 'error')
+      logRecord.set('response', parsedJson)
+      $app.save(logRecord)
+
+      return e.json(res.statusCode, {
+        success: false,
+        error: parsedJson && parsedJson.error ? String(parsedJson.error) : 'API request failed',
+      })
     } catch (err) {
       logRecord.set('status', 'error')
       logRecord.set('response', { error: err.message || String(err) })
