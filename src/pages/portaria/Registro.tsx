@@ -29,7 +29,6 @@ import {
   Unit,
   AppUser,
   Carrier,
-  sendWhatsapp,
   verifyWhatsapp,
   createRecebimentoAuditoria,
 } from '@/services/api'
@@ -128,15 +127,55 @@ export default function PortariaRegistro() {
     if (rawPhone.length < 10) return
     setIsWhatsappSending(true)
     try {
-      const res = await sendWhatsapp(rawPhone)
-      if (res.success) {
+      const code = Math.floor(100000 + Math.random() * 900000).toString()
+      const message = `Seu código de validação na portaria é: ${code}`
+
+      // Create validation record locally so verifyWhatsapp can validate it
+      try {
+        await pb.collection('whatsapp_verifications').create({
+          phone: rawPhone,
+          code,
+          expires_at: new Date(Date.now() + 10 * 60000).toISOString(),
+          used: false,
+          attempts: 0,
+        })
+      } catch (err) {
+        console.error('Failed to create verification record', err)
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_POCKETBASE_URL}/functions/enviar_whatsapp_zapi`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phone: rawPhone,
+            message,
+            tipo: 'codigo',
+          }),
+        },
+      )
+
+      const result = await response.json()
+
+      if (result.success) {
         setIsWhatsappSent(true)
         toast({
           title: 'WhatsApp Enviado',
           description: 'O código foi enviado para o celular do entregador.',
         })
+      } else {
+        console.error(result.error)
+        toast({
+          title: 'Erro',
+          description: 'Falha ao enviar o WhatsApp.',
+          variant: 'destructive',
+        })
       }
     } catch (err: any) {
+      console.error(err)
       toast({
         title: 'Erro',
         description: 'Falha ao enviar o WhatsApp.',
