@@ -178,14 +178,25 @@ export default function PortariaRegistro() {
     sessionStorage.setItem('codigo_timestamp', Date.now().toString())
 
     try {
-      await pb.send('/backend/v1/enviar_codigo_whatsapp', {
-        method: 'POST',
-        body: JSON.stringify({
-          phone: digits,
-          message: `Seu código é: ${code}`,
-        }),
-        headers: { 'Content-Type': 'application/json' },
-      })
+      const response = await fetch(
+        `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/enviar_codigo_whatsapp`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            phone: digits,
+            message: `Seu código é: ${code}`,
+          }),
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: pb.authStore.token,
+          },
+        },
+      )
+
+      if (!response.ok) {
+        throw new Error('Falha ao enviar código')
+      }
+
       toast({
         title: 'Sucesso',
         description: 'Código enviado via WhatsApp',
