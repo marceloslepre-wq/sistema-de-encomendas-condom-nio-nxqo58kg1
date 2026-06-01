@@ -1,16 +1,17 @@
 migrate(
   (app) => {
-    try {
-      const logs = app.findCollectionByNameOrId('whatsapp_logs')
-      app.delete(logs)
-    } catch (_) {}
+    const collectionsToRemove = ['whatsapp_logs', 'whatsapp_verifications']
 
-    try {
-      const verif = app.findCollectionByNameOrId('whatsapp_verifications')
-      app.delete(verif)
-    } catch (_) {}
+    for (const name of collectionsToRemove) {
+      try {
+        if (app.hasTable(name)) {
+          const col = app.findCollectionByNameOrId(name)
+          app.delete(col)
+        }
+      } catch (_) {}
+    }
   },
   (app) => {
-    // Reverting this migration is not natively supported without redefining the collections
+    // Reverting this migration is not natively supported
   },
 )
