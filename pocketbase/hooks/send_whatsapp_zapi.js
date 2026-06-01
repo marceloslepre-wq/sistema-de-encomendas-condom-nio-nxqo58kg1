@@ -51,6 +51,7 @@ routerAdd(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'client-token': 'D41BBA7471F8F494D528DB60',
         },
         body: JSON.stringify({ phone: testPhone, message: testMessage }),
         timeout: 10,
@@ -79,7 +80,7 @@ routerAdd(
       if (isSuccess) {
         logStatus = 'success'
       } else {
-        logStatus = parsedJson && parsedJson.error ? String(parsedJson.error) : 'error'
+        logStatus = parsedJson && parsedJson.error ? String(parsedJson.error) : rawText || 'error'
         $app.logger().error('Z-API Error', 'status', res.statusCode, 'body', rawText)
       }
 
@@ -98,9 +99,10 @@ routerAdd(
       }
 
       if (parseFailed) {
-        const statusCode = isSuccess ? 200 : res.statusCode
+        const statusCode = isSuccess ? 400 : res.statusCode
         return e.json(statusCode, {
           success: false,
+          message: rawText || 'Failed to parse API response',
           raw_error: rawText,
         })
       }
@@ -108,6 +110,7 @@ routerAdd(
       if (!isSuccess) {
         return e.json(res.statusCode, {
           success: false,
+          message: logStatus,
           error: logStatus,
           data: parsedJson,
         })

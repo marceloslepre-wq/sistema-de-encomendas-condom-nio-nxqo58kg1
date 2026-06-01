@@ -29,7 +29,6 @@ import {
   Unit,
   AppUser,
   Carrier,
-  sendWhatsapp,
   verifyWhatsapp,
   createRecebimentoAuditoria,
 } from '@/services/api'
@@ -136,7 +135,10 @@ export default function PortariaRegistro() {
 
     setIsWhatsappSending(true)
     try {
-      const result = await sendWhatsapp(rawPhone, 'codigo')
+      const result = await pb.send('/backend/v1/whatsapp/send', {
+        method: 'POST',
+        body: JSON.stringify({ phone: rawPhone, tipo: 'codigo' }),
+      })
 
       if (result && result.success) {
         setIsWhatsappSent(true)
@@ -148,12 +150,27 @@ export default function PortariaRegistro() {
         console.error('sendWhatsapp returned unsuccessful result:', result)
         toast({
           title: 'Falha no Envio',
-          description: result?.error || 'A resposta da API de WhatsApp não indicou sucesso.',
+          description:
+            result?.error ||
+            result?.message ||
+            'A resposta da API de WhatsApp não indicou sucesso.',
           variant: 'destructive',
         })
       }
     } catch (err: any) {
-      const errorMessage = getErrorMessage(err)
+      let errorMessage = getErrorMessage(err)
+      if (err?.response?.error && typeof err.response.error === 'string') {
+        errorMessage = err.response.error
+      } else if (
+        err?.response?.message &&
+        typeof err.response.message === 'string' &&
+        err.response.message !== 'Something went wrong.'
+      ) {
+        errorMessage = err.response.message
+      } else if (err?.response?.raw_error && typeof err.response.raw_error === 'string') {
+        errorMessage = err.response.raw_error
+      }
+
       console.error('WhatsApp Notification API Error:', errorMessage, err)
       toast({
         title: 'Erro de Comunicação',
