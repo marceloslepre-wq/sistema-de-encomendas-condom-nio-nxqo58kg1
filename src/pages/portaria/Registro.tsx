@@ -158,16 +158,16 @@ export default function PortariaRegistro() {
         },
       )
 
-      const result = await response.json()
+      const result = await response.json().catch(() => null)
 
-      if (result.success) {
+      if (result && result.success) {
         setIsWhatsappSent(true)
         toast({
           title: 'WhatsApp Enviado',
           description: 'O código foi enviado para o celular do entregador.',
         })
       } else {
-        console.error(result.error)
+        console.error(result?.error || 'Unknown error')
         toast({
           title: 'Erro',
           description: 'Falha ao enviar o WhatsApp.',
