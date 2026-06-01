@@ -40,10 +40,6 @@ routerAdd(
     }
 
     try {
-      // Hardcoded test payload per integration requirements
-      const testPhone = '5527999740817'
-      const testMessage = 'Teste de comunicação do sistema CondoPack.'
-
       let logStatus = 'error'
 
       const res = $http.send({
@@ -51,9 +47,8 @@ routerAdd(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'client-token': 'D41BBA7471F8F494D528DB60',
         },
-        body: JSON.stringify({ phone: testPhone, message: testMessage }),
+        body: JSON.stringify({ phone: phoneNum, message: originalMessage }),
         timeout: 10,
       })
 
@@ -63,7 +58,11 @@ routerAdd(
           rawText = new TextDecoder().decode(res.body)
         }
       } catch (decodeErr) {
-        rawText = String(res.body)
+        if (Array.isArray(res.body)) {
+          rawText = String.fromCharCode.apply(null, res.body)
+        } else {
+          rawText = String(res.body)
+        }
       }
 
       let parsedJson = null
