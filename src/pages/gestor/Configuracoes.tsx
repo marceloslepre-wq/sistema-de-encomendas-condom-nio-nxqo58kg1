@@ -326,7 +326,7 @@ export default function GestorConfiguracoes() {
                 <div>
                   <Label className="text-base font-semibold">Notificações Automáticas</Label>
                   <p className="text-sm text-muted-foreground">
-                    Ativar o envio de e-mails/SMS para moradores.
+                    Ativar o envio de e-mails/WhatsApp para moradores.
                   </p>
                 </div>
                 <Switch

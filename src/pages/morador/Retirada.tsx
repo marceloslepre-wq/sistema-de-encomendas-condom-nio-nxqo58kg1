@@ -16,7 +16,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/comp
 import { Loader2, Package, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import pb from '@/lib/pocketbase/client'
-import { sendSms, verifySms, updateParcel, Parcel } from '@/services/api'
+import { sendWhatsapp, verifyWhatsapp, updateParcel, Parcel } from '@/services/api'
 import useRealtime from '@/hooks/use-realtime'
 
 export default function MoradorRetirada() {
@@ -26,17 +26,17 @@ export default function MoradorRetirada() {
 
   const [parcels, setParcels] = useState<Parcel[]>([])
   const [selected, setSelected] = useState<string[]>([])
-  const [exigeSms, setExigeSms] = useState(true)
+  const [exigeWhatsapp, setExigeWhatsapp] = useState(true)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showSmsDialog, setShowSmsDialog] = useState(false)
-  const [smsCode, setSmsCode] = useState('')
-  const [isSmsSending, setIsSmsSending] = useState(false)
+  const [showWhatsappDialog, setShowWhatsappDialog] = useState(false)
+  const [whatsappCode, setWhatsappCode] = useState('')
+  const [isWhatsappSending, setIsWhatsappSending] = useState(false)
 
   const loadData = async () => {
     try {
       const condoRes = await pb.collection('condos').getFullList()
-      if (condoRes.length > 0) setExigeSms(condoRes[0].exige_validacao_sms)
+      if (condoRes.length > 0) setExigeWhatsapp(condoRes[0].exige_validacao_whatsapp)
 
       const res = await pb.collection('parcels').getList<Parcel>(1, 100, {
         filter: 'status = "LIBERADO_RETIRADA"',
@@ -58,7 +58,7 @@ export default function MoradorRetirada() {
   }
 
   const handleRetirar = async () => {
-    if (exigeSms) {
+    if (exigeWhatsapp) {
       if (!user?.phone) {
         toast({
           title: 'Telefone não cadastrado',
@@ -67,18 +67,18 @@ export default function MoradorRetirada() {
         })
         return
       }
-      setIsSmsSending(true)
+      setIsWhatsappSending(true)
       try {
-        await sendSms(user.phone)
-        setShowSmsDialog(true)
+        await sendWhatsapp(user.phone, 'codigo')
+        setShowWhatsappDialog(true)
       } catch (err) {
         toast({
           title: 'Erro',
-          description: 'Falha ao enviar SMS para o seu celular.',
+          description: 'Falha ao enviar WhatsApp para o seu celular.',
           variant: 'destructive',
         })
       } finally {
-        setIsSmsSending(false)
+        setIsWhatsappSending(false)
       }
     } else {
       processWithdrawal()
@@ -88,9 +88,9 @@ export default function MoradorRetirada() {
   const handleVerifyAndWithdraw = async () => {
     setIsSubmitting(true)
     try {
-      await verifySms(user.phone, smsCode)
+      await verifyWhatsapp(user.phone, whatsappCode)
       await processWithdrawal()
-      setShowSmsDialog(false)
+      setShowWhatsappDialog(false)
     } catch (err) {
       toast({ title: 'Erro', description: 'Código inválido ou expirado.', variant: 'destructive' })
       setIsSubmitting(false)
@@ -163,10 +163,10 @@ export default function MoradorRetirada() {
           {parcels.length > 0 && (
             <Button
               className="w-full mt-6 h-12 text-lg"
-              disabled={selected.length === 0 || isSmsSending}
+              disabled={selected.length === 0 || isWhatsappSending}
               onClick={handleRetirar}
             >
-              {isSmsSending ? (
+              {isWhatsappSending ? (
                 <Loader2 className="animate-spin mr-2 h-5 w-5" />
               ) : (
                 <Package className="mr-2 h-5 w-5" />
@@ -177,17 +177,22 @@ export default function MoradorRetirada() {
         </CardContent>
       </Card>
 
-      <Dialog open={showSmsDialog} onOpenChange={setShowSmsDialog}>
+      <Dialog open={showWhatsappDialog} onOpenChange={setShowWhatsappDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Validação de Segurança</DialogTitle>
             <DialogDescription>
-              Digite o código de 6 dígitos enviado por SMS para o seu celular com final{' '}
+              Digite o código de 6 dígitos enviado por WhatsApp para o seu celular com final{' '}
               {user?.phone?.slice(-4)}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center py-6 space-y-4">
-            <InputOTP maxLength={6} value={smsCode} onChange={setSmsCode} disabled={isSubmitting}>
+            <InputOTP
+              maxLength={6}
+              value={whatsappCode}
+              onChange={setWhatsappCode}
+              disabled={isSubmitting}
+            >
               <InputOTPGroup>
                 <InputOTPSlot index={0} className="w-12 h-14 text-2xl" />
                 <InputOTPSlot index={1} className="w-12 h-14 text-2xl" />
@@ -204,13 +209,13 @@ export default function MoradorRetirada() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setShowSmsDialog(false)}
+              onClick={() => setShowWhatsappDialog(false)}
               disabled={isSubmitting}
             >
               Cancelar
             </Button>
             <Button
-              disabled={smsCode.length < 6 || isSubmitting}
+              disabled={whatsappCode.length < 6 || isSubmitting}
               onClick={handleVerifyAndWithdraw}
               className="bg-success hover:bg-success/90 text-white"
             >

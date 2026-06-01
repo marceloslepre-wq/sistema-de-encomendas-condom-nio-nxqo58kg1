@@ -36,9 +36,6 @@ onRecordAfterUpdateSuccess((e) => {
     templateMessage = template.getString('message')
   } catch (_) {}
 
-  const zapiInstanceId = $secrets.get('ZAPI_INSTANCE_ID') || '3F3FE6AB8AF55107542D6627BE24201D'
-  const zapiToken = $secrets.get('ZAPI_TOKEN') || '3F3FE6AB8AF55107542D6627BE24201D'
-
   for (const resident of residents) {
     const email = resident.getString('email')
     const phone = resident.getString('phone')
@@ -76,7 +73,7 @@ onRecordAfterUpdateSuccess((e) => {
           phoneStr = '55' + phoneStr
         }
 
-        const url = `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/send-text`
+        const url = `https://api.z-api.io/instances/3F3FE6AB8AF55107542D6627BE24201D/token/D41BBA7471F8F494D528DB60/send-text`
         $http.send({
           url: url,
           method: 'POST',

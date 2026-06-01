@@ -137,7 +137,9 @@ export default function SalaRetirada() {
                 <CardTitle className="flex items-center gap-2 text-primary">
                   <ShieldCheck className="h-5 w-5" /> Token de Segurança
                 </CardTitle>
-                <CardDescription>Insira os 6 dígitos fornecidos pelo morador.</CardDescription>
+                <CardDescription>
+                  Insira os 6 dígitos (enviados via WhatsApp) fornecidos pelo morador.
+                </CardDescription>
               </CardHeader>
               <CardContent className="pt-8 space-y-8 flex flex-col items-center">
                 <div className="text-center space-y-1 w-full">

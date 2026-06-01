@@ -13,10 +13,10 @@ export default function GestorPermissoes() {
       .then((res) => setCondo(res[0]))
   }, [])
 
-  const handleSmsToggle = async (checked: boolean) => {
+  const handleWhatsappToggle = async (checked: boolean) => {
     if (!condo) return
-    setCondo({ ...condo, exige_validacao_sms: checked })
-    await pb.collection('condos').update(condo.id, { exige_validacao_sms: checked })
+    setCondo({ ...condo, exige_validacao_whatsapp: checked })
+    await pb.collection('condos').update(condo.id, { exige_validacao_whatsapp: checked })
   }
 
   return (
@@ -63,10 +63,10 @@ export default function GestorPermissoes() {
               <Switch checked disabled />
             </div>
             <div className="flex items-center justify-between">
-              <Label className="font-normal">Validar retirada via SMS</Label>
+              <Label className="font-normal">Validar retirada via WhatsApp</Label>
               <Switch
-                checked={condo?.exige_validacao_sms ?? true}
-                onCheckedChange={handleSmsToggle}
+                checked={condo?.exige_validacao_whatsapp ?? true}
+                onCheckedChange={handleWhatsappToggle}
                 disabled={!condo}
               />
             </div>

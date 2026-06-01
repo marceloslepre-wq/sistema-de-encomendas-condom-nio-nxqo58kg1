@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-01T16:42:19.489Z",
+  "generatedAt": "2026-06-01T16:52:02.640Z",
   "collections": [
     {
       "name": "users",
@@ -147,7 +147,7 @@
           "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
-          "name": "exige_validacao_sms",
+          "name": "exige_validacao_whatsapp",
           "type": "bool",
           "required": false,
           "system": false
@@ -645,9 +645,9 @@
       "name": "whatsapp_logs",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.role = 'gestor' || @request.auth.role = 'portaria'",
-        "view": "@request.auth.role = 'gestor' || @request.auth.role = 'portaria'",
-        "create": "@request.auth.role = 'portaria' || @request.auth.role = 'gestor'",
+        "list": "@request.auth.role = 'portaria' || @request.auth.role = 'gestor' || @request.auth.role = 'triagem'",
+        "view": "@request.auth.role = 'portaria' || @request.auth.role = 'gestor' || @request.auth.role = 'triagem'",
+        "create": "@request.auth.role = 'portaria' || @request.auth.role = 'gestor' || @request.auth.role = 'triagem'",
         "update": null,
         "delete": null
       },
@@ -697,8 +697,8 @@
       "name": "whatsapp_verifications",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.role = 'portaria' || @request.auth.role = 'gestor'",
-        "view": "@request.auth.role = 'portaria' || @request.auth.role = 'gestor'",
+        "list": "@request.auth.role = 'portaria' || @request.auth.role = 'gestor' || @request.auth.role = 'triagem'",
+        "view": "@request.auth.role = 'portaria' || @request.auth.role = 'gestor' || @request.auth.role = 'triagem'",
         "create": "@request.auth.id != ''",
         "update": null,
         "delete": null

@@ -85,7 +85,7 @@ export default function PortariaRegistro() {
     pb.collection('condos')
       .getFullList()
       .then((res) => {
-        if (res.length > 0) setExigeValidacao(res[0].exige_validacao_sms)
+        if (res.length > 0) setExigeValidacao(res[0].exige_validacao_whatsapp)
       })
       .catch(() => {})
 
@@ -453,7 +453,8 @@ export default function PortariaRegistro() {
               {exigeValidacao && isWhatsappSent && !isWhatsappVerified && (
                 <div className="space-y-2 animate-fade-in">
                   <Label>
-                    Código de Verificação <span className="text-destructive">*</span>
+                    Código de Verificação (Enviado via WhatsApp){' '}
+                    <span className="text-destructive">*</span>
                   </Label>
                   <div className="flex gap-2">
                     <Input

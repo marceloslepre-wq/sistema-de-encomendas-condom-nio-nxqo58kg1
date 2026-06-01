@@ -29,41 +29,12 @@ routerAdd(
       $app.save(verif)
     }
 
-    const rawInstanceId =
-      $os.getenv('ZAPI_INSTANCE_ID') ||
-      $secrets.get('ZAPI_INSTANCE_ID') ||
-      '3F3FE6AB8AF55107542D6627BE24201D'
-    const rawToken =
-      $os.getenv('ZAPI_TOKEN') || $secrets.get('ZAPI_TOKEN') || 'D41BBA7471F8F494D528DB60'
-
-    // Data Sanitization: Remove whitespace, line breaks, and hidden characters
-    const instanceId = String(rawInstanceId).replace(/[\s\r\n\t\v\f\0:]/g, '')
-    const token = String(rawToken).replace(/[\s\r\n\t\v\f\0:]/g, '')
-
     let logStatus = 'error'
-
-    if (!instanceId || !token) {
-      $app.logger().warn('Z-API secrets missing, WhatsApp not physically sent')
-      logStatus = 'Credenciais ZAPI ausentes'
-
-      const logCol = $app.findCollectionByNameOrId('whatsapp_logs')
-      const log = new Record(logCol)
-      log.set('phone', phoneNum)
-      log.set('message', message)
-      log.set('tipo', tipo)
-      log.set('status', logStatus)
-      $app.save(log)
-
-      return e.json(200, {
-        success: false,
-        error: 'Erro de configuração: Credenciais do WhatsApp (Z-API) não encontradas no sistema.',
-      })
-    }
 
     try {
       const toPhone = phoneNum.startsWith('55') ? phoneNum : '55' + phoneNum
       const res = $http.send({
-        url: `https://api.z-api.io/instances/${instanceId}/token/${token}/send-text`,
+        url: `https://api.z-api.io/instances/3F3FE6AB8AF55107542D6627BE24201D/token/D41BBA7471F8F494D528DB60/send-text`,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,7 +68,6 @@ routerAdd(
     $app.save(log)
 
     if (logStatus !== 'success') {
-      // Handle gracefully without crashing the frontend execution stack
       return e.json(200, {
         success: false,
         error: 'Erro ao enviar WhatsApp pelo provedor. Detalhes: ' + logStatus,
