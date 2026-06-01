@@ -33,12 +33,13 @@ routerAdd(
 
     try {
       const toPhone = phoneNum.startsWith('55') ? phoneNum : '55' + phoneNum
+      const clientToken = $secrets.get('ZAPI_TOKEN') || 'D41BBA7471F8F494D528DB60'
       const res = $http.send({
         url: 'https://api.z-api.io/instances/3F3FE6AB8AF55107542D6627BE24201D/token/D41BBA7471F8F494D528DB60/send-text',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Client-Token': 'D41BBA7471F8F494D528DB60',
+          'client-token': clientToken,
         },
         body: JSON.stringify({ phone: toPhone, message: message }),
         timeout: 10,
