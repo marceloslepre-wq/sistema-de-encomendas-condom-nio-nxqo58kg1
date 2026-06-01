@@ -13,6 +13,8 @@ import {
   Shield,
   Home,
   Truck,
+  Box,
+  MessageSquare,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import {
@@ -40,6 +42,8 @@ export function AppSidebar() {
           { title: 'Transportadoras', url: '/gestor/transportadoras', icon: Truck },
           { title: 'Gerar Links', url: '/gestor/links', icon: LinkIcon },
           { title: 'Relatórios', url: '/gestor/relatorios', icon: FileText },
+          { title: 'Logística', url: '/gestor/logistica', icon: Box },
+          { title: 'Comunicação', url: '/gestor/comunicacao', icon: MessageSquare },
           { title: 'Permissões', url: '/gestor/permissoes', icon: Shield },
           { title: 'Configurações', url: '/gestor/configuracoes', icon: Settings },
         ]

@@ -175,6 +175,11 @@ export default function SalaTriagem() {
                           <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
                         <SelectContent>
+                          {volumeTypes.length === 0 && (
+                            <SelectItem value="none" disabled>
+                              Nenhum tipo cadastrado
+                            </SelectItem>
+                          )}
                           {volumeTypes.map((v) => (
                             <SelectItem key={v.id} value={v.name}>
                               {v.name}
@@ -190,6 +195,11 @@ export default function SalaTriagem() {
                           <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
                         <SelectContent>
+                          {shelfLocations.length === 0 && (
+                            <SelectItem value="none" disabled>
+                              Nenhum local cadastrado
+                            </SelectItem>
+                          )}
                           {shelfLocations.map((s) => (
                             <SelectItem key={s.id} value={s.name}>
                               {s.name}

@@ -43,15 +43,7 @@ routerAdd(
       }
     }
 
-    const allowedFields = [
-      'name',
-      'cpf',
-      'phone',
-      'role',
-      'status',
-      'unit_id',
-      'autoriza_retirada_terceiros',
-    ]
+    const allowedFields = ['name', 'cpf', 'phone', 'role', 'status', 'autoriza_retirada_terceiros']
 
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
@@ -59,19 +51,15 @@ routerAdd(
       }
     }
 
+    if (body.unit_id !== undefined) {
+      record.set('unit_id', body.unit_id || null)
+    }
+
     if (body.email !== undefined) {
       record.setEmail(body.email)
     }
 
     if (body.password && String(body.password).trim() !== '') {
-      if (body.passwordConfirm && body.password !== body.passwordConfirm) {
-        throw new BadRequestError('As senhas não coincidem.', {
-          passwordConfirm: new ValidationError(
-            'validation_password_mismatch',
-            'As senhas não coincidem.',
-          ),
-        })
-      }
       record.setPassword(String(body.password))
     }
 

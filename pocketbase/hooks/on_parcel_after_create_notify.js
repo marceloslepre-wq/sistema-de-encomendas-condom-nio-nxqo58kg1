@@ -38,6 +38,9 @@ onRecordAfterCreateSuccess((e) => {
     templateMessage = template.getString('message')
   } catch (_) {}
 
+  const zapiInstanceId = $secrets.get('ZAPI_INSTANCE_ID') || '3F3FE6AB8AF55107542D6627BE24201D'
+  const zapiToken = $secrets.get('ZAPI_TOKEN') || '3F3FE6AB8AF55107542D6627BE24201D'
+
   for (const resident of residents) {
     const email = resident.getString('email')
     const phone = resident.getString('phone')
@@ -46,7 +49,7 @@ onRecordAfterCreateSuccess((e) => {
     const code = e.record.getString('withdrawal_code') || ''
 
     const message = templateMessage
-      .replace(/{name}/g, resident.getString('name'))
+      .replace(/{name}/g, resident.getString('name') || 'Morador')
       .replace(/{tracking}/g, tracking)
       .replace(/{code}/g, code)
       .replace(/{condoName}/g, condoName)
@@ -70,21 +73,22 @@ onRecordAfterCreateSuccess((e) => {
 
     if (phone) {
       try {
-        const url =
-          ($secrets.get('PB_INSTANCE_URL') || 'http://localhost:8090') + '/backend/v1/sms/send'
+        let phoneStr = phone.replace(/\D/g, '')
+        if (!phoneStr.startsWith('55')) {
+          phoneStr = '55' + phoneStr
+        }
+
+        const url = `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/send-text`
         $http.send({
           url: url,
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: phone, message: message }),
-          timeout: 5,
+          body: JSON.stringify({ phone: phoneStr, message: message }),
+          timeout: 10,
         })
         sent = true
       } catch (err) {
-        $app
-          .logger()
-          .info('SMS attempt failed (mock/simulated)', 'phone', phone, 'error', err.message)
-        sent = true
+        $app.logger().error('Z-API WhatsApp attempt failed', 'phone', phone, 'error', err.message)
       }
     }
 

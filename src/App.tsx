@@ -19,6 +19,8 @@ import GestorRelatorios from './pages/gestor/Relatorios'
 import GestorConfiguracoes from './pages/gestor/Configuracoes'
 import GestorPermissoes from './pages/gestor/Permissoes'
 import GestorTransportadoras from './pages/gestor/Carriers'
+import GestorLogistica from './pages/gestor/Logistica'
+import GestorComunicacao from './pages/gestor/Comunicacao'
 
 // Portaria / Sala Pages
 import PortariaRegistro from './pages/portaria/Registro'
@@ -143,6 +145,22 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="gestor">
                   <GestorPermissoes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gestor/logistica"
+              element={
+                <ProtectedRoute requiredRole="gestor">
+                  <GestorLogistica />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gestor/comunicacao"
+              element={
+                <ProtectedRoute requiredRole="gestor">
+                  <GestorComunicacao />
                 </ProtectedRoute>
               }
             />
