@@ -83,9 +83,6 @@ export const verifyWhatsapp = (phone: string, code: string) =>
     headers: { 'Content-Type': 'application/json' },
   })
 
-export const sendSms = sendWhatsapp
-export const verifySms = verifyWhatsapp
-
 export const createRecebimentoAuditoria = (data: any) =>
   pb.collection('recebimentos_auditoria').create(data)
 

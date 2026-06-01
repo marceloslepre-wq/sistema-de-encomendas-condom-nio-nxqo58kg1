@@ -77,7 +77,10 @@ onRecordAfterUpdateSuccess((e) => {
         $http.send({
           url: url,
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Client-Token': 'D41BBA7471F8F494D528DB60',
+          },
           body: JSON.stringify({ phone: phoneStr, message: message }),
           timeout: 10,
         })
