@@ -178,35 +178,16 @@ export default function PortariaRegistro() {
     sessionStorage.setItem('codigo_timestamp', Date.now().toString())
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/enviar-codigo-whatsapp`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            phone: digits,
-            message: `Seu código é: ${code}`,
-          }),
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: pb.authStore.token,
-          },
+      await pb.send('/backend/v1/enviar-codigo-whatsapp', {
+        method: 'POST',
+        body: JSON.stringify({
+          phone: digits,
+          message: `Seu código é: ${code}`,
+        }),
+        headers: {
+          'Content-Type': 'application/json',
         },
-      )
-
-      if (!response.ok) {
-        let errorMsg = 'Falha ao enviar código'
-        try {
-          const errorData = await response.json()
-          if (errorData.error) {
-            errorMsg = errorData.error
-          } else if (errorData.message) {
-            errorMsg = errorData.message
-          }
-        } catch (_) {
-          // Use default errorMsg if response is not JSON
-        }
-        throw new Error(errorMsg)
-      }
+      })
 
       toast({
         title: 'Sucesso',
@@ -217,7 +198,7 @@ export default function PortariaRegistro() {
       console.error('Failed to send code', err)
       toast({
         title: 'Erro',
-        description: err.message || 'Falha ao enviar. Tente novamente.',
+        description: getErrorMessage(err) || 'Falha ao enviar. Tente novamente.',
         variant: 'destructive',
       })
     } finally {
