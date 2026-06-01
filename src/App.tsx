@@ -42,11 +42,17 @@ const ProtectedRoute = ({
   children: React.ReactNode
   requiredRole?: string
 }) => {
-  const { role, isAuthenticated, loading } = useAuth()
+  const { user, role, isAuthenticated, loading } = useAuth()
 
-  if (loading) return null // Or a loading spinner
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
-  if (!isAuthenticated) return <Navigate to="/" replace />
+  if (!isAuthenticated || !user) return <Navigate to="/" replace />
 
   if (requiredRole && role !== requiredRole) {
     if (
