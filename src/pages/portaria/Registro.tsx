@@ -125,7 +125,15 @@ export default function PortariaRegistro() {
 
   const handleSendWhatsapp = async () => {
     const rawPhone = courierPhone.replace(/\D/g, '')
-    if (rawPhone.length < 10) return
+    if (rawPhone.length < 10) {
+      toast({
+        title: 'Número Inválido',
+        description: 'Por favor, insira um número de celular válido com DDD.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setIsWhatsappSending(true)
     try {
       const result = await sendWhatsapp(rawPhone, 'codigo')
@@ -139,8 +147,8 @@ export default function PortariaRegistro() {
       } else {
         console.error('sendWhatsapp returned unsuccessful result:', result)
         toast({
-          title: 'Erro',
-          description: 'A resposta da API de WhatsApp não indicou sucesso.',
+          title: 'Falha no Envio',
+          description: result?.error || 'A resposta da API de WhatsApp não indicou sucesso.',
           variant: 'destructive',
         })
       }

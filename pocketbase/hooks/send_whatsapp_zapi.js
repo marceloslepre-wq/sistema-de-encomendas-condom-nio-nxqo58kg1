@@ -71,7 +71,11 @@ routerAdd(
     $app.save(log)
 
     if (logStatus !== 'success') {
-      return e.badRequestError('Erro ao enviar WhatsApp pelo provedor.')
+      // Handle gracefully without crashing the frontend execution stack
+      return e.json(200, {
+        success: false,
+        error: 'Erro ao enviar WhatsApp pelo provedor. Detalhes: ' + logStatus,
+      })
     }
 
     return e.json(200, { success: true })
