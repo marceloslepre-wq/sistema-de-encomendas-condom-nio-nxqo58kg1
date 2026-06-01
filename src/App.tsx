@@ -24,6 +24,7 @@ import GestorComunicacao from './pages/gestor/Comunicacao'
 
 // Portaria / Sala Pages
 import PortariaRegistro from './pages/portaria/Registro'
+import PortariaRecebimentos from './pages/portaria/Recebimentos'
 import SalaTriagem from './pages/sala/Triagem'
 import SalaRetirada from './pages/sala/Retirada'
 
@@ -170,6 +171,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="portaria">
                   <PortariaRegistro />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portaria/recebimentos"
+              element={
+                <ProtectedRoute requiredRole="portaria">
+                  <PortariaRecebimentos />
                 </ProtectedRoute>
               }
             />

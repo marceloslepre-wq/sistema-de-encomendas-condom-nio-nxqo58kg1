@@ -29,11 +29,13 @@ import {
   Unit,
   AppUser,
   Carrier,
-  sendSms,
-  verifySms,
+  sendWhatsapp,
+  verifyWhatsapp,
+  createRecebimentoAuditoria,
 } from '@/services/api'
 import { useAuth } from '@/hooks/use-auth'
 import pb from '@/lib/pocketbase/client'
+import { getErrorMessage } from '@/lib/pocketbase/errors'
 
 const formatCpf = (value: string) => {
   const v = value.replace(/\D/g, '').substring(0, 11)
@@ -70,20 +72,20 @@ export default function PortariaRegistro() {
   const [courierCpf, setCourierCpf] = useState('')
   const [courierPhone, setCourierPhone] = useState('')
 
-  const [smsCode, setSmsCode] = useState('')
-  const [isSmsSent, setIsSmsSent] = useState(false)
-  const [isSmsSending, setIsSmsSending] = useState(false)
-  const [isSmsVerified, setIsSmsVerified] = useState(false)
-  const [isSmsVerifying, setIsSmsVerifying] = useState(false)
+  const [whatsappCode, setWhatsappCode] = useState('')
+  const [isWhatsappSent, setIsWhatsappSent] = useState(false)
+  const [isWhatsappSending, setIsWhatsappSending] = useState(false)
+  const [isWhatsappVerified, setIsWhatsappVerified] = useState(false)
+  const [isWhatsappVerifying, setIsWhatsappVerifying] = useState(false)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [exigeSms, setExigeSms] = useState(true)
+  const [exigeValidacao, setExigeValidacao] = useState(true)
 
   useEffect(() => {
     pb.collection('condos')
       .getFullList()
       .then((res) => {
-        if (res.length > 0) setExigeSms(res[0].exige_validacao_sms)
+        if (res.length > 0) setExigeValidacao(res[0].exige_validacao_sms)
       })
       .catch(() => {})
 
@@ -110,48 +112,48 @@ export default function PortariaRegistro() {
   }, [filteredResidents, residentId])
 
   const isFormValid = useMemo(() => {
-    const validSms = exigeSms ? isSmsVerified : true
+    const validCode = exigeValidacao ? isWhatsappVerified : true
     return (
       unitId &&
       carrier &&
       Number(volumes) > 0 &&
       courierName &&
       courierCpf.length === 14 &&
-      validSms
+      validCode
     )
-  }, [unitId, carrier, volumes, courierName, courierCpf, isSmsVerified, exigeSms])
+  }, [unitId, carrier, volumes, courierName, courierCpf, isWhatsappVerified, exigeValidacao])
 
-  const handleSendSms = async () => {
+  const handleSendWhatsapp = async () => {
     const rawPhone = courierPhone.replace(/\D/g, '')
     if (rawPhone.length < 10) return
-    setIsSmsSending(true)
+    setIsWhatsappSending(true)
     try {
-      const res = await sendSms(rawPhone)
+      const res = await sendWhatsapp(rawPhone)
       if (res.success) {
-        setIsSmsSent(true)
+        setIsWhatsappSent(true)
         toast({
-          title: 'SMS Enviado',
+          title: 'WhatsApp Enviado',
           description: 'O código foi enviado para o celular do entregador.',
         })
       }
     } catch (err: any) {
       toast({
         title: 'Erro',
-        description: 'Falha ao enviar o SMS.',
+        description: 'Falha ao enviar o WhatsApp.',
         variant: 'destructive',
       })
     } finally {
-      setIsSmsSending(false)
+      setIsWhatsappSending(false)
     }
   }
 
-  const handleVerifySms = async () => {
-    if (!smsCode) return
+  const handleVerifyWhatsapp = async () => {
+    if (!whatsappCode) return
     const rawPhone = courierPhone.replace(/\D/g, '')
-    setIsSmsVerifying(true)
+    setIsWhatsappVerifying(true)
     try {
-      await verifySms(rawPhone, smsCode)
-      setIsSmsVerified(true)
+      await verifyWhatsapp(rawPhone, whatsappCode)
+      setIsWhatsappVerified(true)
       toast({
         title: 'Entregador Verificado',
         description: 'O código foi validado com sucesso.',
@@ -160,11 +162,11 @@ export default function PortariaRegistro() {
     } catch (err: any) {
       toast({
         title: 'Erro de Verificação',
-        description: 'Código inválido ou expirado.',
+        description: getErrorMessage(err),
         variant: 'destructive',
       })
     } finally {
-      setIsSmsVerifying(false)
+      setIsWhatsappVerifying(false)
     }
   }
 
@@ -184,6 +186,21 @@ export default function PortariaRegistro() {
         entry_date: new Date().toISOString(),
         porter_id: user?.id || '',
       })
+
+      // Try saving audit log
+      try {
+        await createRecebimentoAuditoria({
+          morador_nome: courierName,
+          morador_cpf: courierCpf.replace(/\D/g, ''),
+          morador_celular: courierPhone.replace(/\D/g, ''),
+          codigo_enviado: whatsappCode || '',
+          codigo_validado: exigeValidacao ? isWhatsappVerified : false,
+          data_hora_recebimento: new Date().toISOString(),
+          status: 'Recebido',
+        })
+      } catch (auditErr) {
+        console.error('Failed to create audit record', auditErr)
+      }
 
       setIsSuccess(true)
       toast({
@@ -212,9 +229,9 @@ export default function PortariaRegistro() {
     setCourierName('')
     setCourierCpf('')
     setCourierPhone('')
-    setSmsCode('')
-    setIsSmsSent(false)
-    setIsSmsVerified(false)
+    setWhatsappCode('')
+    setIsWhatsappSent(false)
+    setIsWhatsappVerified(false)
   }
 
   if (isSuccess) {
@@ -360,7 +377,7 @@ export default function PortariaRegistro() {
                   value={courierName}
                   onChange={(e) => setCourierName(e.target.value)}
                   placeholder="Ex: João da Silva"
-                  disabled={isSmsVerified}
+                  disabled={isWhatsappVerified}
                 />
               </div>
 
@@ -373,68 +390,74 @@ export default function PortariaRegistro() {
                   onChange={(e) => setCourierCpf(formatCpf(e.target.value))}
                   placeholder="000.000.000-00"
                   maxLength={14}
-                  disabled={isSmsVerified}
+                  disabled={isWhatsappVerified}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>Celular {exigeSms && <span className="text-destructive">*</span>}</Label>
+                <Label>
+                  Celular {exigeValidacao && <span className="text-destructive">*</span>}
+                </Label>
                 <div className="flex gap-2">
                   <Input
                     value={courierPhone}
                     onChange={(e) => {
                       setCourierPhone(formatPhone(e.target.value))
-                      setIsSmsSent(false)
-                      setSmsCode('')
+                      setIsWhatsappSent(false)
+                      setWhatsappCode('')
                     }}
                     placeholder="(00) 00000-0000"
                     maxLength={15}
-                    disabled={exigeSms ? isSmsVerified || isSmsSending : false}
+                    disabled={exigeValidacao ? isWhatsappVerified || isWhatsappSending : false}
                   />
-                  {exigeSms && !isSmsVerified && (
+                  {exigeValidacao && !isWhatsappVerified && (
                     <Button
                       type="button"
-                      onClick={handleSendSms}
-                      disabled={isSmsSending || courierPhone.length < 14}
+                      onClick={handleSendWhatsapp}
+                      disabled={isWhatsappSending || courierPhone.length < 14}
                       className="shrink-0"
-                      variant={isSmsSent ? 'outline' : 'default'}
+                      variant={isWhatsappSent ? 'outline' : 'default'}
                     >
-                      {isSmsSending ? (
+                      {isWhatsappSending ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
                         <Send className="w-4 h-4 mr-2" />
                       )}
-                      {isSmsSent ? 'Reenviar' : 'Enviar SMS'}
+                      {isWhatsappSent ? 'Reenviar' : 'Enviar Cod. Validação'}
                     </Button>
                   )}
                 </div>
               </div>
 
-              {exigeSms && isSmsSent && !isSmsVerified && (
+              {exigeValidacao && isWhatsappSent && !isWhatsappVerified && (
                 <div className="space-y-2 animate-fade-in">
                   <Label>
                     Código de Verificação <span className="text-destructive">*</span>
                   </Label>
                   <div className="flex gap-2">
                     <Input
-                      value={smsCode}
-                      onChange={(e) => setSmsCode(e.target.value)}
+                      value={whatsappCode}
+                      onChange={(e) => setWhatsappCode(e.target.value)}
                       placeholder="000000"
                       maxLength={6}
                     />
                     <Button
                       type="button"
-                      onClick={handleVerifySms}
-                      disabled={isSmsVerifying || smsCode.length < 4}
+                      onClick={handleVerifyWhatsapp}
+                      disabled={isWhatsappVerifying || whatsappCode.length < 4}
                       variant="secondary"
                     >
-                      {isSmsVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verificar'}
+                      {isWhatsappVerifying ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        'Verificar'
+                      )}
                     </Button>
                   </div>
                 </div>
               )}
 
-              {exigeSms && isSmsVerified && (
+              {exigeValidacao && isWhatsappVerified && (
                 <div className="space-y-2 flex items-end">
                   <div className="flex items-center gap-2 text-success font-medium h-10 px-3 bg-success/10 rounded-md w-full border border-success/20">
                     <CheckCircle2 className="w-5 h-5" /> Entregador Verificado

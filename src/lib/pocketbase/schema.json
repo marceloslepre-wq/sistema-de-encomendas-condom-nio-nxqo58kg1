@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-01T13:41:31.980Z",
+  "generatedAt": "2026-06-01T14:03:34.031Z",
   "collections": [
     {
       "name": "users",
@@ -640,6 +640,192 @@
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_nt_status ON notification_templates (status)"]
+    },
+    {
+      "name": "whatsapp_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.role = 'gestor' || @request.auth.role = 'portaria'",
+        "view": "@request.auth.role = 'gestor' || @request.auth.role = 'portaria'",
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "phone",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "message",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "tipo",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "whatsapp_verifications",
+      "type": "base",
+      "apiRules": {
+        "list": null,
+        "view": null,
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "phone",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "code",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "expires_at",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "used",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "attempts",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "locked_until",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "recebimentos_auditoria",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.role = 'gestor' || @request.auth.role = 'portaria'",
+        "view": "@request.auth.role = 'gestor' || @request.auth.role = 'portaria'",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "morador_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "morador_cpf",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "morador_celular",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "codigo_enviado",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "codigo_validado",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_hora_recebimento",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
     }
   ]
 }

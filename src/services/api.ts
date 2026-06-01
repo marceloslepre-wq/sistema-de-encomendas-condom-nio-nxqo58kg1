@@ -69,18 +69,27 @@ export const updateParcelWithFormData = (id: string, formData: FormData) =>
   pb.collection('parcels').update(id, formData)
 export const getFileUrl = (record: any, filename: string) => pb.files.getUrl(record, filename)
 
-export const sendSms = (phone: string) =>
-  pb.send<{ success: boolean; mockCode?: string }>('/backend/v1/sms/send', {
+export const sendWhatsapp = (phone: string, tipo: string = 'codigo', message?: string) =>
+  pb.send<{ success: boolean; mockCode?: string }>('/backend/v1/whatsapp/send', {
     method: 'POST',
-    body: JSON.stringify({ phone }),
+    body: JSON.stringify({ phone, tipo, message }),
     headers: { 'Content-Type': 'application/json' },
   })
 
-export const verifySms = (phone: string, code: string) =>
-  pb.send('/backend/v1/sms/verify', {
+export const verifyWhatsapp = (phone: string, code: string) =>
+  pb.send('/backend/v1/whatsapp/verify', {
     method: 'POST',
     body: JSON.stringify({ phone, code }),
     headers: { 'Content-Type': 'application/json' },
+  })
+
+export const createRecebimentoAuditoria = (data: any) =>
+  pb.collection('recebimentos_auditoria').create(data)
+
+export const getRecebimentosAuditoria = (page = 1, filter = '') =>
+  pb.collection('recebimentos_auditoria').getList(page, 20, {
+    filter,
+    sort: '-data_hora_recebimento',
   })
 
 export type Parcel = RecordModel & {
@@ -128,6 +137,16 @@ export const getParcelById = (id: string) =>
 
 export const getParcelAuditLogs = (parcelId: string) =>
   pb.collection('audit_logs').getFullList({ filter: `parcel_id="${parcelId}"`, sort: '-created' })
+
+export type RecebimentoAuditoria = RecordModel & {
+  morador_nome: string
+  morador_cpf: string
+  morador_celular: string
+  codigo_enviado: string
+  codigo_validado: boolean
+  data_hora_recebimento: string
+  status: string
+}
 
 export type AppUser = RecordModel & {
   name: string

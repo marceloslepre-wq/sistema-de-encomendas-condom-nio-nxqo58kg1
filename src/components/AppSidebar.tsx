@@ -51,6 +51,7 @@ export function AppSidebar() {
       case 'triagem':
         return [
           { title: 'Recepção (Lobby)', url: '/portaria/registro', icon: Package },
+          { title: 'Registro de Recebimento', url: '/portaria/recebimentos', icon: History },
           { title: 'Triagem & Etiqueta', url: '/sala/triagem', icon: ClipboardList },
           { title: 'Validar Retirada', url: '/sala/retirada', icon: QrCode },
         ]
