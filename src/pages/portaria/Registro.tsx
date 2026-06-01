@@ -179,7 +179,7 @@ export default function PortariaRegistro() {
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/enviar_codigo_whatsapp`,
+        `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/enviar-codigo-whatsapp`,
         {
           method: 'POST',
           body: JSON.stringify({

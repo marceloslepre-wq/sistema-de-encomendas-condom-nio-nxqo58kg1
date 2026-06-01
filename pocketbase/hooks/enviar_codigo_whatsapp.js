@@ -13,14 +13,8 @@ routerAdd(
       return e.badRequestError('Message is required')
     }
 
-    const instanceId = $secrets.get('ZAPI_INSTANCE_ID')
-    const token = $secrets.get('ZAPI_TOKEN')
-
-    if (!instanceId || !token) {
-      return e.internalServerError('Z-API credentials not configured')
-    }
-
-    const url = `https://api.z-api.io/instances/${instanceId}/token/${token}/send-text`
+    const apiUrl =
+      'https://api.z-api.io/instances/3F3FE6AB8AF55107542D6627BE24201D/token/D41BBA7471F8F494D528DB60/send-text'
 
     const logCol = $app.findCollectionByNameOrId('whatsapp_logs')
     const logRecord = new Record(logCol)
@@ -29,7 +23,7 @@ routerAdd(
 
     try {
       const res = $http.send({
-        url: url,
+        url: apiUrl,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
