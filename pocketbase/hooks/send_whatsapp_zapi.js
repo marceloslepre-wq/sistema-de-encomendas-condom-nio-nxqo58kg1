@@ -34,7 +34,7 @@ routerAdd(
     try {
       const toPhone = phoneNum.startsWith('55') ? phoneNum : '55' + phoneNum
       const res = $http.send({
-        url: `https://api.z-api.io/instances/3F3FE6AB8AF55107542D6627BE24201D/token/D41BBA7471F8F494D528DB60/send-text`,
+        url: 'https://api.z-api.io/instances/3F3FE6AB8AF55107542D6627BE24201D/token/D41BBA7471F8F494D528DB60/send-text',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
