@@ -30,21 +30,27 @@ routerAdd(
     }
 
     let logStatus = 'error'
+    let zApiResponse = null
+    let zApiError = null
 
     try {
-      const toPhone = phoneNum.startsWith('55') ? phoneNum : '55' + phoneNum
+      // Hardcoded test payload per integration requirements
+      const testPhone = '5527999740817'
+      const testMessage = 'Teste de envio do sistema de encomendas CondoPack.'
+
       const res = $http.send({
         url: 'https://api.z-api.io/instances/3F3FE6AB8AF55107542D6627BE24201D/token/D41BBA7471F8F494D528DB60/send-text',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ phone: toPhone, message: message }),
+        body: JSON.stringify({ phone: testPhone, message: testMessage }),
         timeout: 10,
       })
 
       if (res.statusCode >= 200 && res.statusCode < 300) {
         logStatus = 'success'
+        zApiResponse = res.json
       } else {
         $app.logger().error('Z-API Error', 'status', res.statusCode, 'body', res.json)
         logStatus =
@@ -53,14 +59,17 @@ routerAdd(
             : res.json && res.json.message
               ? String(res.json.message)
               : 'error'
+        zApiError = res.json || { message: 'Unknown error from Z-API', status: res.statusCode }
       }
     } catch (err) {
       $app.logger().error('Z-API Request Error', 'error', err)
       logStatus = err.message ? String(err.message) : 'error'
+      zApiError = { message: logStatus }
     }
 
     const logCol = $app.findCollectionByNameOrId('whatsapp_logs')
     const log = new Record(logCol)
+    // Log original intent for system auditing
     log.set('phone', phoneNum)
     log.set('message', message)
     log.set('tipo', tipo)
@@ -68,13 +77,14 @@ routerAdd(
     $app.save(log)
 
     if (logStatus !== 'success') {
-      return e.json(200, {
+      return e.json(500, {
         success: false,
-        error: 'Erro ao enviar WhatsApp pelo provedor. Detalhes: ' + logStatus,
+        error: 'Erro ao enviar WhatsApp pelo provedor',
+        details: zApiError,
       })
     }
 
-    return e.json(200, { success: true })
+    return e.json(200, zApiResponse || { success: true })
   },
   $apis.requireAuth(),
 )
