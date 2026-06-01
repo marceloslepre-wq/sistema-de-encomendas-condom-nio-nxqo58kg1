@@ -194,7 +194,18 @@ export default function PortariaRegistro() {
       )
 
       if (!response.ok) {
-        throw new Error('Falha ao enviar código')
+        let errorMsg = 'Falha ao enviar código'
+        try {
+          const errorData = await response.json()
+          if (errorData.error) {
+            errorMsg = errorData.error
+          } else if (errorData.message) {
+            errorMsg = errorData.message
+          }
+        } catch (_) {
+          // Use default errorMsg if response is not JSON
+        }
+        throw new Error(errorMsg)
       }
 
       toast({
@@ -206,7 +217,7 @@ export default function PortariaRegistro() {
       console.error('Failed to send code', err)
       toast({
         title: 'Erro',
-        description: 'Falha ao enviar. Tente novamente.',
+        description: err.message || 'Falha ao enviar. Tente novamente.',
         variant: 'destructive',
       })
     } finally {
