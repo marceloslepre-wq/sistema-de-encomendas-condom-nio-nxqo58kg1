@@ -1,10 +1,35 @@
 /*
   ====================================================================================================
-  INTEGRAÇÃO EVOLUTION API
+  INTEGRAÇÃO EVOLUTION API (OFICIAL)
   ====================================================================================================
-  Conforme especificado, a URL e a apikey devem ser configuradas de forma explícita neste hook.
+  Configuração fixa solicitada:
+  - Server URL: https://api.sholver.com.br
+  - Endpoint: POST /message/sendText/Encomenda
+  - Header obrigatório: apikey
+
+  IMPORTANTE:
+  - Este hook substitui totalmente a integração anterior de mensageria.
+  - Este hook NÃO usa secrets/env para URL/chave da Evolution.
+  - O número deve ser enviado no formato 55 + DDD + número (somente dígitos).
   ====================================================================================================
 */
+
+const EVOLUTION_API_URL = 'https://api.sholver.com.br/message/sendText/Encomenda'
+const EVOLUTION_API_KEY = '3Sqdj8r8CbQRbzon7vcIKSPWCP8gus6c'
+
+function normalizeBrazilianNumber(input) {
+  let digits = String(input || '').replace(/\D/g, '')
+
+  // Remove zeros iniciais comuns de discagem local.
+  digits = digits.replace(/^0+/, '')
+
+  // Garante DDI brasileiro.
+  if (!digits.startsWith('55')) {
+    digits = '55' + digits
+  }
+
+  return digits
+}
 
 routerAdd(
   'POST',
@@ -22,28 +47,30 @@ routerAdd(
       return e.badRequestError('Message is required')
     }
 
-    let cleanPhone = phone.replace(/\D/g, '')
-    if (!cleanPhone.startsWith('55')) {
-      cleanPhone = '55' + cleanPhone
-    }
+    const normalizedNumber = normalizeBrazilianNumber(phone)
 
-    const apiUrl =
-      'https://api.sholver.com.br/message/sendText/sistema-de-encomendas-condominio-03d6a'
+    // 55 + DDD + número local (10 ou 11 dígitos no Brasil => total 12 ou 13)
+    if (normalizedNumber.length < 12 || normalizedNumber.length > 13) {
+      return e.badRequestError('Phone must be in format 55 + DDD + number')
+    }
 
     const logCol = $app.findCollectionByNameOrId('whatsapp_logs')
     const logRecord = new Record(logCol)
-    logRecord.set('phone', cleanPhone)
+    logRecord.set('phone', normalizedNumber)
     logRecord.set('message', message)
 
     try {
       const res = $http.send({
-        url: apiUrl,
+        url: EVOLUTION_API_URL,
         method: 'POST',
         headers: {
+          apikey: EVOLUTION_API_KEY,
           'Content-Type': 'application/json',
-          apikey: '3Sqdj8r8CbQRbzon7vcIKSPWCP8gus6c',
         },
-        body: JSON.stringify({ number: cleanPhone, text: message }),
+        body: JSON.stringify({
+          number: normalizedNumber,
+          text: message,
+        }),
         timeout: 10,
       })
 
@@ -74,18 +101,9 @@ routerAdd(
         logRecord.set('response', parsedJson)
         $app.save(logRecord)
 
-        let messageId = 'unknown'
-        if (parsedJson && parsedJson.messageId) {
-          messageId = parsedJson.messageId
-        } else if (parsedJson && parsedJson.id) {
-          messageId = parsedJson.id
-        } else if (parsedJson && parsedJson.key && parsedJson.key.id) {
-          messageId = parsedJson.key.id
-        }
-
         return e.json(200, {
           success: true,
-          messageId: messageId,
+          data: parsedJson,
         })
       }
 
@@ -98,14 +116,22 @@ routerAdd(
           ? String(parsedJson.error)
           : parsedJson && parsedJson.message
             ? String(parsedJson.message)
-            : 'API request failed'
-      return e.badRequestError(`Erro Evolution API: ${apiError}`)
+            : 'Evolution API request failed'
+
+      return e.json(res.statusCode, {
+        success: false,
+        error: apiError,
+        data: parsedJson,
+      })
     } catch (err) {
       logRecord.set('status', 'error')
       logRecord.set('response', { error: err.message || String(err) })
       $app.save(logRecord)
 
-      return e.internalServerError(`Erro interno: ${err.message || String(err)}`)
+      return e.json(500, {
+        success: false,
+        error: err.message || String(err),
+      })
     }
   },
   $apis.requireAuth(),

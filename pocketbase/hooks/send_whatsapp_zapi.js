@@ -1,3 +1,29 @@
+/*
+  ====================================================================================================
+  LEGACY ROUTE COMPATÍVEL COM EVOLUTION API
+  ====================================================================================================
+  Esta rota é mantida por compatibilidade para clientes que ainda chamam:
+  POST /backend/v1/whatsapp/send
+
+  Integração atual: Evolution API (instância Encomenda)
+  Endpoint: https://api.sholver.com.br/message/sendText/Encomenda
+  ====================================================================================================
+*/
+
+const EVOLUTION_API_URL = 'https://api.sholver.com.br/message/sendText/Encomenda'
+const EVOLUTION_API_KEY = '3Sqdj8r8CbQRbzon7vcIKSPWCP8gus6c'
+
+function normalizeBrazilianNumber(input) {
+  let digits = String(input || '').replace(/\D/g, '')
+  digits = digits.replace(/^0+/, '')
+
+  if (!digits.startsWith('55')) {
+    digits = '55' + digits
+  }
+
+  return digits
+}
+
 routerAdd(
   'POST',
   '/backend/v1/whatsapp/send',
@@ -11,7 +37,11 @@ routerAdd(
       return e.badRequestError('Phone is required')
     }
 
-    const phoneNum = String(body.phone || '').replace(/\D/g, '')
+    const phoneNum = normalizeBrazilianNumber(body.phone)
+    if (phoneNum.length < 12 || phoneNum.length > 13) {
+      return e.badRequestError('Phone must be in format 55 + DDD + number')
+    }
+
     const tipo = body.tipo || 'codigo'
 
     let code = ''
@@ -20,7 +50,6 @@ routerAdd(
     if (tipo === 'codigo') {
       code = $security.randomStringWithAlphabet(6, '0123456789')
       originalMessage = `Seu código de validação é: ${code}`
-      // Expiration 10 minutes from now
       const expiresAt = new Date(Date.now() + 10 * 60000).toISOString()
 
       try {
@@ -43,12 +72,13 @@ routerAdd(
       let logStatus = 'error'
 
       const res = $http.send({
-        url: 'https://api.z-api.io/instances/3F3FE6AB8AF55107542D6627BE24201D/token/D41BBA7471F8F494D528DB60/send-text',
+        url: EVOLUTION_API_URL,
         method: 'POST',
         headers: {
+          apikey: EVOLUTION_API_KEY,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ phone: phoneNum, message: originalMessage }),
+        body: JSON.stringify({ number: phoneNum, text: originalMessage }),
         timeout: 10,
       })
 
@@ -80,7 +110,7 @@ routerAdd(
         logStatus = 'success'
       } else {
         logStatus = parsedJson && parsedJson.error ? String(parsedJson.error) : rawText || 'error'
-        $app.logger().error('Z-API Error', 'status', res.statusCode, 'body', rawText)
+        $app.logger().error('Evolution API Error', 'status', res.statusCode, 'body', rawText)
       }
 
       try {
@@ -120,7 +150,7 @@ routerAdd(
         data: parsedJson,
       })
     } catch (err) {
-      $app.logger().error('Z-API Request Global Error', 'error', err.message || String(err))
+      $app.logger().error('Evolution API Request Global Error', 'error', err.message || String(err))
       return e.json(500, {
         success: false,
         catch_error: err.message || String(err),
