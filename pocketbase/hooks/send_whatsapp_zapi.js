@@ -1,17 +1,18 @@
 /*
   ====================================================================================================
-  LEGACY ROUTE COMPATÍVEL COM EVOLUTION API
+  LEGACY ROUTE COMPATÍVEL COM EVOLUTION API (SKIP CLOUD)
   ====================================================================================================
   Esta rota é mantida por compatibilidade para clientes que ainda chamam:
   POST /backend/v1/whatsapp/send
 
-  Integração atual: Evolution API (instância Encomenda)
-  Endpoint: https://api.sholver.com.br/message/sendText/Encomenda
+  Secrets obrigatórias no Skip Cloud:
+  - EVOLUTION_API_URL (ex.: https://api.sholver.com.br)
+  - EVOLUTION_API_KEY (apikey da Evolution)
+
+  Endpoint final utilizado:
+  - ${EVOLUTION_API_URL}/message/sendText/Encomenda
   ====================================================================================================
 */
-
-const EVOLUTION_API_URL = 'https://api.sholver.com.br/message/sendText/Encomenda'
-const EVOLUTION_API_KEY = '3Sqdj8r8CbQRbzon7vcIKSPWCP8gus6c'
 
 function normalizeBrazilianNumber(input) {
   let digits = String(input || '').replace(/\D/g, '')
@@ -36,6 +37,21 @@ routerAdd(
     if (!body.phone) {
       return e.badRequestError('Phone is required')
     }
+
+    // Secrets configuradas no Skip Cloud (aba "Segredos")
+    const apiUrl = $secrets.get('EVOLUTION_API_URL')
+    const apiKey = $secrets.get('EVOLUTION_API_KEY')
+
+    if (!apiUrl || !String(apiUrl).trim()) {
+      return e.internalServerError('Missing Skip Cloud secret: EVOLUTION_API_URL')
+    }
+
+    if (!apiKey || !String(apiKey).trim()) {
+      return e.internalServerError('Missing Skip Cloud secret: EVOLUTION_API_KEY')
+    }
+
+    const baseUrl = String(apiUrl).replace(/\/+$/, '')
+    const url = `${baseUrl}/message/sendText/Encomenda`
 
     const phoneNum = normalizeBrazilianNumber(body.phone)
     if (phoneNum.length < 12 || phoneNum.length > 13) {
@@ -72,10 +88,10 @@ routerAdd(
       let logStatus = 'error'
 
       const res = $http.send({
-        url: EVOLUTION_API_URL,
+        url: url,
         method: 'POST',
         headers: {
-          apikey: EVOLUTION_API_KEY,
+          apikey: apiKey,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ number: phoneNum, text: originalMessage }),

@@ -1,21 +1,21 @@
 /*
   ====================================================================================================
-  INTEGRAÇÃO EVOLUTION API (OFICIAL)
+  INTEGRAÇÃO EVOLUTION API (SKIP CLOUD)
   ====================================================================================================
-  Configuração fixa solicitada:
-  - Server URL: https://api.sholver.com.br
-  - Endpoint: POST /message/sendText/Encomenda
-  - Header obrigatório: apikey
+  Este hook lê as credenciais da Evolution API via secrets do Skip Cloud/PocketBase.
+
+  Secrets obrigatórias no Skip Cloud:
+  - EVOLUTION_API_URL (ex.: https://api.sholver.com.br)
+  - EVOLUTION_API_KEY (apikey da Evolution)
+
+  Endpoint final utilizado:
+  - ${EVOLUTION_API_URL}/message/sendText/Encomenda
 
   IMPORTANTE:
-  - Este hook substitui totalmente a integração anterior de mensageria.
-  - Este hook NÃO usa secrets/env para URL/chave da Evolution.
-  - O número deve ser enviado no formato 55 + DDD + número (somente dígitos).
+  - Sem essas secrets configuradas, o envio falha com erro de configuração.
+  - O número é normalizado para o formato 55 + DDD + número (somente dígitos).
   ====================================================================================================
 */
-
-const EVOLUTION_API_URL = 'https://api.sholver.com.br/message/sendText/Encomenda'
-const EVOLUTION_API_KEY = '3Sqdj8r8CbQRbzon7vcIKSPWCP8gus6c'
 
 function normalizeBrazilianNumber(input) {
   let digits = String(input || '').replace(/\D/g, '')
@@ -47,6 +47,21 @@ routerAdd(
       return e.badRequestError('Message is required')
     }
 
+    // Secrets configuradas no Skip Cloud (aba "Segredos")
+    const apiUrl = $secrets.get('EVOLUTION_API_URL')
+    const apiKey = $secrets.get('EVOLUTION_API_KEY')
+
+    if (!apiUrl || !String(apiUrl).trim()) {
+      return e.internalServerError('Missing Skip Cloud secret: EVOLUTION_API_URL')
+    }
+
+    if (!apiKey || !String(apiKey).trim()) {
+      return e.internalServerError('Missing Skip Cloud secret: EVOLUTION_API_KEY')
+    }
+
+    const baseUrl = String(apiUrl).replace(/\/+$/, '')
+    const url = `${baseUrl}/message/sendText/Encomenda`
+
     const normalizedNumber = normalizeBrazilianNumber(phone)
 
     // 55 + DDD + número local (10 ou 11 dígitos no Brasil => total 12 ou 13)
@@ -61,10 +76,10 @@ routerAdd(
 
     try {
       const res = $http.send({
-        url: EVOLUTION_API_URL,
+        url: url,
         method: 'POST',
         headers: {
-          apikey: EVOLUTION_API_KEY,
+          apikey: apiKey,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
