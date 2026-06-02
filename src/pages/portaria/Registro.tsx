@@ -196,9 +196,17 @@ export default function PortariaRegistro() {
       })
     } catch (err: any) {
       console.error('Failed to send code', err)
+
+      let errorMessage = getErrorMessage(err) || 'Falha ao enviar. Tente novamente.'
+      if (err?.response?.error) {
+        errorMessage = String(err.response.error)
+      } else if (err?.response?.message) {
+        errorMessage = String(err.response.message)
+      }
+
       toast({
         title: 'Erro',
-        description: getErrorMessage(err) || 'Falha ao enviar. Tente novamente.',
+        description: errorMessage,
         variant: 'destructive',
       })
     } finally {

@@ -32,6 +32,11 @@ routerAdd(
       return e.badRequestError('Message is required')
     }
 
+    let cleanPhone = phone.replace(/\D/g, '')
+    if (cleanPhone.length === 10 || cleanPhone.length === 11) {
+      cleanPhone = '55' + cleanPhone
+    }
+
     /*
       ATENÇÃO: NÃO MUDAR PARA VARIÁVEIS DE AMBIENTE!
       A Z-API EXIGE que instância e token estejam DIRETAMENTE na URL.
@@ -42,7 +47,7 @@ routerAdd(
 
     const logCol = $app.findCollectionByNameOrId('whatsapp_logs')
     const logRecord = new Record(logCol)
-    logRecord.set('phone', phone)
+    logRecord.set('phone', cleanPhone)
     logRecord.set('message', message)
 
     try {
@@ -52,7 +57,7 @@ routerAdd(
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ phone, message }),
+        body: JSON.stringify({ phone: cleanPhone, message }),
         timeout: 10,
       })
 
@@ -100,19 +105,19 @@ routerAdd(
       logRecord.set('response', parsedJson)
       $app.save(logRecord)
 
-      return e.json(res.statusCode, {
-        success: false,
-        error: parsedJson && parsedJson.error ? String(parsedJson.error) : 'API request failed',
-      })
+      const apiError =
+        parsedJson && parsedJson.error
+          ? String(parsedJson.error)
+          : parsedJson && parsedJson.message
+            ? String(parsedJson.message)
+            : 'API request failed'
+      return e.badRequestError(`Erro Z-API: ${apiError}`)
     } catch (err) {
       logRecord.set('status', 'error')
       logRecord.set('response', { error: err.message || String(err) })
       $app.save(logRecord)
 
-      return e.json(500, {
-        success: false,
-        error: err.message || String(err),
-      })
+      return e.internalServerError(`Erro interno: ${err.message || String(err)}`)
     }
   },
   $apis.requireAuth(),
