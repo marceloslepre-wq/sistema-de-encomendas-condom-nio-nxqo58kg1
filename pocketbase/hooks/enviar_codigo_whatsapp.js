@@ -1,18 +1,8 @@
 /*
   ====================================================================================================
-  ATENÇÃO CRÍTICA - INTEGRAÇÃO Z-API
+  INTEGRAÇÃO EVOLUTION API
   ====================================================================================================
-  NÃO MUDAR PARA VARIÁVEIS DE AMBIENTE!
-  NÃO USAR secrets, process.env, import.meta.env ou qualquer configuração dinâmica para credenciais.
-
-  A Z-API DESTE PROJETO EXIGE que INSTÂNCIA e TOKEN estejam DIRETAMENTE na URL do endpoint.
-  Tentar enviar por headers de autenticação (ex: Client-Token) ou por secrets quebra o fluxo no Skip.
-
-  REGRA OBRIGATÓRIA:
-  - URL hardcoded com instância + token
-  - Método POST
-  - Body JSON com: { phone, message }
-  - Sem headers de autenticação
+  Conforme especificado, a URL e a apikey devem ser configuradas de forma explícita neste hook.
   ====================================================================================================
 */
 
@@ -33,17 +23,12 @@ routerAdd(
     }
 
     let cleanPhone = phone.replace(/\D/g, '')
-    if (cleanPhone.length === 10 || cleanPhone.length === 11) {
+    if (!cleanPhone.startsWith('55')) {
       cleanPhone = '55' + cleanPhone
     }
 
-    /*
-      ATENÇÃO: NÃO MUDAR PARA VARIÁVEIS DE AMBIENTE!
-      A Z-API EXIGE que instância e token estejam DIRETAMENTE na URL.
-      NÃO funciona com headers de autenticação ou secrets neste projeto.
-    */
     const apiUrl =
-      'https://api.z-api.io/instances/3F3FE6AB8AF55107542D6627BE24201D/token/D41BBA7471F8F494D528DB60/send-text'
+      'https://api.sholver.com.br/message/sendText/sistema-de-encomendas-condominio-03d6a'
 
     const logCol = $app.findCollectionByNameOrId('whatsapp_logs')
     const logRecord = new Record(logCol)
@@ -56,8 +41,9 @@ routerAdd(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          apikey: '3Sqdj8r8CbQRbzon7vcIKSPWCP8gus6c',
         },
-        body: JSON.stringify({ phone: cleanPhone, message }),
+        body: JSON.stringify({ number: cleanPhone, text: message }),
         timeout: 10,
       })
 
@@ -93,6 +79,8 @@ routerAdd(
           messageId = parsedJson.messageId
         } else if (parsedJson && parsedJson.id) {
           messageId = parsedJson.id
+        } else if (parsedJson && parsedJson.key && parsedJson.key.id) {
+          messageId = parsedJson.key.id
         }
 
         return e.json(200, {
@@ -111,7 +99,7 @@ routerAdd(
           : parsedJson && parsedJson.message
             ? String(parsedJson.message)
             : 'API request failed'
-      return e.badRequestError(`Erro Z-API: ${apiError}`)
+      return e.badRequestError(`Erro Evolution API: ${apiError}`)
     } catch (err) {
       logRecord.set('status', 'error')
       logRecord.set('response', { error: err.message || String(err) })
