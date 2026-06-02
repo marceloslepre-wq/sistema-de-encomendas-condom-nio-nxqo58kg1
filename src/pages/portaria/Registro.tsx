@@ -178,7 +178,7 @@ export default function PortariaRegistro() {
     sessionStorage.setItem('codigo_timestamp', Date.now().toString())
 
     try {
-      await pb.send('/backend/v1/enviar-codigo-whatsapp', {
+      await pb.send('/api/enviar-codigo-whatsapp', {
         method: 'POST',
         body: JSON.stringify({
           phone: digits,
