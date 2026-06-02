@@ -14,6 +14,17 @@ routerAdd(
     const phone = body.phone
     const message = body.message
 
+    const url = 'https://api.sholver.com.br/message/sendText'
+    const headers = {
+      'Content-Type': 'application/json',
+      apikey: 'E470E6186A4B-428C-A4EC-E48533ACED91',
+    }
+
+    console.log('URL sendo chamada:', url)
+    console.log('Headers:', headers)
+    console.log('Body:', body)
+    console.log('Phone recebido:', phone)
+
     if (typeof phone !== 'string' || !phone.trim()) {
       return e.badRequestError('Phone is required')
     }
@@ -22,34 +33,30 @@ routerAdd(
       return e.badRequestError('Message is required')
     }
 
-    let cleanPhone = phone.replace(/\D/g, '')
-    if (!cleanPhone.startsWith('55')) {
-      cleanPhone = '55' + cleanPhone
-    }
-
-    const apiUrl =
-      'https://api.sholver.com.br/message/sendText/sistema-de-encomendas-condominio-03d6a'
+    // Passar o telefone exatamente como recebido, sem manipulação de string ou adição de '55'
+    const exactPhone = phone
 
     const logCol = $app.findCollectionByNameOrId('whatsapp_logs')
     const logRecord = new Record(logCol)
-    logRecord.set('phone', cleanPhone)
+    logRecord.set('phone', exactPhone)
     logRecord.set('message', message)
 
+    let res = null
+    let parsedJson = null
+    let rawText = ''
+    let isSuccess = false
+
     try {
-      const res = $http.send({
-        url: apiUrl,
+      res = $http.send({
+        url: url,
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: '3Sqdj8r8CbQRbzon7vcIKSPWCP8gus6c',
-        },
-        body: JSON.stringify({ number: cleanPhone, text: message }),
+        headers: headers,
+        body: JSON.stringify({ number: exactPhone, text: message }),
         timeout: 10,
       })
 
-      const isSuccess = res.statusCode >= 200 && res.statusCode < 300
+      isSuccess = res.statusCode >= 200 && res.statusCode < 300
 
-      let rawText = ''
       try {
         if (res.body) {
           rawText = new TextDecoder().decode(res.body)
@@ -62,51 +69,52 @@ routerAdd(
         }
       }
 
-      let parsedJson = null
       try {
         parsedJson = JSON.parse(rawText)
       } catch (err) {
         parsedJson = { raw: rawText }
       }
 
-      if (isSuccess) {
-        logRecord.set('status', 'success')
-        logRecord.set('response', parsedJson)
-        $app.save(logRecord)
+      if (!isSuccess) {
+        $app
+          .logger()
+          .error('Evolution API Error', 'url', url, 'status', res.statusCode, 'response', rawText)
+      }
+    } catch (err) {
+      $app
+        .logger()
+        .error('Evolution API Exception', 'url', url, 'error', err.message || String(err))
+    }
 
-        let messageId = 'unknown'
-        if (parsedJson && parsedJson.messageId) {
-          messageId = parsedJson.messageId
-        } else if (parsedJson && parsedJson.id) {
-          messageId = parsedJson.id
-        } else if (parsedJson && parsedJson.key && parsedJson.key.id) {
-          messageId = parsedJson.key.id
-        }
+    if (isSuccess) {
+      logRecord.set('status', 'success')
+      logRecord.set('response', { ...parsedJson, successUrl: url })
+      $app.save(logRecord)
 
-        return e.json(200, {
-          success: true,
-          messageId: messageId,
-        })
+      let messageId = 'unknown'
+      if (parsedJson && parsedJson.messageId) {
+        messageId = parsedJson.messageId
+      } else if (parsedJson && parsedJson.id) {
+        messageId = parsedJson.id
+      } else if (parsedJson && parsedJson.key && parsedJson.key.id) {
+        messageId = parsedJson.key.id
       }
 
-      logRecord.set('status', 'error')
-      logRecord.set('response', parsedJson)
-      $app.save(logRecord)
-
-      const apiError =
-        parsedJson && parsedJson.error
-          ? String(parsedJson.error)
-          : parsedJson && parsedJson.message
-            ? String(parsedJson.message)
-            : 'API request failed'
-      return e.badRequestError(`Erro Evolution API: ${apiError}`)
-    } catch (err) {
-      logRecord.set('status', 'error')
-      logRecord.set('response', { error: err.message || String(err) })
-      $app.save(logRecord)
-
-      return e.internalServerError(`Erro interno: ${err.message || String(err)}`)
+      return e.json(200, {
+        success: true,
+        messageId: messageId,
+        url: url,
+      })
     }
+
+    logRecord.set('status', 'error')
+    logRecord.set('response', parsedJson || { error: rawText || 'API request failed' })
+    $app.save(logRecord)
+
+    return e.json(
+      res ? res.statusCode : 400,
+      parsedJson || { error: rawText || 'API request failed' },
+    )
   },
   $apis.requireAuth(),
 )
