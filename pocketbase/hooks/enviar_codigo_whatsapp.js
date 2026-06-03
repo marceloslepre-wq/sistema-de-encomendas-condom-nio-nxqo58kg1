@@ -4,18 +4,27 @@
   ====================================================================================================
   Hook de envio de código WhatsApp.
 
-  Rotas registradas (compatibilidade):
-  - /api/enviar-codigo-whatsapp
+*/
+
+// Rota principal usada pelo frontend
+routerAdd('POST', '/api/enviar-codigo-whatsapp', (e) => {
+=======
+  Rota registrada:
   - /backend/v1/enviar-codigo-whatsapp
   ====================================================================================================
 */
 
-const enviarCodigoWhatsappHandler = (e) => {
+// Rota principal usada pelo frontend
+routerAdd('POST', '/backend/v1/enviar-codigo-whatsapp', (e) => {====================================================================================================
+*/
+
+// Rota principal usada pelo frontend
+routerAdd('POST', '/api/enviar-codigo-whatsapp', (e) => {
   const body = e.requestInfo().body || {}
   const phone = body.phone
   const message = body.message
 
-  const url = 'https://api.sholver.com.br/message/sendText'
+  const url = 'https://api.sholver.com.br/message/sendText/sistema-de-encomendas-condominio-03d6a'
   const headers = {
     'Content-Type': 'application/json',
     apikey: 'E470E6186A4B-428C-A4EC-E48533ACED91',
@@ -116,10 +125,4 @@ const enviarCodigoWhatsappHandler = (e) => {
     res ? res.statusCode : 400,
     parsedJson || { error: rawText || 'API request failed' },
   )
-}
-
-// Rota principal usada pelo frontend
-routerAdd('POST', '/api/enviar-codigo-whatsapp', enviarCodigoWhatsappHandler, $apis.requireAuth())
-
-// Rota legada mantida para compatibilidade
-routerAdd('POST', '/backend/v1/enviar-codigo-whatsapp', enviarCodigoWhatsappHandler, $apis.requireAuth())
+}, $apis.requireAuth())
