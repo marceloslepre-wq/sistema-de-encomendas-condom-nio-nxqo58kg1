@@ -57,9 +57,7 @@ routerAdd(
             presence: 'composing',
             linkPreview: false,
           },
-          textMessage: {
-            text: message,
-          },
+          text: message,
         }),
         timeout: 10,
       })

@@ -186,13 +186,14 @@ export default function PortariaRegistro() {
     }
 
     setIsSendingCode(true)
+    const code = Math.floor(100000 + Math.random() * 900000).toString()
 
     try {
       await pb.send('/backend/v1/enviar-codigo-whatsapp', {
         method: 'POST',
         body: JSON.stringify({
           phone: digits,
-          message: 'Seu código de validação é: ',
+          message: `Seu código de validação é: ${code}`,
         }),
         headers: {
           'Content-Type': 'application/json',
