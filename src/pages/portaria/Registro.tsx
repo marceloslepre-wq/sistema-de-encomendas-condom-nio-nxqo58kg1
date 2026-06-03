@@ -72,6 +72,9 @@ export default function PortariaRegistro() {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSendingCode, setIsSendingCode] = useState(false)
+  const [isCodeSent, setIsCodeSent] = useState(false)
+  const [isCodeVerified, setIsCodeVerified] = useState(false)
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false)
 
   useEffect(() => {
     getUnits()
@@ -97,8 +100,15 @@ export default function PortariaRegistro() {
   }, [filteredResidents, residentId])
 
   const isFormValid = useMemo(() => {
-    return unitId && carrier && Number(volumes) > 0 && courierName && courierCpf.length === 14
-  }, [unitId, carrier, volumes, courierName, courierCpf])
+    return (
+      unitId &&
+      carrier &&
+      Number(volumes) > 0 &&
+      courierName &&
+      courierCpf.length === 14 &&
+      isCodeVerified
+    )
+  }, [unitId, carrier, volumes, courierName, courierCpf, isCodeVerified])
 
   const handleFinish = async () => {
     if (!isFormValid) return
@@ -159,6 +169,9 @@ export default function PortariaRegistro() {
     setCourierCpf('')
     setCourierPhone('')
     setValidationCode('')
+    setIsCodeSent(false)
+    setIsCodeVerified(false)
+    setIsVerifyingCode(false)
   }
 
   const handleSendCode = async () => {
@@ -173,21 +186,22 @@ export default function PortariaRegistro() {
     }
 
     setIsSendingCode(true)
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
-    sessionStorage.setItem('codigo_validacao', code)
-    sessionStorage.setItem('codigo_timestamp', Date.now().toString())
 
     try {
       await pb.send('/backend/v1/enviar-codigo-whatsapp', {
         method: 'POST',
         body: JSON.stringify({
           phone: digits,
-          message: `Seu código é: ${code}`,
+          message: 'Seu código de validação é: ',
         }),
         headers: {
           'Content-Type': 'application/json',
         },
       })
+
+      setIsCodeSent(true)
+      setIsCodeVerified(false)
+      setValidationCode('')
 
       toast({
         title: 'Sucesso',
@@ -211,6 +225,53 @@ export default function PortariaRegistro() {
       })
     } finally {
       setIsSendingCode(false)
+    }
+  }
+
+  const handleVerifyCode = async () => {
+    if (!validationCode || validationCode.length < 4) {
+      toast({
+        title: 'Aviso',
+        description: 'Digite um código válido.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsVerifyingCode(true)
+    try {
+      await pb.send('/backend/v1/verify-whatsapp-code', {
+        method: 'POST',
+        body: JSON.stringify({
+          phone: courierPhone.replace(/\D/g, ''),
+          code: validationCode,
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      setIsCodeVerified(true)
+      toast({
+        title: 'Código Verificado',
+        description: 'A autorização foi confirmada com sucesso.',
+        className: 'bg-success text-white',
+      })
+    } catch (err: any) {
+      console.error('Failed to verify code', err)
+      let errorMessage = 'Código inválido ou expirado. Por favor, tente novamente.'
+      if (err?.response?.error) {
+        errorMessage = String(err.response.error)
+      } else if (err?.response?.message) {
+        errorMessage = String(err.response.message)
+      }
+      toast({
+        title: 'Erro na Verificação',
+        description: errorMessage,
+        variant: 'destructive',
+      })
+    } finally {
+      setIsVerifyingCode(false)
     }
   }
 
@@ -345,13 +406,13 @@ export default function PortariaRegistro() {
 
           <div className="border-t pt-6 mt-6 space-y-6">
             <h3 className="text-lg font-medium flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-primary" /> Identificação do Entregador
+              <ShieldCheck className="h-5 w-5 text-primary" /> Identificação e Autorização
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-2">
                 <Label>
-                  Nome <span className="text-destructive">*</span>
+                  Nome do Entregador/Portador <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   value={courierName}
@@ -373,11 +434,18 @@ export default function PortariaRegistro() {
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label>Celular</Label>
+                <Label>
+                  Celular para Validação <span className="text-destructive">*</span>
+                </Label>
                 <div className="flex gap-2">
                   <Input
                     value={courierPhone}
-                    onChange={(e) => setCourierPhone(formatPhone(e.target.value))}
+                    onChange={(e) => {
+                      setCourierPhone(formatPhone(e.target.value))
+                      setIsCodeSent(false)
+                      setIsCodeVerified(false)
+                      setValidationCode('')
+                    }}
                     placeholder="(00) 00000-0000"
                     maxLength={15}
                   />
@@ -389,29 +457,63 @@ export default function PortariaRegistro() {
                   type="button"
                   variant="outline"
                   onClick={handleSendCode}
-                  disabled={isSendingCode}
+                  disabled={
+                    isSendingCode || !courierPhone || courierPhone.replace(/\D/g, '').length < 10
+                  }
                   className="w-full sm:w-auto mb-2"
                 >
                   {isSendingCode ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Enviar Código via WhatsApp
+                  {isCodeSent ? 'Reenviar Código via WhatsApp' : 'Enviar Código via WhatsApp'}
                 </Button>
 
-                <div className="space-y-2 mt-2">
-                  <Label>Código de Validação</Label>
-                  <Input
-                    value={validationCode}
-                    onChange={(e) => setValidationCode(e.target.value)}
-                    placeholder="000000"
-                    maxLength={6}
-                    className="max-w-[200px]"
-                  />
-                </div>
+                {isCodeSent && !isCodeVerified && (
+                  <div className="space-y-3 mt-4 p-5 border rounded-lg bg-muted/30 animate-fade-in">
+                    <Label className="text-base font-semibold">Código de Validação</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Digite o código de verificação recebido no WhatsApp para confirmar a entrada.
+                    </p>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                      <Input
+                        value={validationCode}
+                        onChange={(e) => setValidationCode(e.target.value.replace(/\D/g, ''))}
+                        placeholder="000000"
+                        maxLength={6}
+                        className="w-full sm:max-w-[200px] text-lg text-center tracking-widest font-mono h-11"
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleVerifyCode}
+                        disabled={isVerifyingCode || !validationCode}
+                        className="w-full sm:w-auto bg-primary text-primary-foreground h-11"
+                      >
+                        {isVerifyingCode ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <ShieldCheck className="mr-2 h-4 w-4" />
+                        )}
+                        Verificar Código
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {isCodeVerified && (
+                  <div className="mt-4 p-4 border rounded-lg bg-success/10 border-success/30 flex items-center gap-3 text-success animate-fade-in shadow-sm">
+                    <CheckCircle2 className="h-6 w-6 shrink-0" />
+                    <div>
+                      <span className="font-semibold block">Autorização Confirmada!</span>
+                      <span className="text-sm text-success/80">
+                        O código foi validado com sucesso. Você já pode registrar a entrada.
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           <Button
-            className="w-full bg-success hover:bg-success/90 text-white mt-8"
+            className="w-full bg-success hover:bg-success/90 text-white mt-8 h-12 text-lg"
             size="lg"
             onClick={handleFinish}
             disabled={isSubmitting || !isFormValid}
