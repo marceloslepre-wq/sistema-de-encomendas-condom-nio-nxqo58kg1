@@ -31,8 +31,10 @@ routerAdd(
       return e.badRequestError('Message is required')
     }
 
-    // Adicionar o prefixo 55 (Brasil) ao número de telefone
-    const exactPhone = phone.startsWith('55') && phone.length > 11 ? phone : `55${phone}`
+    // Limpar formatações e adicionar o prefixo 55 (Brasil) ao número de telefone
+    const numericPhone = phone.replace(/\D/g, '')
+    const exactPhone =
+      numericPhone.startsWith('55') && numericPhone.length > 11 ? numericPhone : `55${numericPhone}`
 
     const logCol = $app.findCollectionByNameOrId('whatsapp_logs')
     const logRecord = new Record(logCol)
@@ -49,7 +51,18 @@ routerAdd(
         url: url,
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({ number: exactPhone, text: message }),
+        body: JSON.stringify({
+          number: exactPhone,
+          text: message,
+          options: {
+            delay: 0,
+            presence: 'composing',
+            linkPreview: false,
+          },
+          textMessage: {
+            text: message,
+          },
+        }),
         timeout: 10,
       })
 
