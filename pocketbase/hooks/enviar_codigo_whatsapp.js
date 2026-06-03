@@ -41,19 +41,17 @@ routerAdd(
     logRecord.set('phone', exactPhone)
     logRecord.set('message', message)
 
-    let res = null
-    let parsedJson = null
-    let rawText = ''
     let isSuccess = false
+    let parsedJson = null
+    let statusCode = 400
 
     try {
-      res = $http.send({
+      const res = $http.send({
         url: url,
         method: 'POST',
         headers: headers,
         body: JSON.stringify({
           number: exactPhone,
-          text: message,
           options: {
             delay: 0,
             presence: 'composing',
@@ -66,35 +64,29 @@ routerAdd(
         timeout: 10,
       })
 
-      isSuccess = res.statusCode >= 200 && res.statusCode < 300
-
-      try {
-        if (res.body) {
-          rawText = new TextDecoder().decode(res.body)
-        }
-      } catch (err) {
-        if (Array.isArray(res.body)) {
-          rawText = String.fromCharCode.apply(null, res.body)
-        } else {
-          rawText = String(res.body)
-        }
-      }
-
-      try {
-        parsedJson = JSON.parse(rawText)
-      } catch (err) {
-        parsedJson = { raw: rawText }
-      }
+      statusCode = res.statusCode
+      isSuccess = statusCode >= 200 && statusCode < 300
+      parsedJson = res.json || {}
 
       if (!isSuccess) {
         $app
           .logger()
-          .error('Evolution API Error', 'url', url, 'status', res.statusCode, 'response', rawText)
+          .error(
+            'Evolution API Error',
+            'url',
+            url,
+            'status',
+            statusCode,
+            'response',
+            JSON.stringify(parsedJson),
+          )
       }
     } catch (err) {
       $app
         .logger()
         .error('Evolution API Exception', 'url', url, 'error', err.message || String(err))
+      parsedJson = { error: err.message || String(err) }
+      statusCode = 500
     }
 
     if (isSuccess) {
@@ -119,13 +111,10 @@ routerAdd(
     }
 
     logRecord.set('status', 'error')
-    logRecord.set('response', parsedJson || { error: rawText || 'API request failed' })
+    logRecord.set('response', parsedJson)
     $app.save(logRecord)
 
-    return e.json(
-      res ? res.statusCode : 400,
-      parsedJson || { error: rawText || 'API request failed' },
-    )
+    return e.json(statusCode, parsedJson)
   },
   $apis.requireAuth(),
 )
