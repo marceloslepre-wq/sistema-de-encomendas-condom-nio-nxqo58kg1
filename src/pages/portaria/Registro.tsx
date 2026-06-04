@@ -81,6 +81,7 @@ export default function PortariaRegistro() {
 
   const [registrationSuccess, setRegistrationSuccess] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [resetTableTrigger, setResetTableTrigger] = useState(0)
 
   useEffect(() => {
     getUnits()
@@ -158,6 +159,7 @@ export default function PortariaRegistro() {
           data_hora_recebimento: new Date().toISOString(),
           status: 'ENTRADA_PORTARIA',
           codigo_validado: validationCode,
+          codigo_liberacao: '',
           unidade: unidadeStr,
           volumes: group.volumes,
           carrier: carrier,
@@ -199,6 +201,7 @@ export default function PortariaRegistro() {
     setIsCodeVerified(false)
     setIsVerifyingCode(false)
     setRegistrationSuccess(false)
+    setResetTableTrigger((prev) => prev + 1)
   }
 
   const handleSendCode = async () => {
@@ -349,7 +352,7 @@ export default function PortariaRegistro() {
                     <PkgIcon className="w-5 h-5" /> Encomendas
                   </Label>
                   <Button type="button" variant="outline" size="sm" onClick={handleAddEntry}>
-                    <Plus className="w-4 h-4 mr-1" /> Adicionar Encomenda
+                    <Plus className="w-4 h-4 mr-1" /> Adicionar Destinatário
                   </Button>
                 </div>
 
@@ -565,16 +568,16 @@ export default function PortariaRegistro() {
               {isSubmitting ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               ) : (
-                <CheckCircle2 className="mr-2 h-5 w-5" />
+                <Plus className="mr-2 h-5 w-5" />
               )}
-              Registrar Entrada
+              Adicionar Encomenda
             </Button>
           </CardContent>
         </Card>
       )}
 
       <div className="pt-4">
-        <RecebimentosTable refreshTrigger={refreshTrigger} />
+        <RecebimentosTable key={resetTableTrigger} refreshTrigger={refreshTrigger} />
       </div>
     </div>
   )

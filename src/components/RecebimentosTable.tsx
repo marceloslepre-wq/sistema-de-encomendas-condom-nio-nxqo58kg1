@@ -32,21 +32,20 @@ export function RecebimentosTable({ refreshTrigger = 0 }: { refreshTrigger?: num
     async (currentPage = 1) => {
       setLoading(true)
       try {
-        let filter = searchTerm ? `morador_nome ~ "${searchTerm}"` : ''
-
+        const conditions = []
+        if (searchTerm) {
+          conditions.push(
+            `(morador_nome ~ "${searchTerm}" || entregador_nome ~ "${searchTerm}" || unidade ~ "${searchTerm}")`,
+          )
+        }
         if (startDate) {
-          const startStr = `${startDate} 00:00:00.000Z`
-          filter += filter
-            ? ` && data_hora_recebimento >= "${startStr}"`
-            : `data_hora_recebimento >= "${startStr}"`
+          conditions.push(`data_hora_recebimento >= "${startDate} 00:00:00.000Z"`)
+        }
+        if (endDate) {
+          conditions.push(`data_hora_recebimento <= "${endDate} 23:59:59.999Z"`)
         }
 
-        if (endDate) {
-          const endStr = `${endDate} 23:59:59.999Z`
-          filter += filter
-            ? ` && data_hora_recebimento <= "${endStr}"`
-            : `data_hora_recebimento <= "${endStr}"`
-        }
+        const filter = conditions.join(' && ')
 
         const res = await pb.collection('recebimentos_auditoria').getList(currentPage, 30, {
           sort: '-data_hora_recebimento',
