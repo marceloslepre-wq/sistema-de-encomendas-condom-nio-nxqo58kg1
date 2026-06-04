@@ -7,7 +7,8 @@ routerAdd(
       return e.badRequestError('Phone and code are required')
     }
 
-    const phoneNum = String(body.phone || '').replace(/\D/g, '')
+    const rawPhone = String(body.phone || '').replace(/\D/g, '')
+    const phoneNum = rawPhone.startsWith('55') && rawPhone.length > 11 ? rawPhone : `55${rawPhone}`
 
     const records = $app.findRecordsByFilter(
       'whatsapp_verifications',
@@ -39,15 +40,13 @@ routerAdd(
       let attempts = record.getInt('attempts') + 1
       record.set('attempts', attempts)
 
-      if (attempts >= 3) {
+      if (attempts > 3) {
         record.set('locked_until', new Date(Date.now() + 5 * 60000).toISOString())
         $app.save(record)
-        return e.badRequestError(
-          'Código incorreto. Máximo de tentativas atingido (bloqueado por 5m).',
-        )
+        return e.badRequestError('Código inválido. Número bloqueado por excesso de tentativas.')
       } else {
         $app.save(record)
-        return e.badRequestError(`Código incorreto. Tentativa ${attempts}/3.`)
+        return e.badRequestError('Código inválido. Por favor, verifique e tente novamente.')
       }
     }
 
