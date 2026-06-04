@@ -135,10 +135,11 @@ export function RecebimentosTable({ refreshTrigger = 0 }: { refreshTrigger?: num
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>CPF</TableHead>
-                <TableHead>Celular</TableHead>
-                <TableHead>Descrição</TableHead>
+                <TableHead>Unidade</TableHead>
+                <TableHead>Morador</TableHead>
+                <TableHead>Volumes</TableHead>
+                <TableHead>Transportadora</TableHead>
+                <TableHead>Entregador</TableHead>
                 <TableHead>Código</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Status</TableHead>
@@ -161,12 +162,11 @@ export function RecebimentosTable({ refreshTrigger = 0 }: { refreshTrigger?: num
               ) : (
                 records.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.morador_nome || '-'}</TableCell>
-                    <TableCell>{r.morador_cpf || '-'}</TableCell>
-                    <TableCell>{r.morador_celular || '-'}</TableCell>
-                    <TableCell className="max-w-xs truncate" title={r.descricao}>
-                      {r.descricao || '-'}
-                    </TableCell>
+                    <TableCell className="font-medium">{r.unidade || '-'}</TableCell>
+                    <TableCell>{r.morador_nome || '-'}</TableCell>
+                    <TableCell>{r.volumes || '-'}</TableCell>
+                    <TableCell>{r.carrier || '-'}</TableCell>
+                    <TableCell>{r.entregador_nome || '-'}</TableCell>
                     <TableCell className="font-mono">{r.codigo_validado || '-'}</TableCell>
                     <TableCell className="whitespace-nowrap">
                       {r.data_hora_recebimento
@@ -176,9 +176,16 @@ export function RecebimentosTable({ refreshTrigger = 0 }: { refreshTrigger?: num
                     <TableCell>
                       <span
                         className={`text-xs px-2 py-1 rounded-md ${
-                          r.status === 'Validado' || r.status === 'Recebido'
+                          [
+                            'Validado',
+                            'Recebido',
+                            'ENTRADA_PORTARIA',
+                            'LIBERADO_RETIRADA',
+                          ].includes(r.status)
                             ? 'bg-primary/10 text-primary'
-                            : 'bg-muted text-muted-foreground'
+                            : r.status === 'EM_TRIAGEM'
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-muted text-muted-foreground'
                         }`}
                       >
                         {r.status || '-'}

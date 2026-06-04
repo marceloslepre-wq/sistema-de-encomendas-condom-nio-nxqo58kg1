@@ -11,17 +11,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { CheckCircle2, Package as PkgIcon, Loader2, Truck, Hash, ShieldCheck } from 'lucide-react'
 import {
-  getUnits,
-  getUsers,
-  createParcel,
-  getCarriers,
-  Unit,
-  AppUser,
-  Carrier,
-} from '@/services/api'
-import { useAuth } from '@/hooks/use-auth'
+  CheckCircle2,
+  Package as PkgIcon,
+  Loader2,
+  Truck,
+  ShieldCheck,
+  Trash2,
+  Plus,
+} from 'lucide-react'
+import { getUnits, getUsers, getCarriers, Unit, AppUser, Carrier } from '@/services/api'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import pb from '@/lib/pocketbase/client'
 import { RecebimentosTable } from '@/components/RecebimentosTable'
@@ -42,19 +41,24 @@ const formatPhone = (value: string) => {
   return v.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2')
 }
 
+type TableEntry = {
+  id: string
+  unitId: string
+  residentId: string
+  volumes: number
+}
+
 export default function PortariaRegistro() {
   const { toast } = useToast()
-  const { user } = useAuth()
 
   const [units, setUnits] = useState<Unit[]>([])
   const [users, setUsers] = useState<AppUser[]>([])
   const [carriers, setCarriers] = useState<Carrier[]>([])
 
-  const [unitId, setUnitId] = useState('')
-  const [residentId, setResidentId] = useState('')
-  const [volumes, setVolumes] = useState<number | ''>(1)
+  const [entries, setEntries] = useState<TableEntry[]>([
+    { id: crypto.randomUUID(), unitId: '', residentId: '', volumes: 1 },
+  ])
   const [carrier, setCarrier] = useState('')
-  const [description, setDescription] = useState('')
 
   const [courierName, setCourierName] = useState('')
   const [courierCpf, setCourierCpf] = useState('')
@@ -66,8 +70,9 @@ export default function PortariaRegistro() {
   const [isCodeSent, setIsCodeSent] = useState(false)
   const [isCodeVerified, setIsCodeVerified] = useState(false)
   const [isVerifyingCode, setIsVerifyingCode] = useState(false)
+
+  const [registrationSuccess, setRegistrationSuccess] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const [formResetKey, setFormResetKey] = useState(0)
 
   useEffect(() => {
     getUnits()
@@ -81,77 +86,93 @@ export default function PortariaRegistro() {
       .catch(() => {})
   }, [])
 
-  const filteredResidents = useMemo(() => {
-    if (!unitId) return []
-    return users.filter((u) => u.unit_id === unitId)
-  }, [unitId, users])
+  const handleAddEntry = () => {
+    setEntries([...entries, { id: crypto.randomUUID(), unitId: '', residentId: '', volumes: 1 }])
+  }
 
-  useEffect(() => {
-    if (filteredResidents.length === 1 && !residentId) {
-      setResidentId(filteredResidents[0].id)
+  const removeEntry = (id: string) => {
+    if (entries.length > 1) {
+      setEntries(entries.filter((e) => e.id !== id))
     }
-  }, [filteredResidents, residentId])
+  }
+
+  const updateEntry = (id: string, updates: Partial<TableEntry>) => {
+    setEntries(entries.map((e) => (e.id === id ? { ...e, ...updates } : e)))
+  }
 
   const isFormValid = useMemo(() => {
+    const hasInvalidEntry = entries.some((e) => !e.unitId || e.volumes < 1)
     return (
-      unitId &&
+      entries.length > 0 &&
+      !hasInvalidEntry &&
       carrier &&
-      Number(volumes) > 0 &&
       courierName &&
       courierCpf.length === 14 &&
       isCodeVerified
     )
-  }, [unitId, carrier, volumes, courierName, courierCpf, isCodeVerified])
+  }, [carrier, entries, courierName, courierCpf, isCodeVerified])
 
   const handleFinish = async () => {
     if (!isFormValid) return
     setIsSubmitting(true)
 
     try {
-      await createParcel({
-        unit_id: unitId,
-        resident_id: residentId || '',
-        volumes: Number(volumes),
-        carrier,
-        courier_name: courierName,
-        courier_cpf: courierCpf.replace(/\D/g, ''),
-        status: 'ENTRADA_PORTARIA',
-        entry_date: new Date().toISOString(),
-        porter_id: user?.id || '',
-      })
+      const groups = entries.reduce(
+        (acc, entry) => {
+          const key = `${entry.unitId}_${entry.residentId}`
+          if (!acc[key]) acc[key] = { ...entry }
+          else acc[key].volumes += entry.volumes
+          return acc
+        },
+        {} as Record<string, TableEntry>,
+      )
 
+      for (const group of Object.values(groups)) {
+        const unit = units.find((u) => u.id === group.unitId)
+        const resident = users.find((u) => u.id === group.residentId)
+        const unidadeStr = unit ? `${unit.tower} - ${unit.apartment}` : ''
+        const moradorNome = resident ? resident.name : ''
+
+        await pb.collection('recebimentos_auditoria').create({
+          morador_nome: moradorNome,
+          morador_cpf: resident?.cpf || '',
+          morador_celular: resident?.phone || '',
+          entregador_nome: courierName,
+          entregador_cpf: courierCpf.replace(/\D/g, ''),
+          entregador_celular: courierPhone.replace(/\D/g, ''),
+          data_hora_recebimento: new Date().toISOString(),
+          status: 'ENTRADA_PORTARIA',
+          codigo_validado: validationCode,
+          unidade: unidadeStr,
+          volumes: group.volumes,
+          carrier: carrier,
+          unit_id: group.unitId,
+          resident_id: group.residentId || null,
+        })
+      }
+
+      setRegistrationSuccess(true)
       toast({
         title: 'Sucesso!',
-        description: 'Encomenda registrada! Atualizando lista...',
+        description: 'Encomendas registradas com sucesso!',
         className: 'bg-success text-white',
       })
-
-      handleReset()
       setRefreshTrigger((prev) => prev + 1)
     } catch (err: any) {
       const errorMessage = getErrorMessage(err)
-      console.error('Parcel Creation API Error:', errorMessage, err)
-
       toast({
         title: 'Aviso',
-        description: `Encomenda registrada com pendências: ${errorMessage}`,
+        description: `Falha ao registrar algumas encomendas: ${errorMessage}`,
+        variant: 'destructive',
       })
-
-      // Even if there's an API error here, the audit log is already persisted
-      // so we reset the form and trigger the reactive refresh
-      handleReset()
-      setRefreshTrigger((prev) => prev + 1)
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleReset = () => {
-    setUnitId('')
-    setResidentId('')
-    setVolumes(1)
+  const handleNewRegistration = () => {
+    setEntries([{ id: crypto.randomUUID(), unitId: '', residentId: '', volumes: 1 }])
     setCarrier('')
-    setDescription('')
     setCourierName('')
     setCourierCpf('')
     setCourierPhone('')
@@ -159,17 +180,13 @@ export default function PortariaRegistro() {
     setIsCodeSent(false)
     setIsCodeVerified(false)
     setIsVerifyingCode(false)
-    setFormResetKey((prev) => prev + 1)
+    setRegistrationSuccess(false)
   }
 
   const handleSendCode = async () => {
     let digits = courierPhone.replace(/\D/g, '')
     if (!digits) {
-      toast({
-        title: 'Erro',
-        description: 'Celular obrigatório',
-        variant: 'destructive',
-      })
+      toast({ title: 'Erro', description: 'Celular obrigatório', variant: 'destructive' })
       return
     }
 
@@ -184,23 +201,12 @@ export default function PortariaRegistro() {
         `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/enviar-codigo-whatsapp`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: pb.authStore.token,
-          },
-          body: JSON.stringify({
-            phone: digits,
-          }),
+          headers: { 'Content-Type': 'application/json', Authorization: pb.authStore.token },
+          body: JSON.stringify({ phone: digits }),
         },
-      ).catch((err) => {
-        console.error('Network error calling enviar-codigo-whatsapp:', err)
-        return null
-      })
+      ).catch(() => null)
 
       if (response && !response.ok) {
-        console.error(
-          `Evolution API or code sending error: ${response.status} ${response.statusText}`,
-        )
         toast({
           title: 'Aviso',
           description:
@@ -213,13 +219,11 @@ export default function PortariaRegistro() {
       setIsCodeVerified(false)
       setValidationCode('')
     } catch (err: any) {
-      console.error('Failed to send code', err)
       toast({
         title: 'Aviso',
         description: 'Houve uma instabilidade no envio, mas você pode prosseguir com a validação.',
         variant: 'destructive',
       })
-
       setIsCodeSent(true)
       setIsCodeVerified(false)
       setValidationCode('')
@@ -230,11 +234,7 @@ export default function PortariaRegistro() {
 
   const handleVerifyCode = async () => {
     if (!validationCode || validationCode.length < 4) {
-      toast({
-        title: 'Aviso',
-        description: 'Digite um código válido.',
-        variant: 'destructive',
-      })
+      toast({ title: 'Aviso', description: 'Digite um código válido.', variant: 'destructive' })
       return
     }
 
@@ -247,32 +247,11 @@ export default function PortariaRegistro() {
     try {
       await pb.send('/backend/v1/verify-whatsapp-code', {
         method: 'POST',
-        body: JSON.stringify({
-          phone: digits,
-          code: validationCode,
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        body: JSON.stringify({ phone: digits, code: validationCode }),
+        headers: { 'Content-Type': 'application/json' },
       })
 
       setIsCodeVerified(true)
-
-      // Mandatory Data Persistence: Create audit log immediately upon successful validation
-      try {
-        await pb.collection('recebimentos_auditoria').create({
-          morador_nome: courierName,
-          morador_cpf: courierCpf.replace(/\D/g, ''),
-          morador_celular: digits,
-          data_hora_recebimento: new Date().toISOString(),
-          status: 'Validado',
-          descricao: description,
-          codigo_validado: validationCode,
-        })
-        setRefreshTrigger((prev) => prev + 1)
-      } catch (auditErr) {
-        console.error('Failed to create audit record', auditErr)
-      }
 
       toast({
         title: 'Código Verificado',
@@ -280,7 +259,6 @@ export default function PortariaRegistro() {
         className: 'bg-success text-white',
       })
     } catch (err: any) {
-      console.error('Failed to verify code', err)
       toast({
         title: 'Erro na Verificação',
         description: 'Código inválido. Tente novamente.',
@@ -300,237 +278,273 @@ export default function PortariaRegistro() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader className="border-b bg-muted/20">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <PkgIcon className="h-5 w-5 text-primary" /> Dados da Encomenda
-          </CardTitle>
-          <CardDescription>Identifique a unidade de destino e a transportadora.</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="space-y-2">
-              <Label>
-                Unidade (Torre - Apto) <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                key={`unit-${formResetKey}`}
-                value={unitId}
-                onValueChange={(val) => {
-                  setUnitId(val)
-                  setResidentId('')
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a unidade..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {units.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.tower} - {u.apartment}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Morador (Opcional)</Label>
-              <Select
-                key={`resident-${formResetKey}`}
-                value={residentId}
-                onValueChange={setResidentId}
-                disabled={!unitId || filteredResidents.length === 0}
-              >
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={
-                      !unitId ? 'Selecione a unidade primeiro' : 'Selecione o morador...'
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredResidents.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">
-                <Truck className="w-4 h-4 text-muted-foreground" /> Transportadora{' '}
-                <span className="text-destructive">*</span>
-              </Label>
-              <Select key={`carrier-${formResetKey}`} value={carrier} onValueChange={setCarrier}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {carriers.map((c) => (
-                    <SelectItem key={c.id} value={c.name}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="Outros">Outros</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">
-                <Hash className="w-4 h-4 text-muted-foreground" /> Volumes{' '}
-                <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                type="number"
-                min="1"
-                value={volumes}
-                onChange={(e) =>
-                  setVolumes(e.target.value === '' ? '' : parseInt(e.target.value, 10))
-                }
-                className="h-10"
-                placeholder="Quantidade de volumes"
-              />
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label>Descrição da Encomenda</Label>
-              <Input
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Ex: Caixa pequena da Amazon"
-              />
-            </div>
-          </div>
-
-          <div className="border-t pt-6 mt-6 space-y-6">
-            <h3 className="text-lg font-medium flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-primary" /> Identificação e Autorização
+      {registrationSuccess ? (
+        <Card className="text-center py-12 animate-fade-in">
+          <CardContent>
+            <CheckCircle2 className="w-20 h-20 text-success mx-auto mb-6" />
+            <h3 className="text-3xl font-bold tracking-tight mb-2">
+              Encomendas registradas com sucesso!
             </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <Label>
-                  Nome do Entregador/Portador <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  value={courierName}
-                  onChange={(e) => setCourierName(e.target.value)}
-                  placeholder="Ex: João da Silva"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>
-                  CPF <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  value={courierCpf}
-                  onChange={(e) => setCourierCpf(formatCpf(e.target.value))}
-                  placeholder="000.000.000-00"
-                  maxLength={14}
-                />
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label>
-                  Celular para Validação <span className="text-destructive">*</span>
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={courierPhone}
-                    onChange={(e) => {
-                      setCourierPhone(formatPhone(e.target.value))
-                      setIsCodeSent(false)
-                      setIsCodeVerified(false)
-                      setValidationCode('')
-                    }}
-                    placeholder="(00) 00000-0000"
-                    maxLength={15}
-                  />
+            <p className="text-muted-foreground mb-8">
+              Os pacotes foram lançados no sistema e já constam na fila da Triagem.
+            </p>
+            <Button onClick={handleNewRegistration} size="lg" className="h-12 text-lg">
+              <Plus className="mr-2 w-5 h-5" /> Novo Registro
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader className="border-b bg-muted/20">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <PkgIcon className="h-5 w-5 text-primary" /> Dados da Encomenda
+            </CardTitle>
+            <CardDescription>Adicione as encomendas vinculadas à mesma entrega.</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-6">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <Truck className="w-4 h-4 text-muted-foreground" /> Transportadora{' '}
+                    <span className="text-destructive">*</span>
+                  </Label>
+                  <Select value={carrier} onValueChange={setCarrier}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {carriers.map((c) => (
+                        <SelectItem key={c.id} value={c.name}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="Outros">Outros</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
-              <div className="space-y-2 md:col-span-2 pt-4 border-t mt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleSendCode}
-                  disabled={
-                    isSendingCode || !courierPhone || courierPhone.replace(/\D/g, '').length < 10
-                  }
-                  className="w-full sm:w-auto mb-2"
-                >
-                  {isSendingCode ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {isCodeSent ? 'Reenviar Código via WhatsApp' : 'Enviar Código via WhatsApp'}
-                </Button>
+              <div className="pt-4 border-t">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
+                  <Label className="text-lg font-semibold flex items-center gap-2">
+                    <PkgIcon className="w-5 h-5" /> Encomendas
+                  </Label>
+                  <Button type="button" variant="outline" size="sm" onClick={handleAddEntry}>
+                    <Plus className="w-4 h-4 mr-1" /> Adicionar Encomenda
+                  </Button>
+                </div>
 
-                {isCodeSent && !isCodeVerified && (
-                  <div className="space-y-3 mt-4 p-5 border rounded-lg bg-muted/30 animate-fade-in">
-                    <Label className="text-base font-semibold">Código de Validação</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Digite o código de verificação recebido no WhatsApp para confirmar a entrada.
-                    </p>
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                      <Input
-                        value={validationCode}
-                        onChange={(e) => setValidationCode(e.target.value.replace(/\D/g, ''))}
-                        placeholder="000000"
-                        maxLength={6}
-                        className="w-full sm:max-w-[200px] text-lg text-center tracking-widest font-mono h-11"
-                      />
-                      <Button
-                        type="button"
-                        onClick={handleVerifyCode}
-                        disabled={isVerifyingCode || !validationCode}
-                        className="w-full sm:w-auto bg-primary text-primary-foreground h-11"
+                <div className="space-y-3">
+                  {entries.map((entry) => {
+                    const filteredResidents = users.filter((u) => u.unit_id === entry.unitId)
+                    return (
+                      <div
+                        key={entry.id}
+                        className="grid grid-cols-12 gap-3 items-end bg-muted/20 p-4 rounded-md border animate-fade-in"
                       >
-                        {isVerifyingCode ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <ShieldCheck className="mr-2 h-4 w-4" />
-                        )}
-                        Validar
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {isCodeVerified && (
-                  <div className="mt-4 p-4 border rounded-lg bg-success/10 border-success/30 flex items-center gap-3 text-success animate-fade-in shadow-sm">
-                    <CheckCircle2 className="h-6 w-6 shrink-0" />
-                    <div>
-                      <span className="font-semibold block">Autorização Confirmada!</span>
-                      <span className="text-sm text-success/80">
-                        O código foi validado com sucesso. Você já pode registrar a entrada.
-                      </span>
-                    </div>
-                  </div>
-                )}
+                        <div className="col-span-12 md:col-span-4 space-y-2">
+                          <Label>
+                            Unidade <span className="text-destructive">*</span>
+                          </Label>
+                          <Select
+                            value={entry.unitId}
+                            onValueChange={(val) =>
+                              updateEntry(entry.id, { unitId: val, residentId: '' })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {units.map((u) => (
+                                <SelectItem key={u.id} value={u.id}>
+                                  {u.tower} - {u.apartment}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-12 md:col-span-5 space-y-2">
+                          <Label>Morador (Opcional)</Label>
+                          <Select
+                            value={entry.residentId}
+                            onValueChange={(val) => updateEntry(entry.id, { residentId: val })}
+                            disabled={!entry.unitId || filteredResidents.length === 0}
+                          >
+                            <SelectTrigger>
+                              <SelectValue
+                                placeholder={
+                                  !entry.unitId ? 'Selecione a unidade' : 'Selecione o morador'
+                                }
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {filteredResidents.map((r) => (
+                                <SelectItem key={r.id} value={r.id}>
+                                  {r.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-8 md:col-span-2 space-y-2">
+                          <Label>
+                            Volumes <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={entry.volumes || ''}
+                            onChange={(e) =>
+                              updateEntry(entry.id, { volumes: parseInt(e.target.value, 10) || 0 })
+                            }
+                            className="bg-background"
+                          />
+                        </div>
+                        <div className="col-span-4 md:col-span-1 pb-0.5">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => removeEntry(entry.id)}
+                            disabled={entries.length === 1}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </div>
-          </div>
 
-          <Button
-            className="w-full bg-success hover:bg-success/90 text-white mt-8 h-12 text-lg"
-            size="lg"
-            onClick={handleFinish}
-            disabled={isSubmitting || !isFormValid}
-          >
-            {isSubmitting ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            ) : (
-              <CheckCircle2 className="mr-2 h-5 w-5" />
-            )}
-            Registrar Entrada
-          </Button>
-        </CardContent>
-      </Card>
+            <div className="border-t pt-6 mt-6 space-y-6">
+              <h3 className="text-lg font-medium flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-primary" /> Identificação e Autorização
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <Label>
+                    Nome do Entregador/Portador <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    value={courierName}
+                    onChange={(e) => setCourierName(e.target.value)}
+                    placeholder="Ex: João da Silva"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    CPF <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    value={courierCpf}
+                    onChange={(e) => setCourierCpf(formatCpf(e.target.value))}
+                    placeholder="000.000.000-00"
+                    maxLength={14}
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label>
+                    Celular para Validação <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={courierPhone}
+                      onChange={(e) => {
+                        setCourierPhone(formatPhone(e.target.value))
+                        setIsCodeSent(false)
+                        setIsCodeVerified(false)
+                        setValidationCode('')
+                      }}
+                      placeholder="(00) 00000-0000"
+                      maxLength={15}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2 pt-4 border-t mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSendCode}
+                    disabled={
+                      isSendingCode || !courierPhone || courierPhone.replace(/\D/g, '').length < 10
+                    }
+                    className="w-full sm:w-auto mb-2"
+                  >
+                    {isSendingCode ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {isCodeSent ? 'Reenviar Código via WhatsApp' : 'Enviar Código via WhatsApp'}
+                  </Button>
+
+                  {isCodeSent && !isCodeVerified && (
+                    <div className="space-y-3 mt-4 p-5 border rounded-lg bg-muted/30 animate-fade-in">
+                      <Label className="text-base font-semibold">Código de Validação</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Digite o código de verificação recebido no WhatsApp para confirmar a
+                        entrada.
+                      </p>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <Input
+                          value={validationCode}
+                          onChange={(e) => setValidationCode(e.target.value.replace(/\D/g, ''))}
+                          placeholder="000000"
+                          maxLength={6}
+                          className="w-full sm:max-w-[200px] text-lg text-center tracking-widest font-mono h-11"
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleVerifyCode}
+                          disabled={isVerifyingCode || !validationCode}
+                          className="w-full sm:w-auto bg-primary text-primary-foreground h-11"
+                        >
+                          {isVerifyingCode ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <ShieldCheck className="mr-2 h-4 w-4" />
+                          )}
+                          Validar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {isCodeVerified && (
+                    <div className="mt-4 p-4 border rounded-lg bg-success/10 border-success/30 flex items-center gap-3 text-success animate-fade-in shadow-sm">
+                      <CheckCircle2 className="h-6 w-6 shrink-0" />
+                      <div>
+                        <span className="font-semibold block">Autorização Confirmada!</span>
+                        <span className="text-sm text-success/80">
+                          O código foi validado com sucesso. Você já pode registrar a entrada.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <Button
+              className="w-full bg-success hover:bg-success/90 text-white mt-8 h-12 text-lg"
+              size="lg"
+              onClick={handleFinish}
+              disabled={isSubmitting || !isFormValid}
+            >
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                <CheckCircle2 className="mr-2 h-5 w-5" />
+              )}
+              Registrar Entrada
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="pt-4">
         <RecebimentosTable refreshTrigger={refreshTrigger} />

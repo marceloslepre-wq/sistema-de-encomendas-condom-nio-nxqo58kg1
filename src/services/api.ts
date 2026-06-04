@@ -59,6 +59,10 @@ export const createParcel = (data: any) => pb.collection('parcels').create(data)
 export const updateParcel = (id: string, data: any) => pb.collection('parcels').update(id, data)
 export const updateParcelWithFormData = (id: string, formData: FormData) =>
   pb.collection('parcels').update(id, formData)
+export const createParcelWithFormData = (formData: FormData) =>
+  pb.collection('parcels').create(formData)
+export const updateRecebimentoAuditoria = (id: string, data: any) =>
+  pb.collection('recebimentos_auditoria').update(id, data)
 export const getFileUrl = (record: any, filename: string) => pb.files.getUrl(record, filename)
 
 export const createRecebimentoAuditoria = (data: any) =>
@@ -120,11 +124,18 @@ export type RecebimentoAuditoria = RecordModel & {
   morador_nome: string
   morador_cpf: string
   morador_celular: string
-
   data_hora_recebimento: string
   status: string
   descricao?: string
   codigo_validado?: string
+  unidade?: string
+  volumes?: number
+  carrier?: string
+  entregador_nome?: string
+  entregador_cpf?: string
+  entregador_celular?: string
+  unit_id?: string
+  resident_id?: string
 }
 
 export type AppUser = RecordModel & {

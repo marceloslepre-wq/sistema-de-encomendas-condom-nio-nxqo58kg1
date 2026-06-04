@@ -13,20 +13,20 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { Package, Camera, Printer, CheckCircle2, Loader2, ArrowRight } from 'lucide-react'
 import {
-  getParcels,
-  updateParcelWithFormData,
-  updateParcel,
-  Parcel,
+  RecebimentoAuditoria,
   getVolumeTypes,
   getShelfLocations,
+  updateRecebimentoAuditoria,
+  createParcelWithFormData,
 } from '@/services/api'
 import useRealtime from '@/hooks/use-realtime'
 import { format } from 'date-fns'
+import pb from '@/lib/pocketbase/client'
 
 export default function SalaTriagem() {
   const { toast } = useToast()
-  const [parcels, setParcels] = useState<Parcel[]>([])
-  const [selectedParcel, setSelectedParcel] = useState<Parcel | null>(null)
+  const [recebimentos, setRecebimentos] = useState<RecebimentoAuditoria[]>([])
+  const [selectedRecebimento, setSelectedRecebimento] = useState<RecebimentoAuditoria | null>(null)
 
   const [trackingCode, setTrackingCode] = useState('')
   const [volumeType, setVolumeType] = useState('')
@@ -41,8 +41,11 @@ export default function SalaTriagem() {
 
   const loadData = async () => {
     try {
-      const data = await getParcels()
-      setParcels(data.filter((p) => p.status === 'ENTRADA_PORTARIA' || p.status === 'EM_TRIAGEM'))
+      const data = await pb.collection('recebimentos_auditoria').getFullList<RecebimentoAuditoria>({
+        filter: `status='ENTRADA_PORTARIA' || status='EM_TRIAGEM'`,
+        sort: 'created',
+      })
+      setRecebimentos(data)
       const [vTypes, sLocs] = await Promise.all([getVolumeTypes(), getShelfLocations()])
       setVolumeTypes(vTypes)
       setShelfLocations(sLocs)
@@ -54,31 +57,29 @@ export default function SalaTriagem() {
   useEffect(() => {
     loadData()
   }, [])
-  useRealtime('parcels', () => loadData())
 
-  const handleStartTriage = async (parcel: Parcel) => {
+  useRealtime('recebimentos_auditoria', () => loadData())
+
+  const handleStartTriage = async (recebimento: RecebimentoAuditoria) => {
     try {
-      if (parcel.status === 'ENTRADA_PORTARIA') {
-        const updated = await updateParcel(parcel.id, { status: 'EM_TRIAGEM' })
-        setSelectedParcel(updated)
+      if (recebimento.status === 'ENTRADA_PORTARIA') {
+        const updated = await updateRecebimentoAuditoria(recebimento.id, { status: 'EM_TRIAGEM' })
+        setSelectedRecebimento(updated)
       } else {
-        setSelectedParcel(parcel)
+        setSelectedRecebimento(recebimento)
       }
-      setTrackingCode(parcel.tracking_code || '')
-      setVolumeType(parcel.volume_type || (volumeTypes.length > 0 ? volumeTypes[0].name : ''))
-      setShelfLocation(
-        parcel.shelf_location || (shelfLocations.length > 0 ? shelfLocations[0].name : ''),
-      )
+      setTrackingCode('')
+      setVolumeType(volumeTypes.length > 0 ? volumeTypes[0].name : '')
+      setShelfLocation(shelfLocations.length > 0 ? shelfLocations[0].name : '')
       setPhoto(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
     } catch (err: any) {
-      console.error('Failed to start triage:', err, err.response)
       toast({ title: 'Erro', description: 'Falha ao iniciar triagem.', variant: 'destructive' })
     }
   }
 
   const handleFinish = async () => {
-    if (!selectedParcel) return
+    if (!selectedRecebimento) return
     setIsSubmitting(true)
     try {
       const code = Math.floor(100000 + Math.random() * 900000).toString()
@@ -88,16 +89,30 @@ export default function SalaTriagem() {
       formData.append('tracking_code', trackingCode)
       formData.append('volume_type', volumeType)
       formData.append('shelf_location', shelfLocation)
+
+      if (selectedRecebimento.unit_id) formData.append('unit_id', selectedRecebimento.unit_id)
+      if (selectedRecebimento.resident_id)
+        formData.append('resident_id', selectedRecebimento.resident_id)
+      formData.append('carrier', selectedRecebimento.carrier || '')
+      formData.append('volumes', selectedRecebimento.volumes?.toString() || '1')
+      formData.append(
+        'entry_date',
+        selectedRecebimento.data_hora_recebimento || new Date().toISOString(),
+      )
+      formData.append('courier_name', selectedRecebimento.entregador_nome || '')
+      formData.append('courier_cpf', selectedRecebimento.entregador_cpf || '')
+
       if (photo) {
         formData.append('photo', photo)
       }
 
-      await updateParcelWithFormData(selectedParcel.id, formData)
+      await createParcelWithFormData(formData)
+      await updateRecebimentoAuditoria(selectedRecebimento.id, { status: 'LIBERADO_RETIRADA' })
+
       toast({ title: 'Sucesso', description: 'Encomenda liberada para retirada.' })
-      setSelectedParcel(null)
+      setSelectedRecebimento(null)
       loadData()
     } catch (err: any) {
-      console.error('Failed to finish triage:', err, err.response)
       toast({ title: 'Erro', description: 'Falha ao finalizar.', variant: 'destructive' })
     } finally {
       setIsSubmitting(false)
@@ -120,41 +135,52 @@ export default function SalaTriagem() {
       <div className="grid md:grid-cols-3 gap-6">
         <div className="md:col-span-1 space-y-4 print:hidden h-[75vh] overflow-y-auto pr-2">
           <h3 className="font-semibold text-lg sticky top-0 bg-background py-2">
-            Fila de Entrada ({parcels.length})
+            Fila de Entrada ({recebimentos.length})
           </h3>
-          {parcels.length === 0 && (
+          {recebimentos.length === 0 && (
             <p className="text-muted-foreground text-sm py-4">Nenhuma encomenda na fila.</p>
           )}
-          {parcels.map((p) => (
+          {recebimentos.map((r) => (
             <Card
-              key={p.id}
-              className={`cursor-pointer transition-colors hover:border-primary ${selectedParcel?.id === p.id ? 'border-primary bg-primary/5' : ''}`}
-              onClick={() => handleStartTriage(p)}
+              key={r.id}
+              className={`cursor-pointer transition-colors hover:border-primary ${selectedRecebimento?.id === r.id ? 'border-primary bg-primary/5' : ''}`}
+              onClick={() => handleStartTriage(r)}
             >
               <CardContent className="p-4 flex justify-between items-center">
                 <div>
-                  <p className="font-bold">
-                    {p.expand?.unit_id?.tower}-{p.expand?.unit_id?.apartment}
+                  <p className="font-bold">{r.unidade || 'Sem Unidade'}</p>
+                  <p className="text-sm text-muted-foreground">{r.morador_nome || 'Sem morador'}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {r.volumes || 1} volume(s) • {r.carrier || 'Transportadora N/D'}
                   </p>
-                  <p className="text-sm text-muted-foreground">{p.carrier}</p>
                 </div>
-                <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                <div className="flex flex-col items-end gap-2">
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded-full ${
+                      r.status === 'EM_TRIAGEM'
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-blue-100 text-blue-700'
+                    }`}
+                  >
+                    {r.status === 'EM_TRIAGEM' ? 'Em Triagem' : 'Pendente'}
+                  </span>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
 
         <div className="md:col-span-2">
-          {selectedParcel ? (
+          {selectedRecebimento ? (
             <Card className="print:border-none print:shadow-none">
               <CardHeader className="print:hidden border-b bg-muted/20">
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5 text-primary" /> Processamento de Encomenda
                 </CardTitle>
                 <CardDescription>
-                  Unidade: {selectedParcel.expand?.unit_id?.tower}-
-                  {selectedParcel.expand?.unit_id?.apartment} | Morador:{' '}
-                  {selectedParcel.expand?.resident_id?.name || 'N/D'}
+                  Unidade: {selectedRecebimento.unidade} | Morador:{' '}
+                  {selectedRecebimento.morador_nome || 'N/D'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
@@ -245,18 +271,17 @@ export default function SalaTriagem() {
                 <div className="hidden print:flex flex-col items-center justify-center space-y-4 print:w-full print:m-0 print:p-0">
                   <div className="w-64 bg-white border-2 border-dashed border-gray-300 p-6 flex flex-col items-center text-center shadow-sm rounded-md print:border-none print:shadow-none print:w-auto">
                     <h3 className="font-extrabold text-3xl mb-1 text-black">
-                      {selectedParcel.expand?.unit_id?.tower}-
-                      {selectedParcel.expand?.unit_id?.apartment}
+                      {selectedRecebimento.unidade}
                     </h3>
                     <p className="text-base font-medium mb-4 text-black line-clamp-1 overflow-hidden">
-                      {selectedParcel.expand?.resident_id?.name || 'Morador'}
+                      {selectedRecebimento.morador_nome || 'Morador'}
                     </p>
                     <p className="text-xs font-bold uppercase mt-2 text-black">
                       LOC: {shelfLocation}
                     </p>
                     <p className="text-[10px] text-gray-600 font-medium">{volumeType}</p>
                     <p className="text-[10px] text-gray-500 mt-2">
-                      ID: {selectedParcel.id.substring(0, 6).toUpperCase()} •{' '}
+                      ID: {selectedRecebimento.id.substring(0, 6).toUpperCase()} •{' '}
                       {format(new Date(), 'dd/MM/yyyy')}
                     </p>
                   </div>
