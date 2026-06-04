@@ -14,21 +14,21 @@
   ====================================================================================================
 */
 
-function normalizeBrazilianNumber(input) {
-  let digits = String(input || '').replace(/\D/g, '')
-  digits = digits.replace(/^0+/, '')
-
-  if (!digits.startsWith('55')) {
-    digits = '55' + digits
-  }
-
-  return digits
-}
-
 routerAdd(
   'POST',
   '/backend/v1/whatsapp/send',
   (e) => {
+    function normalizeBrazilianNumber(input) {
+      let digits = String(input || '').replace(/\D/g, '')
+      digits = digits.replace(/^0+/, '')
+
+      if (!digits.startsWith('55')) {
+        digits = '55' + digits
+      }
+
+      return digits
+    }
+
     if (e.request.method !== 'POST') {
       return e.json(405, { error: 'Method Not Allowed' })
     }
@@ -66,14 +66,16 @@ routerAdd(
     if (tipo === 'codigo') {
       code = $security.randomStringWithAlphabet(6, '0123456789')
       originalMessage = `Seu código de validação é: ${code}`
-      const expiresAt = new Date(Date.now() + 10 * 60000).toISOString()
+      // Changed to 15 minutes to match the system update and ensure consistency
+      const expires = new Date()
+      expires.setMinutes(expires.getMinutes() + 15)
 
       try {
         const verifCol = $app.findCollectionByNameOrId('whatsapp_verifications')
         const verif = new Record(verifCol)
         verif.set('phone', phoneNum)
         verif.set('code', code)
-        verif.set('expires_at', expiresAt)
+        verif.set('expires_at', expires.toISOString().replace('T', ' '))
         verif.set('used', false)
         verif.set('attempts', 0)
         $app.save(verif)

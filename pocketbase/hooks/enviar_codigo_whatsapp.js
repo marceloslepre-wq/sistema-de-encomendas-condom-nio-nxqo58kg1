@@ -48,7 +48,7 @@ routerAdd(
           ? numericPhone
           : `55${numericPhone}`
 
-      // Gerar código de 6 dígitos de forma segura no backend
+      // Gerar código de 6 dígitos (apenas números, sem espaços)
       const code = $security.randomStringWithAlphabet(6, '0123456789')
       const message = `Seu código de validação é: ${code}`
 
@@ -60,8 +60,9 @@ routerAdd(
         verifRecord.set('code', code)
 
         const expires = new Date()
-        expires.setMinutes(expires.getMinutes() + 10)
-        verifRecord.set('expires_at', expires.toISOString())
+        expires.setMinutes(expires.getMinutes() + 15)
+        // Store explicitly formatted to avoid 'T' lexicographical comparison issues
+        verifRecord.set('expires_at', expires.toISOString().replace('T', ' '))
         verifRecord.set('used', false)
         verifRecord.set('attempts', 0)
 
