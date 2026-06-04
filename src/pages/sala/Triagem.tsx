@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,8 +10,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
-import { Package, Camera, Printer, CheckCircle2, Loader2, ArrowRight } from 'lucide-react'
+import { Package, Printer, CheckCircle2, Loader2, Settings } from 'lucide-react'
 import {
   RecebimentoAuditoria,
   getVolumeTypes,
@@ -23,10 +38,17 @@ import useRealtime from '@/hooks/use-realtime'
 import { format } from 'date-fns'
 import pb from '@/lib/pocketbase/client'
 
+type ExpandedVolume = RecebimentoAuditoria & {
+  _volumeIndex: number
+  _totalVolumes: number
+  _volumeStatus: string
+}
+
 export default function SalaTriagem() {
   const { toast } = useToast()
   const [recebimentos, setRecebimentos] = useState<RecebimentoAuditoria[]>([])
-  const [selectedRecebimento, setSelectedRecebimento] = useState<RecebimentoAuditoria | null>(null)
+  const [selectedVolume, setSelectedVolume] = useState<ExpandedVolume | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   const [trackingCode, setTrackingCode] = useState('')
   const [volumeType, setVolumeType] = useState('')
@@ -60,14 +82,61 @@ export default function SalaTriagem() {
 
   useRealtime('recebimentos_auditoria', () => loadData())
 
-  const handleStartTriage = async (recebimento: RecebimentoAuditoria) => {
+  const expandedRows = useMemo(() => {
+    return recebimentos.flatMap((r) => {
+      const count = r.volumes && r.volumes > 0 ? r.volumes : 1
+      const statuses = r.volume_statuses || {}
+      return Array.from({ length: count }).map((_, i) => {
+        const volIndex = i + 1
+        return {
+          ...r,
+          _volumeIndex: volIndex,
+          _totalVolumes: count,
+          _volumeStatus: statuses[volIndex] || 'Pendente',
+        } as ExpandedVolume
+      })
+    })
+  }, [recebimentos])
+
+  const handleStatusChange = async (id: string, volIndex: number, status: string) => {
+    const recebimento = recebimentos.find((r) => r.id === id)
+    if (!recebimento) return
+
+    const currentStatuses = recebimento.volume_statuses || {}
+    const updatedStatuses = { ...currentStatuses, [volIndex]: status }
+    const total = recebimento.volumes || 1
+
+    const isAllProcessed = Array.from({ length: total }).every(
+      (_, i) => updatedStatuses[i + 1] === 'Processado' || updatedStatuses[i + 1] === 'Entregue',
+    )
+
     try {
-      if (recebimento.status === 'ENTRADA_PORTARIA') {
-        const updated = await updateRecebimentoAuditoria(recebimento.id, { status: 'EM_TRIAGEM' })
-        setSelectedRecebimento(updated)
-      } else {
-        setSelectedRecebimento(recebimento)
+      await updateRecebimentoAuditoria(id, {
+        volume_statuses: updatedStatuses,
+        ...(isAllProcessed ? { status: 'LIBERADO_RETIRADA' } : { status: 'EM_TRIAGEM' }),
+      })
+      toast({
+        title: 'Status Atualizado',
+        description: `Volume ${volIndex}/${total} atualizado para ${status}.`,
+      })
+      loadData()
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar o status.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleStartTriage = async (vol: ExpandedVolume) => {
+    try {
+      if (vol.status === 'ENTRADA_PORTARIA') {
+        const updated = await updateRecebimentoAuditoria(vol.id, { status: 'EM_TRIAGEM' })
+        vol = { ...vol, ...updated, status: 'EM_TRIAGEM' }
       }
+      setSelectedVolume(vol)
+      setDialogOpen(true)
       setTrackingCode('')
       setVolumeType(volumeTypes.length > 0 ? volumeTypes[0].name : '')
       setShelfLocation(shelfLocations.length > 0 ? shelfLocations[0].name : '')
@@ -79,7 +148,7 @@ export default function SalaTriagem() {
   }
 
   const handleFinish = async () => {
-    if (!selectedRecebimento) return
+    if (!selectedVolume) return
     setIsSubmitting(true)
     try {
       const code = Math.floor(100000 + Math.random() * 900000).toString()
@@ -90,27 +159,37 @@ export default function SalaTriagem() {
       formData.append('volume_type', volumeType)
       formData.append('shelf_location', shelfLocation)
 
-      if (selectedRecebimento.unit_id) formData.append('unit_id', selectedRecebimento.unit_id)
-      if (selectedRecebimento.resident_id)
-        formData.append('resident_id', selectedRecebimento.resident_id)
-      formData.append('carrier', selectedRecebimento.carrier || '')
-      formData.append('volumes', selectedRecebimento.volumes?.toString() || '1')
+      if (selectedVolume.unit_id) formData.append('unit_id', selectedVolume.unit_id)
+      if (selectedVolume.resident_id) formData.append('resident_id', selectedVolume.resident_id)
+      formData.append('carrier', selectedVolume.carrier || '')
+      formData.append('volumes', '1') // Processing individual volume
       formData.append(
         'entry_date',
-        selectedRecebimento.data_hora_recebimento || new Date().toISOString(),
+        selectedVolume.data_hora_recebimento || new Date().toISOString(),
       )
-      formData.append('courier_name', selectedRecebimento.entregador_nome || '')
-      formData.append('courier_cpf', selectedRecebimento.entregador_cpf || '')
+      formData.append('courier_name', selectedVolume.entregador_nome || '')
+      formData.append('courier_cpf', selectedVolume.entregador_cpf || '')
 
       if (photo) {
         formData.append('photo', photo)
       }
 
       await createParcelWithFormData(formData)
-      await updateRecebimentoAuditoria(selectedRecebimento.id, { status: 'LIBERADO_RETIRADA' })
 
-      toast({ title: 'Sucesso', description: 'Encomenda liberada para retirada.' })
-      setSelectedRecebimento(null)
+      const currentStatuses = selectedVolume.volume_statuses || {}
+      const updatedStatuses = { ...currentStatuses, [selectedVolume._volumeIndex]: 'Processado' }
+      const isAllProcessed = Array.from({ length: selectedVolume._totalVolumes }).every(
+        (_, i) => updatedStatuses[i + 1] === 'Processado' || updatedStatuses[i + 1] === 'Entregue',
+      )
+
+      await updateRecebimentoAuditoria(selectedVolume.id, {
+        volume_statuses: updatedStatuses,
+        ...(isAllProcessed ? { status: 'LIBERADO_RETIRADA' } : { status: 'EM_TRIAGEM' }),
+      })
+
+      toast({ title: 'Sucesso', description: 'Volume liberado para retirada.' })
+      setDialogOpen(false)
+      setSelectedVolume(null)
       loadData()
     } catch (err: any) {
       toast({ title: 'Erro', description: 'Falha ao finalizar.', variant: 'destructive' })
@@ -124,184 +203,208 @@ export default function SalaTriagem() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+    <div className="max-w-6xl mx-auto space-y-6 pb-20 animate-fade-in">
       <div className="print:hidden">
         <h2 className="text-3xl font-bold tracking-tight">Triagem & Etiquetagem</h2>
         <p className="text-muted-foreground">
-          Processe pacotes recebidos na portaria e prepare-os para o morador.
+          Processe pacotes recebidos na portaria e gerencie cada volume individualmente.
         </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-1 space-y-4 print:hidden h-[75vh] overflow-y-auto pr-2">
-          <h3 className="font-semibold text-lg sticky top-0 bg-background py-2">
-            Fila de Entrada ({recebimentos.length})
-          </h3>
-          {recebimentos.length === 0 && (
-            <p className="text-muted-foreground text-sm py-4">Nenhuma encomenda na fila.</p>
-          )}
-          {recebimentos.map((r) => (
-            <Card
-              key={r.id}
-              className={`cursor-pointer transition-colors hover:border-primary ${selectedRecebimento?.id === r.id ? 'border-primary bg-primary/5' : ''}`}
-              onClick={() => handleStartTriage(r)}
-            >
-              <CardContent className="p-4 flex justify-between items-center">
-                <div>
-                  <p className="font-bold">{r.unidade || 'Sem Unidade'}</p>
-                  <p className="text-sm text-muted-foreground">{r.morador_nome || 'Sem morador'}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {r.volumes || 1} volume(s) • {r.carrier || 'Transportadora N/D'}
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full ${
-                      r.status === 'EM_TRIAGEM'
-                        ? 'bg-amber-100 text-amber-700'
-                        : 'bg-blue-100 text-blue-700'
-                    }`}
-                  >
-                    {r.status === 'EM_TRIAGEM' ? 'Em Triagem' : 'Pendente'}
-                  </span>
-                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="md:col-span-2">
-          {selectedRecebimento ? (
-            <Card className="print:border-none print:shadow-none">
-              <CardHeader className="print:hidden border-b bg-muted/20">
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-primary" /> Processamento de Encomenda
-                </CardTitle>
-                <CardDescription>
-                  Unidade: {selectedRecebimento.unidade} | Morador:{' '}
-                  {selectedRecebimento.morador_nome || 'N/D'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <div className="grid md:grid-cols-2 gap-6 print:hidden">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Código de Rastreio (Opcional)</Label>
-                      <Input
-                        value={trackingCode}
-                        onChange={(e) => setTrackingCode(e.target.value)}
-                        placeholder="Ex: AB123456789BR"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Tipo de Volume</Label>
-                      <Select value={volumeType} onValueChange={setVolumeType}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {volumeTypes.length === 0 && (
-                            <SelectItem value="none" disabled>
-                              Nenhum tipo cadastrado
-                            </SelectItem>
-                          )}
-                          {volumeTypes.map((v) => (
-                            <SelectItem key={v.id} value={v.name}>
-                              {v.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Localização na Sala</Label>
-                      <Select value={shelfLocation} onValueChange={setShelfLocation}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {shelfLocations.length === 0 && (
-                            <SelectItem value="none" disabled>
-                              Nenhum local cadastrado
-                            </SelectItem>
-                          )}
-                          {shelfLocations.map((s) => (
-                            <SelectItem key={s.id} value={s.name}>
-                              {s.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Foto do Pacote</Label>
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        ref={fileInputRef}
-                        onChange={(e) => setPhoto(e.target.files?.[0] || null)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className="bg-muted/30 p-4 rounded-lg border flex flex-col items-center">
-                      <p className="text-sm font-medium mb-3">Gerar Etiqueta</p>
-                      <Button variant="outline" className="w-full" onClick={handlePrint}>
-                        <Printer className="w-4 h-4 mr-2" /> Imprimir Etiqueta
-                      </Button>
-                    </div>
-
-                    <Button
-                      className="w-full h-12 bg-primary hover:bg-primary/90 text-white"
-                      onClick={handleFinish}
-                      disabled={isSubmitting}
+      <Card className="print:hidden border-none shadow-none md:border md:shadow-sm">
+        <CardHeader className="bg-muted/20 border-b">
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-primary" /> Fila de Volumes Pendentes
+          </CardTitle>
+          <CardDescription>
+            Defina o status de cada volume ou processe-os separadamente.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="pl-6">Unidade</TableHead>
+                <TableHead>Morador</TableHead>
+                <TableHead>Volume #</TableHead>
+                <TableHead>Transportadora</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-32 pr-6">Ação</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {expandedRows.map((vol) => (
+                <TableRow key={`${vol.id}-${vol._volumeIndex}`}>
+                  <TableCell className="pl-6 font-medium">{vol.unidade || 'N/D'}</TableCell>
+                  <TableCell>{vol.morador_nome || 'N/D'}</TableCell>
+                  <TableCell className="font-mono text-muted-foreground whitespace-nowrap">
+                    {vol._volumeIndex}/{vol._totalVolumes}
+                  </TableCell>
+                  <TableCell>{vol.carrier || 'N/D'}</TableCell>
+                  <TableCell>
+                    <Select
+                      value={vol._volumeStatus}
+                      onValueChange={(val) => handleStatusChange(vol.id, vol._volumeIndex, val)}
                     >
-                      {isSubmitting ? (
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="mr-2 h-5 w-5" />
-                      )}
-                      Finalizar e Liberar
+                      <SelectTrigger className="w-[160px] h-8 bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Pendente">Pendente</SelectItem>
+                        <SelectItem value="Em Processamento">Em Processamento</SelectItem>
+                        <SelectItem value="Processado">Processado</SelectItem>
+                        <SelectItem value="Entregue">Entregue</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell className="pr-6">
+                    <Button size="sm" variant="outline" onClick={() => handleStartTriage(vol)}>
+                      <Settings className="w-4 h-4 mr-2" />
+                      Processar
                     </Button>
-                  </div>
-                </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {expandedRows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    Nenhum volume na fila de triagem.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-                <div className="hidden print:flex flex-col items-center justify-center space-y-4 print:w-full print:m-0 print:p-0">
-                  <div className="w-64 bg-white border-2 border-dashed border-gray-300 p-6 flex flex-col items-center text-center shadow-sm rounded-md print:border-none print:shadow-none print:w-auto">
-                    <h3 className="font-extrabold text-3xl mb-1 text-black">
-                      {selectedRecebimento.unidade}
-                    </h3>
-                    <p className="text-base font-medium mb-4 text-black line-clamp-1 overflow-hidden">
-                      {selectedRecebimento.morador_nome || 'Morador'}
-                    </p>
-                    <p className="text-xs font-bold uppercase mt-2 text-black">
-                      LOC: {shelfLocation}
-                    </p>
-                    <p className="text-[10px] text-gray-600 font-medium">{volumeType}</p>
-                    <p className="text-[10px] text-gray-500 mt-2">
-                      ID: {selectedRecebimento.id.substring(0, 6).toUpperCase()} •{' '}
-                      {format(new Date(), 'dd/MM/yyyy')}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground print:hidden">
-              <Camera className="w-16 h-16 opacity-20 mb-4" />
-              <p>Selecione uma encomenda na fila para iniciar a triagem.</p>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-2xl print:hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" /> Processar Volume{' '}
+              {selectedVolume?._volumeIndex}/{selectedVolume?._totalVolumes}
+            </DialogTitle>
+            <DialogDescription>
+              Unidade: {selectedVolume?.unidade} | Morador: {selectedVolume?.morador_nome || 'N/D'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid md:grid-cols-2 gap-6 py-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Código de Rastreio (Opcional)</Label>
+                <Input
+                  value={trackingCode}
+                  onChange={(e) => setTrackingCode(e.target.value)}
+                  placeholder="Ex: AB123456789BR"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo de Volume</Label>
+                <Select value={volumeType} onValueChange={setVolumeType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {volumeTypes.length === 0 && (
+                      <SelectItem value="none" disabled>
+                        Nenhum tipo cadastrado
+                      </SelectItem>
+                    )}
+                    {volumeTypes.map((v) => (
+                      <SelectItem key={v.id} value={v.name}>
+                        {v.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Localização na Sala</Label>
+                <Select value={shelfLocation} onValueChange={setShelfLocation}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {shelfLocations.length === 0 && (
+                      <SelectItem value="none" disabled>
+                        Nenhum local cadastrado
+                      </SelectItem>
+                    )}
+                    {shelfLocations.map((s) => (
+                      <SelectItem key={s.id} value={s.name}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Foto do Pacote</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  onChange={(e) => setPhoto(e.target.files?.[0] || null)}
+                />
+              </div>
             </div>
-          )}
+
+            <div className="space-y-6 flex flex-col">
+              <div className="bg-muted/30 p-4 rounded-lg border flex flex-col items-center flex-1 justify-center">
+                <p className="text-sm font-medium mb-3">Gerar Etiqueta</p>
+                <Button variant="outline" className="w-full" onClick={handlePrint}>
+                  <Printer className="w-4 h-4 mr-2" /> Imprimir Etiqueta
+                </Button>
+                <p className="text-xs text-muted-foreground mt-3 text-center">
+                  A etiqueta será gerada especificamente para o volume{' '}
+                  {selectedVolume?._volumeIndex} de {selectedVolume?._totalVolumes}.
+                </p>
+              </div>
+
+              <Button
+                className="w-full h-12 bg-primary hover:bg-primary/90 text-white"
+                onClick={handleFinish}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="mr-2 h-5 w-5" />
+                )}
+                Finalizar e Liberar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Print-only layout */}
+      {selectedVolume && (
+        <div className="hidden print:flex flex-col items-center justify-center space-y-4 print:w-full print:m-0 print:p-0 print:fixed print:top-0 print:left-0 print:bg-white print:z-50 print:h-screen">
+          <div className="w-64 bg-white border-2 border-dashed border-gray-300 p-6 flex flex-col items-center text-center shadow-sm rounded-md print:border-none print:shadow-none print:w-auto">
+            <h3 className="font-extrabold text-3xl mb-1 text-black">{selectedVolume.unidade}</h3>
+            <p className="text-base font-medium mb-4 text-black line-clamp-1 overflow-hidden">
+              {selectedVolume.morador_nome || 'Morador'}
+            </p>
+            <p className="text-xs font-bold uppercase mt-2 text-black">
+              LOC: {shelfLocation} | VOL: {selectedVolume._volumeIndex}/
+              {selectedVolume._totalVolumes}
+            </p>
+            <p className="text-[10px] text-gray-600 font-medium">{volumeType}</p>
+            <p className="text-[10px] text-gray-500 mt-2">
+              ID: {selectedVolume.id.substring(0, 6).toUpperCase()} •{' '}
+              {format(new Date(), 'dd/MM/yyyy')}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <style
         dangerouslySetInnerHTML={{
           __html: `
         @media print {
-          body * { visibility: hidden; }
+          body > :not(.print\\:flex) { visibility: hidden; }
           .print\\:w-auto, .print\\:w-auto * { visibility: visible; }
           .print\\:w-auto {
             position: absolute; left: 0; top: 0;

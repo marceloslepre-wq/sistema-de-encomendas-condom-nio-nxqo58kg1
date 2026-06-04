@@ -10,6 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
 import {
   CheckCircle2,
@@ -335,87 +343,96 @@ export default function PortariaRegistro() {
                   </Button>
                 </div>
 
-                <div className="space-y-3">
-                  {entries.map((entry) => {
-                    const filteredResidents = users.filter((u) => u.unit_id === entry.unitId)
-                    return (
-                      <div
-                        key={entry.id}
-                        className="grid grid-cols-12 gap-3 items-end bg-muted/20 p-4 rounded-md border animate-fade-in"
-                      >
-                        <div className="col-span-12 md:col-span-4 space-y-2">
-                          <Label>
-                            Unidade <span className="text-destructive">*</span>
-                          </Label>
-                          <Select
-                            value={entry.unitId}
-                            onValueChange={(val) =>
-                              updateEntry(entry.id, { unitId: val, residentId: '' })
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {units.map((u) => (
-                                <SelectItem key={u.id} value={u.id}>
-                                  {u.tower} - {u.apartment}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="col-span-12 md:col-span-5 space-y-2">
-                          <Label>Morador (Opcional)</Label>
-                          <Select
-                            value={entry.residentId}
-                            onValueChange={(val) => updateEntry(entry.id, { residentId: val })}
-                            disabled={!entry.unitId || filteredResidents.length === 0}
-                          >
-                            <SelectTrigger>
-                              <SelectValue
-                                placeholder={
-                                  !entry.unitId ? 'Selecione a unidade' : 'Selecione o morador'
+                <div className="rounded-md border bg-card overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-muted/50">
+                      <TableRow>
+                        <TableHead className="pl-4">
+                          Unidade <span className="text-destructive">*</span>
+                        </TableHead>
+                        <TableHead>Morador (Opcional)</TableHead>
+                        <TableHead className="w-32">
+                          Volume <span className="text-destructive">*</span>
+                        </TableHead>
+                        <TableHead className="w-[80px] text-center pr-4">Ação</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {entries.map((entry) => {
+                        const filteredResidents = users.filter((u) => u.unit_id === entry.unitId)
+                        return (
+                          <TableRow key={entry.id} className="animate-fade-in">
+                            <TableCell className="align-top pt-4 pl-4">
+                              <Select
+                                value={entry.unitId}
+                                onValueChange={(val) =>
+                                  updateEntry(entry.id, { unitId: val, residentId: '' })
                                 }
+                              >
+                                <SelectTrigger className="bg-background">
+                                  <SelectValue placeholder="Selecione..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {units.map((u) => (
+                                    <SelectItem key={u.id} value={u.id}>
+                                      {u.tower} - {u.apartment}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell className="align-top pt-4">
+                              <Select
+                                value={entry.residentId}
+                                onValueChange={(val) => updateEntry(entry.id, { residentId: val })}
+                                disabled={!entry.unitId || filteredResidents.length === 0}
+                              >
+                                <SelectTrigger className="bg-background">
+                                  <SelectValue
+                                    placeholder={
+                                      !entry.unitId ? 'Selecione a unidade' : 'Selecione o morador'
+                                    }
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {filteredResidents.map((r) => (
+                                    <SelectItem key={r.id} value={r.id}>
+                                      {r.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell className="align-top pt-4">
+                              <Input
+                                type="number"
+                                min="1"
+                                value={entry.volumes || ''}
+                                onChange={(e) =>
+                                  updateEntry(entry.id, {
+                                    volumes: parseInt(e.target.value, 10) || 0,
+                                  })
+                                }
+                                className="bg-background"
                               />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {filteredResidents.map((r) => (
-                                <SelectItem key={r.id} value={r.id}>
-                                  {r.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="col-span-8 md:col-span-2 space-y-2">
-                          <Label>
-                            Volumes <span className="text-destructive">*</span>
-                          </Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={entry.volumes || ''}
-                            onChange={(e) =>
-                              updateEntry(entry.id, { volumes: parseInt(e.target.value, 10) || 0 })
-                            }
-                            className="bg-background"
-                          />
-                        </div>
-                        <div className="col-span-4 md:col-span-1 pb-0.5">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => removeEntry(entry.id)}
-                            disabled={entries.length === 1}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    )
-                  })}
+                            </TableCell>
+                            <TableCell className="align-top pt-4 text-center pr-4">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:bg-destructive/10 hover:text-destructive h-10 w-10"
+                                onClick={() => removeEntry(entry.id)}
+                                disabled={entries.length === 1}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             </div>

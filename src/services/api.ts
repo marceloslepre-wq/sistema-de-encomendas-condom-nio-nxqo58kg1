@@ -136,6 +136,7 @@ export type RecebimentoAuditoria = RecordModel & {
   entregador_celular?: string
   unit_id?: string
   resident_id?: string
+  volume_statuses?: Record<string, string>
 }
 
 export type AppUser = RecordModel & {
