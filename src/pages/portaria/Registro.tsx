@@ -141,7 +141,14 @@ export default function PortariaRegistro() {
         const unidadeStr = unit ? `${unit.tower} - ${unit.apartment}` : ''
         const moradorNome = resident ? resident.name : ''
 
-        await pb.collection('recebimentos_auditoria').create({
+        console.log('Tentando gravar:', {
+          unidade: unidadeStr,
+          morador: moradorNome,
+          volume: group.volumes,
+          transportadora: carrier,
+        })
+
+        const resultado = await pb.collection('recebimentos_auditoria').create({
           morador_nome: moradorNome,
           morador_cpf: resident?.cpf || '',
           morador_celular: resident?.phone || '',
@@ -157,6 +164,8 @@ export default function PortariaRegistro() {
           unit_id: group.unitId,
           resident_id: group.residentId || null,
         })
+
+        console.log('Gravado com sucesso:', resultado)
       }
 
       setRegistrationSuccess(true)
@@ -167,6 +176,7 @@ export default function PortariaRegistro() {
       })
       setRefreshTrigger((prev) => prev + 1)
     } catch (err: any) {
+      console.log('ERRO ao gravar:', err)
       const errorMessage = getErrorMessage(err)
       toast({
         title: 'Aviso',
