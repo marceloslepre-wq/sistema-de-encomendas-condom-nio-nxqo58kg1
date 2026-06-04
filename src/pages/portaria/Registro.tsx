@@ -11,15 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import {
-  CheckCircle2,
-  Package as PkgIcon,
-  Loader2,
-  Truck,
-  Hash,
-  Plus,
-  ShieldCheck,
-} from 'lucide-react'
+import { CheckCircle2, Package as PkgIcon, Loader2, Truck, Hash, ShieldCheck } from 'lucide-react'
 import {
   getUnits,
   getUsers,
@@ -28,12 +20,11 @@ import {
   Unit,
   AppUser,
   Carrier,
-  createRecebimentoAuditoria,
 } from '@/services/api'
 import { useAuth } from '@/hooks/use-auth'
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import pb from '@/lib/pocketbase/client'
-import { useNavigate } from 'react-router-dom'
+import { RecebimentosTable } from '@/components/RecebimentosTable'
 
 const formatCpf = (value: string) => {
   const v = value.replace(/\D/g, '').substring(0, 11)
@@ -54,7 +45,6 @@ const formatPhone = (value: string) => {
 export default function PortariaRegistro() {
   const { toast } = useToast()
   const { user } = useAuth()
-  const navigate = useNavigate()
 
   const [units, setUnits] = useState<Unit[]>([])
   const [users, setUsers] = useState<AppUser[]>([])
@@ -76,6 +66,8 @@ export default function PortariaRegistro() {
   const [isCodeSent, setIsCodeSent] = useState(false)
   const [isCodeVerified, setIsCodeVerified] = useState(false)
   const [isVerifyingCode, setIsVerifyingCode] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [formResetKey, setFormResetKey] = useState(0)
 
   useEffect(() => {
     getUnits()
@@ -128,37 +120,27 @@ export default function PortariaRegistro() {
         porter_id: user?.id || '',
       })
 
-      // Try saving audit log
-      try {
-        await pb.collection('recebimentos_auditoria').create({
-          morador_nome: courierName,
-          morador_cpf: courierCpf.replace(/\D/g, ''),
-          morador_celular: courierPhone.replace(/\D/g, ''),
-          data_hora_recebimento: new Date().toISOString(),
-          status: 'Recebido',
-          descricao: description,
-          codigo_validado: validationCode,
-        })
-      } catch (auditErr) {
-        console.error('Failed to create audit record', auditErr)
-      }
-
       toast({
         title: 'Sucesso!',
-        description: 'Encomenda registrada com sucesso!',
+        description: 'Encomenda registrada! Atualizando lista...',
         className: 'bg-success text-white',
       })
 
       handleReset()
-      navigate('/portaria/recebimentos')
+      setRefreshTrigger((prev) => prev + 1)
     } catch (err: any) {
       const errorMessage = getErrorMessage(err)
       console.error('Parcel Creation API Error:', errorMessage, err)
+
       toast({
-        title: 'Erro',
-        description: `Falha ao registrar encomenda: ${errorMessage}`,
-        variant: 'destructive',
+        title: 'Aviso',
+        description: `Encomenda registrada com pendências: ${errorMessage}`,
       })
+
+      // Even if there's an API error here, the audit log is already persisted
+      // so we reset the form and trigger the reactive refresh
+      handleReset()
+      setRefreshTrigger((prev) => prev + 1)
     } finally {
       setIsSubmitting(false)
     }
@@ -177,10 +159,11 @@ export default function PortariaRegistro() {
     setIsCodeSent(false)
     setIsCodeVerified(false)
     setIsVerifyingCode(false)
+    setFormResetKey((prev) => prev + 1)
   }
 
   const handleSendCode = async () => {
-    const digits = courierPhone.replace(/\D/g, '')
+    let digits = courierPhone.replace(/\D/g, '')
     if (!digits) {
       toast({
         title: 'Erro',
@@ -190,27 +173,52 @@ export default function PortariaRegistro() {
       return
     }
 
+    if (!digits.startsWith('55') && digits.length <= 11) {
+      digits = `55${digits}`
+    }
+
     setIsSendingCode(true)
 
     try {
-      await fetch(`${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/enviar-codigo-whatsapp`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: pb.authStore.token,
+      const response = await fetch(
+        `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/enviar-codigo-whatsapp`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: pb.authStore.token,
+          },
+          body: JSON.stringify({
+            phone: digits,
+          }),
         },
-        body: JSON.stringify({
-          phone: digits,
-        }),
-      }).catch(() => {})
+      ).catch((err) => {
+        console.error('Network error calling enviar-codigo-whatsapp:', err)
+        return null
+      })
+
+      if (response && !response.ok) {
+        console.error(
+          `Evolution API or code sending error: ${response.status} ${response.statusText}`,
+        )
+        toast({
+          title: 'Aviso',
+          description:
+            'Houve uma instabilidade no envio, mas você pode prosseguir com a validação.',
+          variant: 'destructive',
+        })
+      }
 
       setIsCodeSent(true)
       setIsCodeVerified(false)
       setValidationCode('')
-
-      // Ignore external API errors and immediately proceed to validation step
     } catch (err: any) {
       console.error('Failed to send code', err)
+      toast({
+        title: 'Aviso',
+        description: 'Houve uma instabilidade no envio, mas você pode prosseguir com a validação.',
+        variant: 'destructive',
+      })
 
       setIsCodeSent(true)
       setIsCodeVerified(false)
@@ -230,12 +238,17 @@ export default function PortariaRegistro() {
       return
     }
 
+    let digits = courierPhone.replace(/\D/g, '')
+    if (!digits.startsWith('55') && digits.length <= 11) {
+      digits = `55${digits}`
+    }
+
     setIsVerifyingCode(true)
     try {
       await pb.send('/backend/v1/verify-whatsapp-code', {
         method: 'POST',
         body: JSON.stringify({
-          phone: courierPhone.replace(/\D/g, ''),
+          phone: digits,
           code: validationCode,
         }),
         headers: {
@@ -244,6 +257,23 @@ export default function PortariaRegistro() {
       })
 
       setIsCodeVerified(true)
+
+      // Mandatory Data Persistence: Create audit log immediately upon successful validation
+      try {
+        await pb.collection('recebimentos_auditoria').create({
+          morador_nome: courierName,
+          morador_cpf: courierCpf.replace(/\D/g, ''),
+          morador_celular: digits,
+          data_hora_recebimento: new Date().toISOString(),
+          status: 'Validado',
+          descricao: description,
+          codigo_validado: validationCode,
+        })
+        setRefreshTrigger((prev) => prev + 1)
+      } catch (auditErr) {
+        console.error('Failed to create audit record', auditErr)
+      }
+
       toast({
         title: 'Código Verificado',
         description: 'A autorização foi confirmada com sucesso.',
@@ -262,11 +292,11 @@ export default function PortariaRegistro() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-20 animate-fade-in">
+    <div className="max-w-6xl mx-auto space-y-8 pb-20 animate-fade-in">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Recepção de Encomendas</h2>
         <p className="text-muted-foreground">
-          Registro rápido de entrada de pacotes no Lobby (Portaria).
+          Registro rápido de entrada de pacotes e histórico de recebimentos do Lobby.
         </p>
       </div>
 
@@ -284,6 +314,7 @@ export default function PortariaRegistro() {
                 Unidade (Torre - Apto) <span className="text-destructive">*</span>
               </Label>
               <Select
+                key={`unit-${formResetKey}`}
                 value={unitId}
                 onValueChange={(val) => {
                   setUnitId(val)
@@ -306,6 +337,7 @@ export default function PortariaRegistro() {
             <div className="space-y-2">
               <Label>Morador (Opcional)</Label>
               <Select
+                key={`resident-${formResetKey}`}
                 value={residentId}
                 onValueChange={setResidentId}
                 disabled={!unitId || filteredResidents.length === 0}
@@ -334,7 +366,7 @@ export default function PortariaRegistro() {
                 <Truck className="w-4 h-4 text-muted-foreground" /> Transportadora{' '}
                 <span className="text-destructive">*</span>
               </Label>
-              <Select value={carrier} onValueChange={setCarrier}>
+              <Select key={`carrier-${formResetKey}`} value={carrier} onValueChange={setCarrier}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
@@ -499,6 +531,10 @@ export default function PortariaRegistro() {
           </Button>
         </CardContent>
       </Card>
+
+      <div className="pt-4">
+        <RecebimentosTable refreshTrigger={refreshTrigger} />
+      </div>
     </div>
   )
 }

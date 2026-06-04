@@ -48,8 +48,7 @@ export function AppSidebar() {
       case 'portaria':
       case 'triagem':
         return [
-          { title: 'Recepção (Lobby)', url: '/portaria/registro', icon: Package },
-          { title: 'Registro de Recebimento', url: '/portaria/recebimentos', icon: History },
+          { title: 'Recepção de Encomendas', url: '/portaria/registro', icon: Package },
           { title: 'Triagem & Etiqueta', url: '/sala/triagem', icon: ClipboardList },
           { title: 'Validar Retirada', url: '/sala/retirada', icon: QrCode },
         ]

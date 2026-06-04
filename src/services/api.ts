@@ -123,6 +123,8 @@ export type RecebimentoAuditoria = RecordModel & {
 
   data_hora_recebimento: string
   status: string
+  descricao?: string
+  codigo_validado?: string
 }
 
 export type AppUser = RecordModel & {
