@@ -186,14 +186,12 @@ export default function PortariaRegistro() {
     }
 
     setIsSendingCode(true)
-    const code = Math.floor(100000 + Math.random() * 900000).toString()
 
     try {
       await pb.send('/backend/v1/enviar-codigo-whatsapp', {
         method: 'POST',
         body: JSON.stringify({
           phone: digits,
-          message: `Seu código de validação é: ${code}`,
         }),
         headers: {
           'Content-Type': 'application/json',
@@ -214,13 +212,22 @@ export default function PortariaRegistro() {
 
       let errorMessage = getErrorMessage(err) || 'Falha ao enviar. Tente novamente.'
       if (err?.response?.error) {
-        errorMessage = String(err.response.error)
+        const errObj = err.response.error
+        errorMessage =
+          typeof errObj === 'object' && errObj.message ? String(errObj.message) : String(errObj)
       } else if (err?.response?.message) {
         errorMessage = String(err.response.message)
       }
 
+      // Provide specific feedback for known API failure conditions
+      if (err?.status === 400) {
+        errorMessage = 'Serviço do WhatsApp possivelmente desconectado ou número inválido.'
+      } else if (err?.status >= 500) {
+        errorMessage = 'Falha no serviço de mensagens. Tente novamente mais tarde.'
+      }
+
       toast({
-        title: 'Erro',
+        title: 'Erro ao Enviar Código',
         description: errorMessage,
         variant: 'destructive',
       })

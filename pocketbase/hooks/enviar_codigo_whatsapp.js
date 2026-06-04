@@ -15,7 +15,6 @@ routerAdd(
   (e) => {
     const body = e.requestInfo().body || {}
     const phone = body.phone
-    const message = body.message
 
     const url = 'https://api.sholver.com.br/message/sendText/Encomenda'
     const headers = {
@@ -27,14 +26,14 @@ routerAdd(
       return e.badRequestError('Phone is required')
     }
 
-    if (typeof message !== 'string' || !message.trim()) {
-      return e.badRequestError('Message is required')
-    }
-
     // Limpar formatações e adicionar o prefixo 55 (Brasil) ao número de telefone
     const numericPhone = phone.replace(/\D/g, '')
     const exactPhone =
       numericPhone.startsWith('55') && numericPhone.length > 11 ? numericPhone : `55${numericPhone}`
+
+    // Gerar código de 6 dígitos de forma segura no backend
+    const code = $security.randomStringWithAlphabet(6, '0123456789')
+    const message = `Seu código de validação é: ${code}`
 
     const logCol = $app.findCollectionByNameOrId('whatsapp_logs')
     const logRecord = new Record(logCol)
