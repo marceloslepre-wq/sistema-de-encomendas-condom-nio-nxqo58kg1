@@ -111,10 +111,14 @@ export default function SalaTriagem() {
     )
 
     try {
-      await updateRecebimentoAuditoria(id, {
+      const updateData: any = {
         volume_statuses: updatedStatuses,
-        ...(isAllProcessed ? { status: 'LIBERADO_RETIRADA' } : { status: 'EM_TRIAGEM' }),
-      })
+        status: isAllProcessed ? 'LIBERADO_RETIRADA' : 'EM_TRIAGEM',
+      }
+      if (isAllProcessed && recebimento.status !== 'LIBERADO_RETIRADA') {
+        updateData.data_hora_liberado = new Date().toISOString()
+      }
+      await updateRecebimentoAuditoria(id, updateData)
       toast({
         title: 'Status Atualizado',
         description: `Volume ${volIndex}/${total} atualizado para ${status}.`,
@@ -132,7 +136,10 @@ export default function SalaTriagem() {
   const handleStartTriage = async (vol: ExpandedVolume) => {
     try {
       if (vol.status === 'ENTRADA_PORTARIA') {
-        const updated = await updateRecebimentoAuditoria(vol.id, { status: 'EM_TRIAGEM' })
+        const updated = await updateRecebimentoAuditoria(vol.id, {
+          status: 'EM_TRIAGEM',
+          data_hora_triagem: new Date().toISOString(),
+        })
         vol = { ...vol, ...updated, status: 'EM_TRIAGEM' }
       }
       setSelectedVolume(vol)
@@ -154,7 +161,7 @@ export default function SalaTriagem() {
       const code = Math.floor(100000 + Math.random() * 900000).toString()
       const formData = new FormData()
       formData.append('status', 'LIBERADO_RETIRADA')
-      formData.append('withdrawal_code', code)
+      formData.append('codigo_liberacao', code)
       formData.append('tracking_code', trackingCode)
       formData.append('volume_type', volumeType)
       formData.append('shelf_location', shelfLocation)
@@ -182,10 +189,16 @@ export default function SalaTriagem() {
         (_, i) => updatedStatuses[i + 1] === 'Processado' || updatedStatuses[i + 1] === 'Entregue',
       )
 
-      await updateRecebimentoAuditoria(selectedVolume.id, {
+      const updateData: any = {
         volume_statuses: updatedStatuses,
-        ...(isAllProcessed ? { status: 'LIBERADO_RETIRADA' } : { status: 'EM_TRIAGEM' }),
-      })
+        status: isAllProcessed ? 'LIBERADO_RETIRADA' : 'EM_TRIAGEM',
+      }
+      if (isAllProcessed && selectedVolume.status !== 'LIBERADO_RETIRADA') {
+        updateData.data_hora_liberado = new Date().toISOString()
+        updateData.codigo_liberacao = code
+      }
+
+      await updateRecebimentoAuditoria(selectedVolume.id, updateData)
 
       toast({ title: 'Sucesso', description: 'Volume liberado para retirada.' })
       setDialogOpen(false)

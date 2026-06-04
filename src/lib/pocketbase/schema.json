@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-04T21:24:21.294Z",
+  "generatedAt": "2026-06-04T23:05:38.632Z",
   "collections": [
     {
       "name": "users",
@@ -361,6 +361,12 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "codigo_liberacao",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX `idx_parcels_status` ON `parcels` (status)"]
@@ -643,6 +649,43 @@
           "type": "json",
           "required": false,
           "system": false
+        },
+        {
+          "name": "data_ultimo_lembrete",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "codigo_liberacao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_hora_triagem",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_hora_liberado",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_hora_retirada",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "quem_retirou",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
         }
       ],
       "indexes": []
@@ -763,6 +806,130 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_wa_verif_phone ON whatsapp_verifications (phone)"]
+    },
+    {
+      "name": "templates_notificacao",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.role = 'gestor'",
+        "update": "@request.auth.role = 'gestor'",
+        "delete": "@request.auth.role = 'gestor'"
+      },
+      "fields": [
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["Recebido", "Em Triagem", "Liberado"]
+        },
+        {
+          "name": "mensagem_template",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "ativo",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "tipo",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["status", "lembrete"]
+        },
+        {
+          "name": "dias_intervalo",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "horario_disparo",
+          "type": "text",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "notificacoes_enviadas",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.role = 'gestor'",
+        "view": "@request.auth.role = 'gestor'",
+        "create": null,
+        "update": null,
+        "delete": null
+      },
+      "fields": [
+        {
+          "name": "morador",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mensagem",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "celular",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sucesso",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
     }
   ]
 }
