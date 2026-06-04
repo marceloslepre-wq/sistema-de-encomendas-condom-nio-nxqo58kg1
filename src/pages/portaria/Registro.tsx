@@ -188,15 +188,41 @@ export default function PortariaRegistro() {
     setIsSendingCode(true)
 
     try {
-      await pb.send('/backend/v1/enviar-codigo-whatsapp', {
-        method: 'POST',
-        body: JSON.stringify({
-          phone: digits,
-        }),
-        headers: {
-          'Content-Type': 'application/json',
+      const res = await fetch(
+        `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/enviar-codigo-whatsapp`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: pb.authStore.token,
+          },
+          body: JSON.stringify({
+            phone: digits,
+          }),
         },
-      })
+      )
+
+      if (!res.ok) {
+        let errorMsg = 'Falha de comunicação. Tente novamente.'
+        try {
+          const errData = await res.json()
+          if (errData?.message) errorMsg = String(errData.message)
+        } catch {
+          /* intentionally ignored */
+        }
+        throw new Error(errorMsg)
+      }
+
+      const response = await res.json()
+
+      if (response && response.success === false) {
+        toast({
+          title: 'Aviso',
+          description: response.message || 'Serviço indisponível no momento.',
+          variant: 'destructive',
+        })
+        return
+      }
 
       setIsCodeSent(true)
       setIsCodeVerified(false)
@@ -210,24 +236,10 @@ export default function PortariaRegistro() {
     } catch (err: any) {
       console.error('Failed to send code', err)
 
-      let errorMessage = getErrorMessage(err) || 'Falha ao enviar. Tente novamente.'
-      if (err?.response?.error) {
-        const errObj = err.response.error
-        errorMessage =
-          typeof errObj === 'object' && errObj.message ? String(errObj.message) : String(errObj)
-      } else if (err?.response?.message) {
-        errorMessage = String(err.response.message)
-      }
-
-      // Provide specific feedback for known API failure conditions
-      if (err?.status === 400) {
-        errorMessage = 'Serviço do WhatsApp possivelmente desconectado ou número inválido.'
-      } else if (err?.status >= 500) {
-        errorMessage = 'Falha no serviço de mensagens. Tente novamente mais tarde.'
-      }
+      const errorMessage = err.message || 'Falha de comunicação. Tente novamente.'
 
       toast({
-        title: 'Erro ao Enviar Código',
+        title: 'Erro de Conexão',
         description: errorMessage,
         variant: 'destructive',
       })
