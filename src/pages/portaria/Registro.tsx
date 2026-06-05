@@ -29,7 +29,7 @@ import {
   Trash2,
   Plus,
 } from 'lucide-react'
-import { getUnits, getUsers, getCarriers, Unit, AppUser, Carrier } from '@/services/api'
+import { getUnits, getMoradores, getCarriers, Unit, Morador, Carrier } from '@/services/api'
 import { getErrorMessage, extractFieldErrors } from '@/lib/pocketbase/errors'
 import pb from '@/lib/pocketbase/client'
 import { RecebimentosTable } from '@/components/RecebimentosTable'
@@ -61,7 +61,7 @@ export default function PortariaRegistro() {
   const { toast } = useToast()
 
   const [units, setUnits] = useState<Unit[]>([])
-  const [users, setUsers] = useState<AppUser[]>([])
+  const [moradores, setMoradores] = useState<Morador[]>([])
   const [carriers, setCarriers] = useState<Carrier[]>([])
 
   const [entries, setEntries] = useState<TableEntry[]>([
@@ -91,10 +91,10 @@ export default function PortariaRegistro() {
       .catch((err) => {
         console.error('Error fetching units:', err)
       })
-    getUsers()
-      .then(setUsers)
+    getMoradores()
+      .then(setMoradores)
       .catch((err) => {
-        console.error('Error fetching users:', err)
+        console.error('Error fetching moradores:', err)
       })
     getCarriers()
       .then(setCarriers)
@@ -157,7 +157,7 @@ export default function PortariaRegistro() {
 
       for (const group of Object.values(groups)) {
         const unit = units.find((u) => u.id === group.unitId)
-        const resident = users.find((u) => u.id === group.residentId)
+        const resident = moradores.find((m) => m.id === group.residentId)
 
         if (!unit || !resident) {
           throw new Error('Unidade ou morador referenciado não foi encontrado no sistema.')
@@ -170,7 +170,7 @@ export default function PortariaRegistro() {
         }
 
         const unidadeStr = `${unit.tower} - ${unit.apartment}`
-        const moradorNome = resident.name
+        const moradorNome = resident.nome
         const codValidado = bypassValidation ? 'MANUAL' : validationCode
 
         if (!codValidado) {
@@ -184,7 +184,6 @@ export default function PortariaRegistro() {
           transportadora: carrier,
           status: 'ENTRADA_PORTARIA',
           unidade_id: group.unitId,
-          morador_id: group.residentId,
           entregador_nome: courierName,
           entregador_cpf: courierCpf.replace(/\D/g, ''),
           codigo_rastreio: '',
@@ -504,7 +503,14 @@ export default function PortariaRegistro() {
                     </TableHeader>
                     <TableBody>
                       {entries.map((entry) => {
-                        const filteredResidents = users.filter((u) => u.unit_id === entry.unitId)
+                        const selectedUnit = units.find((u) => u.id === entry.unitId)
+                        const filteredResidents = selectedUnit
+                          ? moradores.filter(
+                              (m) =>
+                                m.torre === selectedUnit.tower &&
+                                m.apartamento === selectedUnit.apartment,
+                            )
+                          : []
                         return (
                           <TableRow key={entry.id} className="animate-fade-in">
                             <TableCell className="align-top pt-4 pl-4">
@@ -535,14 +541,18 @@ export default function PortariaRegistro() {
                                 <SelectTrigger className="bg-background">
                                   <SelectValue
                                     placeholder={
-                                      !entry.unitId ? 'Selecione a unidade' : 'Selecione o morador'
+                                      !entry.unitId
+                                        ? 'Selecione a unidade'
+                                        : filteredResidents.length === 0
+                                          ? 'Nenhum morador encontrado'
+                                          : 'Selecione o morador'
                                     }
                                   />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {filteredResidents.map((r) => (
                                     <SelectItem key={r.id} value={r.id}>
-                                      {r.name}
+                                      {r.nome}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
