@@ -42,6 +42,7 @@ type ExpandedVolume = RecebimentoAuditoria & {
   _volumeIndex: number
   _totalVolumes: number
   _volumeStatus: string
+  _matchedMorador?: any
 }
 
 export default function SalaTriagem() {
@@ -63,11 +64,35 @@ export default function SalaTriagem() {
 
   const loadData = async () => {
     try {
+      console.log('Carregando triagem...')
       const data = await pb.collection('recebimentos_auditoria').getFullList<RecebimentoAuditoria>({
         filter: `status='ENTRADA_PORTARIA' || status='EM_TRIAGEM'`,
         sort: 'created',
       })
-      setRecebimentos(data)
+      const moradoresData = await pb.collection('moradores').getFullList<any>()
+
+      const enhancedData = data.map((parcel) => {
+        console.log('Entrada encontrada:', parcel)
+        console.log('Buscando morador para unidade:', parcel.unidade)
+
+        const morador = moradoresData.find((m) => {
+          if (!parcel.unidade) return false
+          const aptMatch = parcel.unidade.includes(m.apartamento)
+          const torreMatch = m.torre ? parcel.unidade.includes(m.torre) : true
+          return aptMatch && torreMatch
+        })
+
+        if (morador) {
+          console.log('Morador encontrado:', morador)
+        }
+
+        return {
+          ...parcel,
+          _matchedMorador: morador,
+        }
+      })
+
+      setRecebimentos(enhancedData)
       const [vTypes, sLocs] = await Promise.all([getVolumeTypes(), getShelfLocations()])
       setVolumeTypes(vTypes)
       setShelfLocations(sLocs)
@@ -83,7 +108,7 @@ export default function SalaTriagem() {
   useRealtime('recebimentos_auditoria', () => loadData())
 
   const expandedRows = useMemo(() => {
-    return recebimentos.flatMap((r) => {
+    return recebimentos.flatMap((r: any) => {
       const count = r.volumes && r.volumes > 0 ? r.volumes : 1
       const statuses = r.volume_statuses || {}
       return Array.from({ length: count }).map((_, i) => {
@@ -93,6 +118,7 @@ export default function SalaTriagem() {
           _volumeIndex: volIndex,
           _totalVolumes: count,
           _volumeStatus: statuses[volIndex] || 'Pendente',
+          _matchedMorador: r._matchedMorador,
         } as ExpandedVolume
       })
     })
@@ -239,6 +265,8 @@ export default function SalaTriagem() {
               <TableRow>
                 <TableHead className="pl-6">Unidade</TableHead>
                 <TableHead>Morador</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Telefone</TableHead>
                 <TableHead>Volume #</TableHead>
                 <TableHead>Transportadora</TableHead>
                 <TableHead>Status</TableHead>
@@ -246,14 +274,18 @@ export default function SalaTriagem() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {expandedRows.map((vol) => (
+              {expandedRows.map((vol: any) => (
                 <TableRow key={`${vol.id}-${vol._volumeIndex}`}>
                   <TableCell className="pl-6 font-medium">{vol.unidade || 'N/D'}</TableCell>
-                  <TableCell>{vol.morador_nome || 'N/D'}</TableCell>
+                  <TableCell>
+                    {vol._matchedMorador?.nome || vol.morador || vol.morador_nome || 'N/D'}
+                  </TableCell>
+                  <TableCell>{vol._matchedMorador?.email || 'N/D'}</TableCell>
+                  <TableCell>{vol._matchedMorador?.telefone || 'N/D'}</TableCell>
                   <TableCell className="font-mono text-muted-foreground whitespace-nowrap">
                     {vol._volumeIndex}/{vol._totalVolumes}
                   </TableCell>
-                  <TableCell>{vol.carrier || 'N/D'}</TableCell>
+                  <TableCell>{vol.transportadora || vol.carrier || 'N/D'}</TableCell>
                   <TableCell>
                     <Select
                       value={vol._volumeStatus}
@@ -280,7 +312,7 @@ export default function SalaTriagem() {
               ))}
               {expandedRows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     Nenhum volume na fila de triagem.
                   </TableCell>
                 </TableRow>

@@ -1,42 +1,62 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { VerticalTimeline } from '@/components/Timeline'
-import { Package, ArrowRight, Box, CalendarClock, ListChecks } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Package, CalendarClock } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
-import { getUnitParcels, getFileUrl, Parcel } from '@/services/api'
+import { RecebimentoAuditoria } from '@/services/api'
 import useRealtime from '@/hooks/use-realtime'
 import { format } from 'date-fns'
 import pb from '@/lib/pocketbase/client'
 import { useToast } from '@/hooks/use-toast'
 
-const STATUS_STEPS = ['ENTRADA_PORTARIA', 'EM_TRIAGEM', 'LIBERADO_RETIRADA', 'RETIRADO']
-
 export default function MoradorDashboard() {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [parcels, setParcels] = useState<Parcel[]>([])
+  const [recebimentos, setRecebimentos] = useState<RecebimentoAuditoria[]>([])
   const [privacy, setPrivacy] = useState(user?.autoriza_retirada_terceiros ?? true)
 
   const loadData = async () => {
-    if (!user?.unit_id) return
-    const res = await getUnitParcels(
-      user.unit_id,
-      1,
-      'status != "RETIRADO" && status != "CANCELADO"',
-    )
-    setParcels(res.items)
+    if (!user?.email) return
+    console.log('Morador logado:', user.email)
+    console.log('Buscando encomendas para:', user.email)
+
+    try {
+      const conditions = [`morador_id.email = "${user.email}"`]
+
+      const moradorRecord = await pb
+        .collection('moradores')
+        .getFirstListItem(`email="${user.email}"`)
+        .catch(() => null)
+      if (moradorRecord) {
+        conditions.push(`unidade ~ "${moradorRecord.apartamento}"`)
+        if (moradorRecord.nome) {
+          conditions.push(`morador ~ "${moradorRecord.nome}"`)
+        }
+      }
+
+      const res = await pb
+        .collection('recebimentos_auditoria')
+        .getList<RecebimentoAuditoria>(1, 50, {
+          filter: `(${conditions.join(' || ')}) && status != 'RETIRADO' && status != 'CANCELADO'`,
+          sort: '-created',
+        })
+
+      console.log('Encomendas encontradas:', res.items)
+      setRecebimentos(res.items)
+    } catch (e) {
+      console.error('Erro ao buscar encomendas', e)
+    }
   }
 
   useEffect(() => {
     loadData()
     if (user) setPrivacy(user.autoriza_retirada_terceiros ?? true)
   }, [user])
-  useRealtime('parcels', () => loadData())
+
+  useRealtime('recebimentos_auditoria', () => loadData())
 
   const handlePrivacyToggle = async (checked: boolean) => {
     setPrivacy(checked)
@@ -49,13 +69,8 @@ export default function MoradorDashboard() {
     }
   }
 
-  const activePackage = parcels[0]
-  const pendingPackages = parcels.slice(1)
-
-  const getStep = (status: string) => Math.max(0, STATUS_STEPS.indexOf(status))
-
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-20">
+    <div className="space-y-6 max-w-5xl mx-auto pb-20 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">
@@ -63,139 +78,86 @@ export default function MoradorDashboard() {
           </h2>
           <p className="text-muted-foreground">Acompanhe suas encomendas em tempo real.</p>
         </div>
-        <Button asChild className="gap-2" variant="outline">
-          <Link to="/morador/retirada">
-            <ListChecks className="w-4 h-4" />
-            Retirada em Massa
-          </Link>
-        </Button>
       </div>
 
-      <div className="flex items-center justify-between bg-muted/30 p-4 rounded-lg border shadow-sm">
-        <div className="space-y-0.5">
-          <Label className="text-base font-semibold">Permitir retirada por vizinhos</Label>
-          <p className="text-sm text-muted-foreground">
-            Autoriza outros moradores da sua unidade a visualizarem e retirarem suas encomendas.
-          </p>
-        </div>
-        <Switch checked={privacy} onCheckedChange={handlePrivacyToggle} />
-      </div>
-
-      <div className="grid gap-6">
-        {activePackage ? (
-          <Card className="border-primary/20 shadow-md">
-            <CardHeader className="pb-4 bg-primary/5 border-b">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Package className="h-5 w-5 text-primary" />
-                  Encomenda Principal
-                </CardTitle>
-                <Badge
-                  className={
-                    activePackage.status === 'LIBERADO_RETIRADA'
-                      ? 'bg-success hover:bg-success'
-                      : 'bg-primary'
-                  }
-                >
-                  {activePackage.status.replace(/_/g, ' ')}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6 grid md:grid-cols-2 gap-8">
-              <div>
-                <VerticalTimeline currentStep={getStep(activePackage.status)} />
-
-                <div className="mt-8 space-y-4 text-sm bg-muted/50 p-4 rounded-lg border">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Transportadora</span>
-                    <span className="font-semibold">{activePackage.carrier || '-'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Chegou em</span>
-                    <span className="font-semibold">
-                      {activePackage.entry_date
-                        ? format(new Date(activePackage.entry_date), 'dd/MM/yyyy HH:mm')
-                        : '-'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col items-center justify-center gap-6">
-                {activePackage.photo ? (
-                  <div className="w-full flex flex-col items-center">
-                    <p className="text-sm text-muted-foreground mb-2 font-medium">Foto do Pacote</p>
-                    <img
-                      src={getFileUrl(activePackage, activePackage.photo)}
-                      alt="Pacote"
-                      className="rounded-lg shadow-sm w-full max-w-[240px] h-48 object-cover border"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full max-w-[240px] h-48 bg-muted rounded-lg flex items-center justify-center border border-dashed">
-                    <Box className="w-10 h-10 text-muted-foreground/30" />
-                  </div>
-                )}
-
-                {activePackage.status === 'LIBERADO_RETIRADA' && activePackage.withdrawal_code && (
-                  <div className="w-full p-6 bg-success/10 rounded-xl border-2 border-success/30 text-center animate-fade-in-up">
-                    <p className="text-sm font-bold text-success mb-2 uppercase tracking-wider">
-                      Código de Retirada
-                    </p>
-                    <p className="text-4xl font-black tracking-[0.2em] text-success">
-                      {activePackage.withdrawal_code}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-3">
-                      Apresente este código na sala de encomendas
-                    </p>
-                  </div>
-                )}
-
-                <Button variant="outline" className="w-full" asChild>
-                  <Link to={`/morador/encomenda/${activePackage.id}`}>
-                    Ver Histórico Completo <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <CalendarClock className="w-16 h-16 mb-4 opacity-20" />
-              <p className="text-lg">Nenhuma encomenda a caminho no momento.</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {pendingPackages.length > 0 && (
-          <div className="animate-fade-in">
-            <h3 className="font-semibold mt-4 mb-2">Outras Encomendas</h3>
+      <Tabs defaultValue="encomendas" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="encomendas">Minhas Encomendas</TabsTrigger>
+          <TabsTrigger value="privacidade">Configurações</TabsTrigger>
+        </TabsList>
+        <TabsContent value="encomendas" className="space-y-4">
+          {recebimentos.length === 0 ? (
             <Card>
-              <CardContent className="p-0 divide-y">
-                {pendingPackages.map((pkg) => (
-                  <div key={pkg.id} className="flex items-center justify-between p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
-                        <Package className="h-5 w-5 text-muted-foreground" />
+              <CardContent className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <CalendarClock className="w-16 h-16 mb-4 opacity-20" />
+                <p className="text-lg">Nenhuma encomenda a caminho no momento.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {recebimentos.map((pkg) => (
+                <Card key={pkg.id} className="overflow-hidden border-primary/10 shadow-sm">
+                  <CardHeader className="bg-muted/30 pb-4 border-b">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-5 w-5 text-primary" />
+                        <CardTitle className="text-lg">{pkg.transportadora || 'Pacote'}</CardTitle>
+                      </div>
+                      <Badge
+                        variant={pkg.status === 'LIBERADO_RETIRADA' ? 'default' : 'secondary'}
+                        className={
+                          pkg.status === 'LIBERADO_RETIRADA'
+                            ? 'bg-success hover:bg-success text-white'
+                            : ''
+                        }
+                      >
+                        {pkg.status?.replace(/_/g, ' ')}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
+                      <div>
+                        <p className="text-muted-foreground mb-1">Unidade</p>
+                        <p className="font-medium text-base">{pkg.unidade || '-'}</p>
                       </div>
                       <div>
-                        <p className="font-medium">{pkg.carrier || 'Pacote'}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {pkg.status.replace(/_/g, ' ')}
+                        <p className="text-muted-foreground mb-1">Volume</p>
+                        <p className="font-medium text-base">{pkg.volume || '1'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground mb-1">Data de Entrada</p>
+                        <p className="font-medium text-base">
+                          {pkg.data_criacao || pkg.created
+                            ? format(new Date(pkg.data_criacao || pkg.created), 'dd/MM/yyyy HH:mm')
+                            : '-'}
+                        </p>
+                      </div>
+                      <div className="md:border-l md:pl-6">
+                        <p className="text-muted-foreground mb-1">Código de Validação</p>
+                        <p className="font-mono font-bold text-lg text-primary tracking-wider">
+                          {pkg.codigo_validacao || '-'}
                         </p>
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link to={`/morador/encomenda/${pkg.id}`}>Detalhes</Link>
-                    </Button>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+        <TabsContent value="privacidade">
+          <div className="flex items-center justify-between bg-muted/30 p-4 rounded-lg border shadow-sm max-w-2xl">
+            <div className="space-y-0.5">
+              <Label className="text-base font-semibold">Permitir retirada por vizinhos</Label>
+              <p className="text-sm text-muted-foreground">
+                Autoriza outros moradores da sua unidade a visualizarem e retirarem suas encomendas.
+              </p>
+            </div>
+            <Switch checked={privacy} onCheckedChange={handlePrivacyToggle} />
           </div>
-        )}
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
