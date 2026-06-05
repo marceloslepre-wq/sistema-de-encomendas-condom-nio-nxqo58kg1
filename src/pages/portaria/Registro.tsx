@@ -340,9 +340,9 @@ export default function PortariaRegistro() {
     setIsSendingCode(true)
 
     const generatedCode = Math.floor(100000 + Math.random() * 900000).toString()
-    const message = `Seu código: ${generatedCode}`
+    const message = `Seu código de validação: ${generatedCode}`
 
-    console.log('Chamando hook com:', {
+    console.log('Enviando para entregador:', {
       phone: digits,
       message,
     })
