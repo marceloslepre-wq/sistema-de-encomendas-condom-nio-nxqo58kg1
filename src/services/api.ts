@@ -16,11 +16,11 @@ export const updateUnit = (id: string, data: any) => pb.collection('units').upda
 export const deleteUnit = (id: string) => pb.collection('units').delete(id)
 
 export const getUsers = () =>
-  pb.collection('usuarios').getFullList({ expand: 'unit_id', sort: '-created' })
+  pb.collection('users').getFullList({ expand: 'unit_id', sort: '-created' })
 
-export const updateUser = (id: string, data: any) => pb.collection('usuarios').update(id, data)
-export const createUser = (data: any) => pb.collection('usuarios').create(data)
-export const deleteUser = (id: string) => pb.collection('usuarios').delete(id)
+export const updateUser = (id: string, data: any) => pb.collection('users').update(id, data)
+export const createUser = (data: any) => pb.collection('users').create(data)
+export const deleteUser = (id: string) => pb.collection('users').delete(id)
 
 export const getCarriers = () => pb.collection('carriers').getFullList({ sort: 'name' })
 export const createCarrier = (data: any) => pb.collection('carriers').create(data)

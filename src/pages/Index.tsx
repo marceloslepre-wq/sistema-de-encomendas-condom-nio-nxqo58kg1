@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
+import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -34,9 +35,10 @@ export default function Index() {
     setIsSubmitting(true)
     const { error } = await signIn(email, password)
     if (error) {
+      const msg = getErrorMessage(error)
       toast({
         title: 'Acesso Negado',
-        description: 'E-mail ou senha incorretos.',
+        description: msg === 'Failed to authenticate.' ? 'E-mail ou senha incorretos.' : msg,
         variant: 'destructive',
       })
       setIsSubmitting(false)

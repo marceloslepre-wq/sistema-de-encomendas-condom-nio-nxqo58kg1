@@ -29,6 +29,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { Plus, Search, Edit, Trash2, Loader2, ShieldAlert } from 'lucide-react'
+import { useRealtime } from '@/hooks/use-realtime'
 import {
   getUsers,
   createUser,
@@ -94,6 +95,10 @@ export default function GestorUsuarios() {
       toast({ title: 'Erro', description: 'Falha ao carregar dados.', variant: 'destructive' })
     }
   }
+
+  useRealtime('users', () => {
+    loadData()
+  })
 
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {

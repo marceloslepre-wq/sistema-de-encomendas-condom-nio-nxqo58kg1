@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
 
     if (pb.authStore.isValid) {
-      pb.collection('usuarios')
+      pb.collection('users')
         .authRefresh()
         .catch(() => pb.authStore.clear())
         .finally(() => setLoading(false))
@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      await pb.collection('usuarios').authWithPassword(email, password)
+      await pb.collection('users').authWithPassword(email, password)
       return { error: null }
     } catch (error) {
       return { error }
