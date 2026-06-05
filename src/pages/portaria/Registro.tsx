@@ -177,7 +177,7 @@ export default function PortariaRegistro() {
           throw new Error('Código de validação está ausente.')
         }
 
-        const payload = {
+        const payload: Record<string, any> = {
           unidade: unidadeStr,
           morador: moradorNome,
           volume: String(group.volumes),
@@ -188,8 +188,11 @@ export default function PortariaRegistro() {
           entregador_nome: courierName,
           entregador_cpf: courierCpf.replace(/\D/g, ''),
           codigo_rastreio: '',
-          recebido_por: pb.authStore.record?.id || '',
           observacoes: `Validação: ${codValidado} | Celular Entregador: ${courierPhone.replace(/\D/g, '')}`,
+        }
+
+        if (pb.authStore.record?.id && pb.authStore.record.collectionName === 'users') {
+          payload.recebido_por = pb.authStore.record.id
         }
 
         console.log(
@@ -239,15 +242,16 @@ export default function PortariaRegistro() {
 
       if (Object.keys(fieldErrors).length > 0) {
         const fields = Object.entries(fieldErrors)
-          .map(([key, val]) => `Campo '${key}': ${val}`)
-          .join(' | ')
-        detailedMsg = `Falha ao salvar: ${fields}`
+          .map(([key, val]) => `${key}: ${val}`)
+          .join('\n')
+        detailedMsg = `Erros de validação:\n${fields}`
       }
 
       toast({
         title: 'Falha ao salvar',
         description: detailedMsg,
         variant: 'destructive',
+        className: 'whitespace-pre-wrap',
       })
 
       setIsSubmitting(false)
