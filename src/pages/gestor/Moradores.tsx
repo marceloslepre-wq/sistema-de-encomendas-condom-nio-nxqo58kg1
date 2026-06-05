@@ -78,10 +78,12 @@ export default function GestorMoradores() {
       if (editingUser) {
         const updatePayload: any = {
           name: data.name,
+          cpf: data.cpf,
           phone: data.phone,
+          unit_id: data.unit_id,
           role: 'morador',
         }
-        if (data.password) {
+        if (data.password && data.password.trim() !== '') {
           updatePayload.password = data.password
           updatePayload.passwordConfirm = data.confirm
         }
@@ -91,7 +93,9 @@ export default function GestorMoradores() {
         const createPayload: any = {
           email: data.email,
           name: data.name,
+          cpf: data.cpf,
           phone: data.phone,
+          unit_id: data.unit_id,
           role: 'morador',
           password: data.password,
           passwordConfirm: data.confirm,

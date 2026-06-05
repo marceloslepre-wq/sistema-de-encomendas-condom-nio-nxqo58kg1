@@ -116,12 +116,19 @@ export function ResidentForm({
       })
     }
 
-    onSubmit({
+    const submitData: any = {
       ...formData,
       cpf: formData.cpf.replace(/\D/g, ''),
       phone: formData.phone.replace(/\D/g, ''),
       unit_id,
-    })
+    }
+
+    if (!submitData.password || submitData.password.trim() === '') {
+      delete submitData.password
+      delete submitData.confirm
+    }
+
+    onSubmit(submitData)
   }
 
   const pwdScore = getPwdStrength(formData.password)
