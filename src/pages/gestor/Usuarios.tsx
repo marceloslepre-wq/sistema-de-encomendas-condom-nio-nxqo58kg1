@@ -29,7 +29,15 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { Plus, Search, Edit, Trash2, Loader2, ShieldAlert } from 'lucide-react'
-import { getUsers, createUser, deleteUser, getUnits, AppUser, Unit } from '@/services/api'
+import {
+  getUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  getUnits,
+  AppUser,
+  Unit,
+} from '@/services/api'
 import pb from '@/lib/pocketbase/client'
 import { extractFieldErrors } from '@/lib/pocketbase/errors'
 
@@ -177,10 +185,7 @@ export default function GestorUsuarios() {
       }
 
       if (editingUser) {
-        await pb.send('/backend/v1/admin/users/' + editingUser.id, {
-          method: 'PATCH',
-          body: dataToSave,
-        })
+        await updateUser(editingUser.id, dataToSave)
         toast({
           title: 'Sucesso',
           description: 'Usuário atualizado com sucesso.',
