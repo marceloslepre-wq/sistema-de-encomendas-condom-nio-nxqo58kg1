@@ -277,6 +277,27 @@ export default function PortariaRegistro() {
               2,
             ),
           )
+
+          const unidade = payload.unidade
+          const morador = payload.morador
+          const volume = payload.volume
+          console.log('Entrada registrada:', { unidade, morador, volume })
+
+          const message = `Sua encomenda ${volume} chegou na portaria`
+          const phone_morador = payload.celular_validacao
+
+          console.log('Enviando notificação para morador:', { phone_morador, message })
+
+          try {
+            const resposta = await pb.send('/backend/v1/enviar-notificacao-morador', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ phone: phone_morador, message }),
+            })
+            console.log('Resposta notificação:', resposta)
+          } catch (erro) {
+            console.log('ERRO notificação:', erro)
+          }
         } catch (dbErr: any) {
           console.error('Database Failure Logging:', dbErr)
           throw dbErr // rethrow to be caught by the outer block
