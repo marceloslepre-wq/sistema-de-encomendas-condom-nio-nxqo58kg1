@@ -518,18 +518,8 @@ export default function PortariaRegistro() {
                         const filteredResidents = selectedUnit
                           ? moradores.filter(
                               (m) =>
-                                String(m.torre || '')
-                                  .trim()
-                                  .toLowerCase() ===
-                                  String(selectedUnit.tower || '')
-                                    .trim()
-                                    .toLowerCase() &&
-                                String(m.apartamento || '')
-                                  .trim()
-                                  .toLowerCase() ===
-                                  String(selectedUnit.apartment || '')
-                                    .trim()
-                                    .toLowerCase(),
+                                m.torre === selectedUnit.tower &&
+                                m.apartamento === selectedUnit.apartment,
                             )
                           : []
                         return (
@@ -537,9 +527,32 @@ export default function PortariaRegistro() {
                             <TableCell className="align-top pt-4 pl-4">
                               <Select
                                 value={entry.unitId}
-                                onValueChange={(val) =>
+                                onValueChange={(val) => {
                                   updateEntry(entry.id, { unitId: val, residentId: '' })
-                                }
+                                  const unit = units.find((u) => u.id === val)
+                                  if (unit) {
+                                    console.log(
+                                      'Unidade selecionada:',
+                                      `${unit.tower}-${unit.apartment}`,
+                                    )
+                                    console.log('Query:', {
+                                      torre: unit.tower,
+                                      apartamento: unit.apartment,
+                                    })
+
+                                    pb.collection('moradores')
+                                      .getFullList({
+                                        filter: `torre="${unit.tower}" && apartamento="${unit.apartment}"`,
+                                      })
+                                      .then((resultado) => {
+                                        console.log('Resultado query:', resultado)
+                                      })
+                                      .catch((erro) => {
+                                        console.log('ERRO query:', erro)
+                                        throw erro
+                                      })
+                                  }
+                                }}
                               >
                                 <SelectTrigger className="bg-background">
                                   <SelectValue placeholder="Selecione..." />
@@ -557,7 +570,6 @@ export default function PortariaRegistro() {
                               <Select
                                 value={entry.residentId}
                                 onValueChange={(val) => updateEntry(entry.id, { residentId: val })}
-                                disabled={!entry.unitId || filteredResidents.length === 0}
                               >
                                 <SelectTrigger className="bg-background">
                                   <SelectValue
