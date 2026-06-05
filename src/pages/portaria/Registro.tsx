@@ -225,6 +225,7 @@ export default function PortariaRegistro() {
           transportadora: carrier,
           status: 'ENTRADA_PORTARIA',
           unidade_id: group.unitId,
+          morador_id: group.residentId,
           entregador_nome: courierName,
           entregador_cpf: courierCpf.replace(/\D/g, ''),
           codigo_rastreio: '',
@@ -581,12 +582,12 @@ export default function PortariaRegistro() {
                                     return
                                   }
 
-                                  const safeTower = towerStr.replace(/"/g, '\\"')
-                                  const safeApartment = aptStr.replace(/"/g, '\\"')
+                                  const safeTower = towerStr.replace(/'/g, "\\'")
+                                  const safeApartment = aptStr.replace(/'/g, "\\'")
 
                                   pb.collection('moradores')
                                     .getFullList({
-                                      filter: `torre = "${safeTower}" && apartamento = "${safeApartment}"`,
+                                      filter: `torre='${safeTower}' && apartamento='${safeApartment}'`,
                                     })
                                     .then((resultado) => {
                                       updateEntry(entry.id, (curr) =>

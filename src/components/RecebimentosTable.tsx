@@ -35,20 +35,20 @@ export function RecebimentosTable({ refreshTrigger = 0 }: { refreshTrigger?: num
         const conditions = []
         if (searchTerm) {
           conditions.push(
-            `(morador_nome ~ "${searchTerm}" || entregador_nome ~ "${searchTerm}" || unidade ~ "${searchTerm}")`,
+            `(morador ~ "${searchTerm}" || entregador_nome ~ "${searchTerm}" || unidade ~ "${searchTerm}")`,
           )
         }
         if (startDate) {
-          conditions.push(`data_hora_recebimento >= "${startDate} 00:00:00.000Z"`)
+          conditions.push(`created >= "${startDate} 00:00:00.000Z"`)
         }
         if (endDate) {
-          conditions.push(`data_hora_recebimento <= "${endDate} 23:59:59.999Z"`)
+          conditions.push(`created <= "${endDate} 23:59:59.999Z"`)
         }
 
         const filter = conditions.join(' && ')
 
         const res = await pb.collection('recebimentos_auditoria').getList(currentPage, 30, {
-          sort: '-data_hora_recebimento',
+          sort: '-created',
           filter,
         })
         setRecords(res.items)
@@ -147,51 +147,53 @@ export function RecebimentosTable({ refreshTrigger = 0 }: { refreshTrigger?: num
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Carregando registros...
                   </TableCell>
                 </TableRow>
               ) : records.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                     Nenhum registro encontrado.
                   </TableCell>
                 </TableRow>
               ) : (
-                records.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.unidade || '-'}</TableCell>
-                    <TableCell>{r.morador_nome || '-'}</TableCell>
-                    <TableCell>{r.volumes || '-'}</TableCell>
-                    <TableCell>{r.carrier || '-'}</TableCell>
-                    <TableCell>{r.entregador_nome || '-'}</TableCell>
-                    <TableCell className="font-mono">{r.codigo_validado || '-'}</TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {r.data_hora_recebimento
-                        ? format(new Date(r.data_hora_recebimento), 'dd/MM/yyyy HH:mm')
-                        : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`text-xs px-2 py-1 rounded-md ${
-                          [
-                            'Validado',
-                            'Recebido',
-                            'ENTRADA_PORTARIA',
-                            'LIBERADO_RETIRADA',
-                          ].includes(r.status)
-                            ? 'bg-primary/10 text-primary'
-                            : r.status === 'EM_TRIAGEM'
-                              ? 'bg-amber-100 text-amber-700'
-                              : 'bg-muted text-muted-foreground'
-                        }`}
-                      >
-                        {r.status || '-'}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))
+                records.map((r) => {
+                  const matchCode = r.observacoes?.match(/Validação:\s*(\w+)/)
+                  const codigoValidado = matchCode ? matchCode[1] : '-'
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-medium">{r.unidade || '-'}</TableCell>
+                      <TableCell>{r.morador || '-'}</TableCell>
+                      <TableCell>{r.volume || '-'}</TableCell>
+                      <TableCell>{r.transportadora || '-'}</TableCell>
+                      <TableCell>{r.entregador_nome || '-'}</TableCell>
+                      <TableCell className="font-mono">{codigoValidado}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {r.created ? format(new Date(r.created), 'dd/MM/yyyy HH:mm') : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`text-xs px-2 py-1 rounded-md ${
+                            [
+                              'Validado',
+                              'Recebido',
+                              'ENTRADA_PORTARIA',
+                              'LIBERADO_RETIRADA',
+                            ].includes(r.status)
+                              ? 'bg-primary/10 text-primary'
+                              : r.status === 'EM_TRIAGEM'
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-muted text-muted-foreground'
+                          }`}
+                        >
+                          {r.status || '-'}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               )}
             </TableBody>
           </Table>

@@ -77,7 +77,7 @@ export const createRecebimentoAuditoria = (data: any) =>
 export const getRecebimentosAuditoria = (page = 1, filter = '') =>
   pb.collection('recebimentos_auditoria').getList(page, 20, {
     filter,
-    sort: '-data_hora_recebimento',
+    sort: '-created',
   })
 
 export type Parcel = RecordModel & {
@@ -127,22 +127,19 @@ export const getParcelAuditLogs = (parcelId: string) =>
   pb.collection('audit_logs').getFullList({ filter: `parcel_id="${parcelId}"`, sort: '-created' })
 
 export type RecebimentoAuditoria = RecordModel & {
-  morador_nome: string
-  morador_cpf: string
-  morador_celular: string
-  data_hora_recebimento: string
-  status: string
-  descricao?: string
-  codigo_validado?: string
   unidade?: string
-  volumes?: number
-  carrier?: string
+  morador?: string
+  volume?: string
+  transportadora?: string
+  status?: string
+  data_criacao?: string
   entregador_nome?: string
   entregador_cpf?: string
-  entregador_celular?: string
-  unit_id?: string
-  resident_id?: string
-  volume_statuses?: Record<string, string>
+  codigo_rastreio?: string
+  observacoes?: string
+  unidade_id?: string
+  morador_id?: string
+  recebido_por?: string
 }
 
 export type AppUser = RecordModel & {
