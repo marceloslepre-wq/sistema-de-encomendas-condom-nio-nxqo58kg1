@@ -112,7 +112,7 @@ export default function PortariaRegistro() {
   }
 
   const isFormValid = useMemo(() => {
-    const hasInvalidEntry = entries.some((e) => !e.unitId || e.volumes < 1)
+    const hasInvalidEntry = entries.some((e) => !e.unitId || !e.residentId || e.volumes < 1)
     return (
       entries.length > 0 &&
       !hasInvalidEntry &&
@@ -141,8 +141,13 @@ export default function PortariaRegistro() {
       for (const group of Object.values(groups)) {
         const unit = units.find((u) => u.id === group.unitId)
         const resident = users.find((u) => u.id === group.residentId)
-        const unidadeStr = unit ? `${unit.tower} - ${unit.apartment}` : ''
-        const moradorNome = resident ? resident.name : ''
+
+        if (!unit || !resident) {
+          throw new Error('Unidade ou morador não encontrado.')
+        }
+
+        const unidadeStr = `${unit.tower} - ${unit.apartment}`
+        const moradorNome = resident.name
 
         console.log('Tentando gravar:', {
           unidade: unidadeStr,
@@ -153,8 +158,8 @@ export default function PortariaRegistro() {
 
         const resultado = await pb.collection('recebimentos_auditoria').create({
           morador_nome: moradorNome,
-          morador_cpf: resident?.cpf || '',
-          morador_celular: resident?.phone || '',
+          morador_cpf: resident.cpf || '',
+          morador_celular: resident.phone || '',
           entregador_nome: courierName,
           entregador_cpf: courierCpf.replace(/\D/g, ''),
           entregador_celular: courierPhone.replace(/\D/g, ''),
@@ -165,8 +170,8 @@ export default function PortariaRegistro() {
           unidade: unidadeStr,
           volumes: group.volumes,
           carrier: carrier,
-          unit_id: group.unitId || '',
-          resident_id: group.residentId || '',
+          unit_id: group.unitId,
+          resident_id: group.residentId,
         })
 
         console.log('Gravado com sucesso:', resultado)
@@ -235,14 +240,17 @@ export default function PortariaRegistro() {
           headers: { 'Content-Type': 'application/json', Authorization: pb.authStore.token },
           body: JSON.stringify({ phone: digits }),
         },
-      ).catch(() => null)
+      )
 
-      if (response && !response.ok) {
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
         toast({
-          title: 'Aviso',
-          description: 'Erro na notificação, mas você pode prosseguir com o código.',
+          title: 'Erro no Envio',
+          description: errorData.error || 'Falha ao comunicar com a API do WhatsApp.',
           variant: 'destructive',
         })
+        setIsCodeSent(false)
+        return
       }
 
       setIsCodeSent(true)
@@ -251,14 +259,11 @@ export default function PortariaRegistro() {
       setValidationCode('')
     } catch (err: any) {
       toast({
-        title: 'Aviso',
-        description: 'Erro na notificação, mas você pode prosseguir com o código.',
+        title: 'Erro de Conexão',
+        description: 'Não foi possível conectar à API de WhatsApp.',
         variant: 'destructive',
       })
-      setIsCodeSent(true)
-      setIsCodeVerified(false)
-      setBypassValidation(false)
-      setValidationCode('')
+      setIsCodeSent(false)
     } finally {
       setIsSendingCode(false)
     }
@@ -374,7 +379,9 @@ export default function PortariaRegistro() {
                         <TableHead className="pl-4">
                           Unidade <span className="text-destructive">*</span>
                         </TableHead>
-                        <TableHead>Morador (Opcional)</TableHead>
+                        <TableHead>
+                          Morador <span className="text-destructive">*</span>
+                        </TableHead>
                         <TableHead className="w-32">
                           Volume <span className="text-destructive">*</span>
                         </TableHead>
@@ -556,12 +563,18 @@ export default function PortariaRegistro() {
                     </div>
                   )}
 
-                  {isCodeSent && !isCodeVerified && (
+                  {!isCodeVerified && (
                     <div className="mt-4 flex items-center gap-2">
                       <Checkbox
                         id="bypass-validation"
                         checked={bypassValidation}
-                        onCheckedChange={(checked) => setBypassValidation(!!checked)}
+                        onCheckedChange={(checked) => {
+                          setBypassValidation(!!checked)
+                          if (checked) {
+                            setIsCodeSent(false)
+                            setValidationCode('')
+                          }
+                        }}
                       />
                       <Label
                         htmlFor="bypass-validation"
