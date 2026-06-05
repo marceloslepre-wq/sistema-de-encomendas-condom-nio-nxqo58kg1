@@ -33,6 +33,7 @@ import { getUnits, getMoradores, getCarriers, Unit, Morador, Carrier } from '@/s
 import { getErrorMessage, extractFieldErrors } from '@/lib/pocketbase/errors'
 import pb from '@/lib/pocketbase/client'
 import { RecebimentosTable } from '@/components/RecebimentosTable'
+import { useRealtime } from '@/hooks/use-realtime'
 
 const formatCpf = (value: string) => {
   const v = value.replace(/\D/g, '').substring(0, 11)
@@ -85,23 +86,33 @@ export default function PortariaRegistro() {
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [resetTableTrigger, setResetTableTrigger] = useState(0)
 
-  useEffect(() => {
+  const loadUnits = () => {
     getUnits()
       .then(setUnits)
-      .catch((err) => {
-        console.error('Error fetching units:', err)
-      })
+      .catch((err) => console.error('Error fetching units:', err))
+  }
+
+  const loadMoradores = () => {
     getMoradores()
       .then(setMoradores)
-      .catch((err) => {
-        console.error('Error fetching moradores:', err)
-      })
+      .catch((err) => console.error('Error fetching moradores:', err))
+  }
+
+  const loadCarriers = () => {
     getCarriers()
       .then(setCarriers)
-      .catch((err) => {
-        console.error('Error fetching carriers:', err)
-      })
+      .catch((err) => console.error('Error fetching carriers:', err))
+  }
+
+  useEffect(() => {
+    loadUnits()
+    loadMoradores()
+    loadCarriers()
   }, [])
+
+  useRealtime('units', () => loadUnits())
+  useRealtime('moradores', () => loadMoradores())
+  useRealtime('carriers', () => loadCarriers())
 
   const handleAddEntry = () => {
     setEntries([...entries, { id: crypto.randomUUID(), unitId: '', residentId: '', volumes: 1 }])
@@ -507,8 +518,18 @@ export default function PortariaRegistro() {
                         const filteredResidents = selectedUnit
                           ? moradores.filter(
                               (m) =>
-                                m.torre === selectedUnit.tower &&
-                                m.apartamento === selectedUnit.apartment,
+                                String(m.torre || '')
+                                  .trim()
+                                  .toLowerCase() ===
+                                  String(selectedUnit.tower || '')
+                                    .trim()
+                                    .toLowerCase() &&
+                                String(m.apartamento || '')
+                                  .trim()
+                                  .toLowerCase() ===
+                                  String(selectedUnit.apartment || '')
+                                    .trim()
+                                    .toLowerCase(),
                             )
                           : []
                         return (
