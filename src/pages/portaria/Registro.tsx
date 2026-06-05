@@ -178,21 +178,18 @@ export default function PortariaRegistro() {
         }
 
         const payload = {
-          morador_nome: moradorNome,
-          morador_cpf: resident.cpf || '',
-          morador_celular: resident.phone || '',
+          unidade: unidadeStr,
+          morador: moradorNome,
+          volume: String(group.volumes),
+          transportadora: carrier,
+          status: 'ENTRADA_PORTARIA',
+          unidade_id: group.unitId,
+          morador_id: group.residentId,
           entregador_nome: courierName,
           entregador_cpf: courierCpf.replace(/\D/g, ''),
-          entregador_celular: courierPhone.replace(/\D/g, ''),
-          data_hora_recebimento: new Date().toISOString(),
-          status: 'ENTRADA_PORTARIA',
-          codigo_validado: codValidado,
-          codigo_liberacao: '',
-          unidade: unidadeStr,
-          volumes: group.volumes,
-          carrier: carrier,
-          unit_id: group.unitId,
-          resident_id: group.residentId,
+          codigo_rastreio: '',
+          recebido_por: pb.authStore.record?.id || '',
+          observacoes: `Validação: ${codValidado} | Celular Entregador: ${courierPhone.replace(/\D/g, '')}`,
         }
 
         console.log(
@@ -200,8 +197,8 @@ export default function PortariaRegistro() {
           JSON.stringify(
             {
               unidade: payload.unidade,
-              morador: payload.morador_nome,
-              volumes: payload.volumes,
+              morador: payload.morador,
+              volume: payload.volume,
               fullPayload: payload,
             },
             null,
