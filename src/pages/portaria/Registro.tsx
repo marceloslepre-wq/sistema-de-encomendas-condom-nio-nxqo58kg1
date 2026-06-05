@@ -351,7 +351,7 @@ export default function PortariaRegistro() {
       const responseBody = await pb.send('/backend/v1/enviar-codigo-whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: digits, code: generatedCode, message }),
+        body: JSON.stringify({ phone: digits, message }),
       })
 
       console.log('Resposta hook:', responseBody)

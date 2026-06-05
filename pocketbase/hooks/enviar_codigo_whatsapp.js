@@ -24,9 +24,8 @@ routerAdd(
       const apiUrl = $secrets.get('EVOLUTION_API_URL')
       const instance = $secrets.get('EVOLUTION_INSTANCE')
       const apikey = $secrets.get('EVOLUTION_API_KEY')
-      const senderNumber = $secrets.get('EVOLUTION_NUMERO_SENDER')
 
-      if (!apiUrl || !instance || !apikey || !senderNumber) {
+      if (!apiUrl || !instance || !apikey) {
         $app
           .logger()
           .error(
@@ -37,8 +36,6 @@ routerAdd(
             !!instance,
             'apikey',
             !!apikey,
-            'senderNumber',
-            !!senderNumber,
           )
         return e.json(200, {
           success: false,
@@ -62,20 +59,19 @@ routerAdd(
           ? numericPhone
           : `55${numericPhone}`
 
-      // Gerar código de 6 dígitos (apenas números, sem espaços)
-      const code = body.code || $security.randomStringWithAlphabet(6, '0123456789')
-      const message = body.message || `Seu código: ${code}`
+      // Extract code from message or generate a new one
+      const codeMatch = body.message ? body.message.match(/\d{6}/) : null
+      const code =
+        body.code ||
+        (codeMatch ? codeMatch[0] : $security.randomStringWithAlphabet(6, '0123456789'))
+      const message = body.message || `Seu código de validação: ${code}`
 
       $app
         .logger()
         .info(
-          'Pre-dispatch',
-          'phone',
-          exactPhone,
-          'message',
-          message,
-          'numero_sender',
-          senderNumber,
+          'Enviando para Evolution:',
+          'data',
+          JSON.stringify({ url, phone: exactPhone, message }),
         )
 
       // Persist verification code
@@ -115,11 +111,6 @@ routerAdd(
       try {
         const payloadStr = JSON.stringify({
           number: exactPhone,
-          options: {
-            delay: 0,
-            presence: 'composing',
-            linkPreview: false,
-          },
           text: message,
         })
         const res = $http.send({
@@ -141,16 +132,18 @@ routerAdd(
             .logger()
             .error(
               'ERRO Evolution:',
-              'url',
-              url,
-              'status',
-              statusCode,
-              'error',
-              JSON.stringify(parsedJson),
+              'data',
+              JSON.stringify({ url, status: statusCode, error: parsedJson }),
             )
         }
       } catch (err) {
-        $app.logger().error('ERRO Evolution:', 'url', url, 'error', err.message || String(err))
+        $app
+          .logger()
+          .error(
+            'ERRO Evolution:',
+            'data',
+            JSON.stringify({ url, error: err.message || String(err) }),
+          )
         parsedJson = { error: err.message || String(err) }
         statusCode = 500
       }
@@ -167,8 +160,8 @@ routerAdd(
         notif.set('mensagem', message)
         notif.set('celular', exactPhone)
         notif.set('sucesso', isSuccess)
-        notif.set('sender_match', true) // Matches the configured sender
-        notif.set('sender_number', senderNumber)
+        notif.set('sender_match', true)
+        notif.set('sender_number', '') // Removed requirement
         $app.save(notif)
       } catch (err) {
         $app
