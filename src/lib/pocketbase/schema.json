@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-05T20:08:51.633Z",
+  "generatedAt": "2026-06-05T20:18:23.108Z",
   "collections": [
     {
       "name": "users",
@@ -259,6 +259,18 @@
         },
         {
           "name": "observacoes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "celular_validacao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "codigo_validacao",
           "type": "text",
           "required": false,
           "system": false

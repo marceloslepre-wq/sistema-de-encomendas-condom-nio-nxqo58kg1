@@ -210,6 +210,18 @@ export default function PortariaRegistro() {
           )
         }
 
+        let userId = ''
+        try {
+          const userRecord = await pb
+            .collection('users')
+            .getFirstListItem(`email="${resident.email}"`)
+          if (userRecord && userRecord.id) {
+            userId = userRecord.id
+          }
+        } catch (e) {
+          console.log('Morador não possui cadastro de usuário ainda.')
+        }
+
         const unidadeStr = `${unit.tower} - ${unit.apartment}`
         const moradorNome = resident.nome
         const codValidado = bypassValidation ? 'MANUAL' : validationCode
@@ -225,14 +237,16 @@ export default function PortariaRegistro() {
           transportadora: carrier,
           status: 'ENTRADA_PORTARIA',
           unidade_id: group.unitId,
-          morador_id: group.residentId,
+          morador_id: userId || '',
           entregador_nome: courierName,
           entregador_cpf: courierCpf.replace(/\D/g, ''),
           codigo_rastreio: '',
           observacoes: `Validação: ${codValidado} | Celular Entregador: ${courierPhone.replace(/\D/g, '')}`,
+          celular_validacao: courierPhone.replace(/\D/g, ''),
+          codigo_validacao: codValidado,
         }
 
-        if (pb.authStore.record?.id && pb.authStore.record.collectionName === 'users') {
+        if (pb.authStore.record?.id) {
           payload.recebido_por = pb.authStore.record.id
         }
 
