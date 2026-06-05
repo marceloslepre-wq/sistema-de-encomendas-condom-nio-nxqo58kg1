@@ -13,7 +13,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { Link2, Copy, Mail, MessageCircle } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { format } from 'date-fns'
+import { format, isValid } from 'date-fns'
 
 export default function GestorLinks() {
   const { toast } = useToast()
@@ -154,7 +154,13 @@ export default function GestorLinks() {
                         {l.role} - {l.expand?.condo_id?.name || 'Sem Condomínio'}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Criado em: {format(new Date(l.created), 'dd/MM HH:mm')}
+                        Criado em:{' '}
+                        {l.created && isValid(new Date(l.created))
+                          ? format(new Date(l.created), 'dd/MM HH:mm')
+                          : 'Sem data'}
+                        {l.expires_at && isValid(new Date(l.expires_at))
+                          ? ` • Expira em: ${format(new Date(l.expires_at), 'dd/MM HH:mm')}`
+                          : ''}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
