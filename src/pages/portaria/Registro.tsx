@@ -67,7 +67,7 @@ export default function PortariaRegistro() {
   const [moradores, setMoradores] = useState<Morador[]>([])
   const [carriers, setCarriers] = useState<Carrier[]>([])
 
-  const [entries, setEntries] = useState<TableEntry[]>([
+  const [entries, setEntries] = useState<TableEntry[]>(() => [
     {
       id: crypto.randomUUID(),
       unitId: '',
@@ -561,32 +561,19 @@ export default function PortariaRegistro() {
                               <Select
                                 value={entry.unitId}
                                 onValueChange={(val) => {
-                                  updateEntry(entry.id, {
+                                  updateEntry(entry.id, (curr) => ({
                                     unitId: val,
                                     residentId: '',
                                     residents: [],
                                     loadingResidents: true,
-                                  })
+                                  }))
                                   const unit = units.find((u) => u.id === val)
                                   if (unit) {
-                                    console.log(
-                                      'Unidade selecionada:',
-                                      `${unit.tower}-${unit.apartment}`,
-                                    )
-                                    console.log('Query:', {
-                                      torre: unit.tower,
-                                      apartamento: unit.apartment,
-                                    })
-
                                     pb.collection('moradores')
                                       .getFullList({
-                                        filter: pb.filter('torre={:torre} && apartamento={:apto}', {
-                                          torre: unit.tower,
-                                          apto: unit.apartment,
-                                        }),
+                                        filter: `torre="${unit.tower.replace(/"/g, '\\"')}" && apartamento="${unit.apartment.replace(/"/g, '\\"')}"`,
                                       })
                                       .then((resultado) => {
-                                        console.log('Resultado query:', resultado)
                                         updateEntry(entry.id, (curr) =>
                                           curr.unitId === val
                                             ? {
@@ -597,7 +584,7 @@ export default function PortariaRegistro() {
                                         )
                                       })
                                       .catch((erro) => {
-                                        console.log('ERRO query:', erro)
+                                        console.error('ERRO query moradores:', erro)
                                         updateEntry(entry.id, (curr) =>
                                           curr.unitId === val
                                             ? { residents: [], loadingResidents: false }
@@ -622,7 +609,9 @@ export default function PortariaRegistro() {
                             <TableCell className="align-top pt-4">
                               <Select
                                 value={entry.residentId}
-                                onValueChange={(val) => updateEntry(entry.id, { residentId: val })}
+                                onValueChange={(val) =>
+                                  updateEntry(entry.id, (curr) => ({ residentId: val }))
+                                }
                                 disabled={
                                   entry.loadingResidents ||
                                   (!entry.unitId && filteredResidents.length === 0)
@@ -656,9 +645,9 @@ export default function PortariaRegistro() {
                                 min="1"
                                 value={entry.volumes || ''}
                                 onChange={(e) =>
-                                  updateEntry(entry.id, {
+                                  updateEntry(entry.id, (curr) => ({
                                     volumes: parseInt(e.target.value, 10) || 0,
-                                  })
+                                  }))
                                 }
                                 className="bg-background"
                               />
