@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -29,7 +30,7 @@ import {
   Plus,
 } from 'lucide-react'
 import { getUnits, getUsers, getCarriers, Unit, AppUser, Carrier } from '@/services/api'
-import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { getErrorMessage, extractFieldErrors } from '@/lib/pocketbase/errors'
 import pb from '@/lib/pocketbase/client'
 import { RecebimentosTable } from '@/components/RecebimentosTable'
 
@@ -78,6 +79,7 @@ export default function PortariaRegistro() {
   const [isCodeSent, setIsCodeSent] = useState(false)
   const [isCodeVerified, setIsCodeVerified] = useState(false)
   const [isVerifyingCode, setIsVerifyingCode] = useState(false)
+  const [bypassValidation, setBypassValidation] = useState(false)
 
   const [registrationSuccess, setRegistrationSuccess] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -117,9 +119,9 @@ export default function PortariaRegistro() {
       carrier &&
       courierName &&
       courierCpf.length === 14 &&
-      isCodeVerified
+      (isCodeVerified || bypassValidation)
     )
-  }, [carrier, entries, courierName, courierCpf, isCodeVerified])
+  }, [carrier, entries, courierName, courierCpf, isCodeVerified, bypassValidation])
 
   const handleFinish = async () => {
     if (!isFormValid) return
@@ -158,13 +160,13 @@ export default function PortariaRegistro() {
           entregador_celular: courierPhone.replace(/\D/g, ''),
           data_hora_recebimento: new Date().toISOString(),
           status: 'ENTRADA_PORTARIA',
-          codigo_validado: validationCode,
+          codigo_validado: bypassValidation ? 'MANUAL' : validationCode,
           codigo_liberacao: '',
           unidade: unidadeStr,
           volumes: group.volumes,
           carrier: carrier,
-          unit_id: group.unitId,
-          resident_id: group.residentId || null,
+          unit_id: group.unitId || '',
+          resident_id: group.residentId || '',
         })
 
         console.log('Gravado com sucesso:', resultado)
@@ -178,11 +180,18 @@ export default function PortariaRegistro() {
       })
       setRefreshTrigger((prev) => prev + 1)
     } catch (err: any) {
-      console.log('ERRO ao gravar:', err)
-      const errorMessage = getErrorMessage(err)
+      console.error('ERRO ao gravar:', err)
+      const fieldErrors = extractFieldErrors(err)
+      let detailedMsg = getErrorMessage(err)
+
+      if (Object.keys(fieldErrors).length > 0) {
+        const fields = Object.keys(fieldErrors).join(', ')
+        detailedMsg = `Campo(s) inválido(s): ${fields}. ${detailedMsg}`
+      }
+
       toast({
-        title: 'Aviso',
-        description: `Falha ao registrar algumas encomendas: ${errorMessage}`,
+        title: 'Erro ao salvar no banco',
+        description: detailedMsg,
         variant: 'destructive',
       })
     } finally {
@@ -200,6 +209,7 @@ export default function PortariaRegistro() {
     setIsCodeSent(false)
     setIsCodeVerified(false)
     setIsVerifyingCode(false)
+    setBypassValidation(false)
     setRegistrationSuccess(false)
     setResetTableTrigger((prev) => prev + 1)
   }
@@ -230,23 +240,24 @@ export default function PortariaRegistro() {
       if (response && !response.ok) {
         toast({
           title: 'Aviso',
-          description:
-            'Houve uma instabilidade no envio, mas você pode prosseguir com a validação.',
+          description: 'Erro na notificação, mas você pode prosseguir com o código.',
           variant: 'destructive',
         })
       }
 
       setIsCodeSent(true)
       setIsCodeVerified(false)
+      setBypassValidation(false)
       setValidationCode('')
     } catch (err: any) {
       toast({
         title: 'Aviso',
-        description: 'Houve uma instabilidade no envio, mas você pode prosseguir com a validação.',
+        description: 'Erro na notificação, mas você pode prosseguir com o código.',
         variant: 'destructive',
       })
       setIsCodeSent(true)
       setIsCodeVerified(false)
+      setBypassValidation(false)
       setValidationCode('')
     } finally {
       setIsSendingCode(false)
@@ -490,6 +501,7 @@ export default function PortariaRegistro() {
                         setCourierPhone(formatPhone(e.target.value))
                         setIsCodeSent(false)
                         setIsCodeVerified(false)
+                        setBypassValidation(false)
                         setValidationCode('')
                       }}
                       placeholder="(00) 00000-0000"
@@ -544,6 +556,22 @@ export default function PortariaRegistro() {
                     </div>
                   )}
 
+                  {isCodeSent && !isCodeVerified && (
+                    <div className="mt-4 flex items-center gap-2">
+                      <Checkbox
+                        id="bypass-validation"
+                        checked={bypassValidation}
+                        onCheckedChange={(checked) => setBypassValidation(!!checked)}
+                      />
+                      <Label
+                        htmlFor="bypass-validation"
+                        className="text-sm font-medium text-muted-foreground cursor-pointer"
+                      >
+                        Sistema inoperante? Prosseguir sem código (Aprovação Manual)
+                      </Label>
+                    </div>
+                  )}
+
                   {isCodeVerified && (
                     <div className="mt-4 p-4 border rounded-lg bg-success/10 border-success/30 flex items-center gap-3 text-success animate-fade-in shadow-sm">
                       <CheckCircle2 className="h-6 w-6 shrink-0" />
@@ -551,6 +579,18 @@ export default function PortariaRegistro() {
                         <span className="font-semibold block">Autorização Confirmada!</span>
                         <span className="text-sm text-success/80">
                           O código foi validado com sucesso. Você já pode registrar a entrada.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {bypassValidation && !isCodeVerified && (
+                    <div className="mt-4 p-4 border rounded-lg bg-amber-100 border-amber-300 flex items-center gap-3 text-amber-800 animate-fade-in shadow-sm">
+                      <ShieldCheck className="h-6 w-6 shrink-0" />
+                      <div>
+                        <span className="font-semibold block">Aprovação Manual Ativada</span>
+                        <span className="text-sm text-amber-700">
+                          A validação foi ignorada manualmente pelo porteiro.
                         </span>
                       </div>
                     </div>
