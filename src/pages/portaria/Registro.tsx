@@ -124,8 +124,8 @@ export default function PortariaRegistro() {
   useRealtime('carriers', () => loadCarriers())
 
   const handleAddEntry = () => {
-    setEntries([
-      ...entries,
+    setEntries((prev) => [
+      ...prev,
       {
         id: crypto.randomUUID(),
         unitId: '',
@@ -138,13 +138,22 @@ export default function PortariaRegistro() {
   }
 
   const removeEntry = (id: string) => {
-    if (entries.length > 1) {
-      setEntries(entries.filter((e) => e.id !== id))
-    }
+    setEntries((prev) => (prev.length > 1 ? prev.filter((e) => e.id !== id) : prev))
   }
 
-  const updateEntry = (id: string, updates: Partial<TableEntry>) => {
-    setEntries(entries.map((e) => (e.id === id ? { ...e, ...updates } : e)))
+  const updateEntry = (
+    id: string,
+    updates: Partial<TableEntry> | ((entry: TableEntry) => Partial<TableEntry>),
+  ) => {
+    setEntries((prev) =>
+      prev.map((e) => {
+        if (e.id === id) {
+          const newValues = typeof updates === 'function' ? updates(e) : updates
+          return { ...e, ...newValues }
+        }
+        return e
+      }),
+    )
   }
 
   const isFormValid = useMemo(() => {
@@ -578,17 +587,22 @@ export default function PortariaRegistro() {
                                       })
                                       .then((resultado) => {
                                         console.log('Resultado query:', resultado)
-                                        updateEntry(entry.id, {
-                                          residents: resultado as Morador[],
-                                          loadingResidents: false,
-                                        })
+                                        updateEntry(entry.id, (curr) =>
+                                          curr.unitId === val
+                                            ? {
+                                                residents: resultado as Morador[],
+                                                loadingResidents: false,
+                                              }
+                                            : {},
+                                        )
                                       })
                                       .catch((erro) => {
                                         console.log('ERRO query:', erro)
-                                        updateEntry(entry.id, {
-                                          residents: [],
-                                          loadingResidents: false,
-                                        })
+                                        updateEntry(entry.id, (curr) =>
+                                          curr.unitId === val
+                                            ? { residents: [], loadingResidents: false }
+                                            : {},
+                                        )
                                       })
                                   }
                                 }}
