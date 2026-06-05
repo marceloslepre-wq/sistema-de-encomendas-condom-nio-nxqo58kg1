@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-05T16:08:53.242Z",
+  "generatedAt": "2026-06-05T16:37:49.938Z",
   "collections": [
     {
       "name": "users",
@@ -7,9 +7,9 @@
       "apiRules": {
         "list": "@request.auth.id != ''",
         "view": "@request.auth.id != ''",
-        "create": "",
-        "update": "id = @request.auth.id || @request.auth.role = 'gestor'",
-        "delete": "id = @request.auth.id || @request.auth.role = 'gestor'"
+        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin') || @request.auth.id = ''",
+        "update": "id = @request.auth.id || @request.auth.role = 'gestor' || @request.auth.role = 'admin'",
+        "delete": "id = @request.auth.id || @request.auth.role = 'gestor' || @request.auth.role = 'admin'"
       },
       "fields": [
         {
@@ -57,9 +57,9 @@
       "apiRules": {
         "list": "",
         "view": "",
-        "create": "@request.auth.role = \"gestor\"",
-        "update": "@request.auth.role = \"gestor\"",
-        "delete": null
+        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'triagem')",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'triagem')",
+        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
       },
       "fields": [
         {
@@ -115,9 +115,9 @@
       "apiRules": {
         "list": "",
         "view": "",
-        "create": "@request.auth.role = \"gestor\"",
-        "update": "@request.auth.role = \"gestor\"",
-        "delete": "@request.auth.role = 'gestor'"
+        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'triagem')",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'triagem')",
+        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
       },
       "fields": [
         {
@@ -162,9 +162,9 @@
       "apiRules": {
         "list": "@request.auth.role = 'portaria' || @request.auth.role = 'triagem' || @request.auth.role = 'gestor'",
         "view": "@request.auth.role = 'portaria' || @request.auth.role = 'triagem' || @request.auth.role = 'gestor'",
-        "create": "@request.auth.role = 'portaria' || @request.auth.role = 'triagem' || @request.auth.role = 'gestor'",
-        "update": "@request.auth.role = 'portaria' || @request.auth.role = 'triagem' || @request.auth.role = 'gestor'",
-        "delete": null
+        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'triagem')",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'triagem')",
+        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
       },
       "fields": [
         {
@@ -227,9 +227,9 @@
       "apiRules": {
         "list": "@request.auth.id != ''",
         "view": "@request.auth.id != ''",
-        "create": "@request.auth.role = 'gestor'",
-        "update": "@request.auth.role = 'gestor'",
-        "delete": "@request.auth.role = 'gestor'"
+        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'triagem')",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'triagem')",
+        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
       },
       "fields": [
         {
@@ -273,9 +273,9 @@
       "apiRules": {
         "list": "@request.auth.role = 'gestor'",
         "view": "@request.auth.role = 'gestor'",
-        "create": null,
-        "update": null,
-        "delete": null
+        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'triagem')",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'triagem')",
+        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
       },
       "fields": [
         {
