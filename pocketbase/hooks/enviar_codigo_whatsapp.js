@@ -63,8 +63,8 @@ routerAdd(
           : `55${numericPhone}`
 
       // Gerar código de 6 dígitos (apenas números, sem espaços)
-      const code = $security.randomStringWithAlphabet(6, '0123456789')
-      const message = `Seu código de validação é: ${code}`
+      const code = body.code || $security.randomStringWithAlphabet(6, '0123456789')
+      const message = body.message || `Seu código: ${code}`
 
       $app
         .logger()

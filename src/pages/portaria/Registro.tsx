@@ -339,38 +339,22 @@ export default function PortariaRegistro() {
 
     setIsSendingCode(true)
 
-    console.log(
-      'Evolution API Request Logging:',
-      JSON.stringify(
-        {
-          phone: digits,
-          message: 'Requisitando envio de código de acesso',
-          apiKey: 'Gerenciado pelo Backend (PocketBase)',
-          url: '/backend/v1/enviar-codigo-whatsapp',
-        },
-        null,
-        2,
-      ),
-    )
+    const generatedCode = Math.floor(100000 + Math.random() * 900000).toString()
+    const message = `Seu código: ${generatedCode}`
+
+    console.log('Chamando hook com:', {
+      phone: digits,
+      message,
+    })
 
     try {
       const responseBody = await pb.send('/backend/v1/enviar-codigo-whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: digits }),
+        body: JSON.stringify({ phone: digits, code: generatedCode, message }),
       })
 
-      console.log(
-        'Evolution API Response Logging:',
-        JSON.stringify(
-          {
-            status: 'success',
-            body: responseBody,
-          },
-          null,
-          2,
-        ),
-      )
+      console.log('Resposta hook:', responseBody)
 
       if (!responseBody.success) {
         toast({
@@ -390,7 +374,7 @@ export default function PortariaRegistro() {
       setBypassValidation(false)
       setValidationCode('')
     } catch (err: any) {
-      console.error('Evolution API Connection Error:', err)
+      console.log('ERRO hook:', err)
       toast({
         title: 'Erro de Conexão',
         description: 'Não foi possível conectar à API de WhatsApp.',
