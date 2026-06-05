@@ -13,15 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Search, Mail, Ban, CheckCircle, Plus, Edit, Trash2 } from 'lucide-react'
-import {
-  getUsers,
-  getUnits,
-  updateUser,
-  createUser,
-  deleteUser,
-  AppUser,
-  Unit,
-} from '@/services/api'
+import { getUnits, AppUser, Unit } from '@/services/api'
+import pb from '@/lib/pocketbase/client'
 import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -65,8 +58,11 @@ export default function GestorMoradores() {
 
   const loadData = async () => {
     try {
-      const [userData, unitData] = await Promise.all([getUsers(), getUnits()])
-      setUsers(userData as AppUser[])
+      const [userData, unitData] = await Promise.all([
+        pb.collection('users').getFullList({ expand: 'unit_id' }),
+        getUnits(),
+      ])
+      setUsers(userData as unknown as AppUser[])
       setUnits(unitData as Unit[])
     } catch (e: any) {
       console.error('Failed to load users or units:', e, e.response)
@@ -88,13 +84,13 @@ export default function GestorMoradores() {
           payload.passwordConfirm = payload.confirm
         }
         delete payload.confirm
-        await updateUser(editingUser.id, payload)
+        await pb.collection('users').update(editingUser.id, payload)
         toast({ title: 'Morador atualizado com sucesso.' })
       } else {
         payload.passwordConfirm = payload.confirm
         delete payload.confirm
         payload.status = 'Ativo'
-        await createUser(payload)
+        await pb.collection('users').create(payload)
         toast({ title: 'Morador criado com sucesso.' })
       }
       setIsFormOpen(false)
@@ -119,7 +115,7 @@ export default function GestorMoradores() {
   const handleDeleteUser = async () => {
     if (!userToDelete) return
     try {
-      await deleteUser(userToDelete.id)
+      await pb.collection('users').delete(userToDelete.id)
       toast({ title: 'Morador removido com sucesso.' })
       loadData()
     } catch (e: any) {
@@ -155,7 +151,7 @@ export default function GestorMoradores() {
   const toggleStatus = async (user: AppUser) => {
     const newStatus = user.status === 'Ativo' ? 'Bloqueado' : 'Ativo'
     try {
-      await updateUser(user.id, { status: newStatus })
+      await pb.collection('users').update(user.id, { status: newStatus })
       setUsers(users.map((u) => (u.id === user.id ? { ...u, status: newStatus } : u)))
       toast({ title: 'Status atualizado', description: `${user.name} agora está ${newStatus}.` })
     } catch (e: any) {
