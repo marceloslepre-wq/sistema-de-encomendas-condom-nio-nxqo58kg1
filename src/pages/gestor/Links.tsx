@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
+import pb from '@/lib/pocketbase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -13,54 +13,60 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { Link2, Copy, Mail, MessageCircle } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { getUnits, getLinks, createLink, Unit } from '@/services/api'
 import { format } from 'date-fns'
 
 export default function GestorLinks() {
   const { toast } = useToast()
-  const [units, setUnits] = useState<Unit[]>([])
+  const [condos, setCondos] = useState<any[]>([])
   const [links, setLinks] = useState<any[]>([])
-  const [selectedTower, setSelectedTower] = useState('')
-  const [selectedApt, setSelectedApt] = useState('')
+  const [selectedCondo, setSelectedCondo] = useState('')
+  const [selectedRole, setSelectedRole] = useState('')
   const [loading, setLoading] = useState(true)
 
+  const roles = [
+    { value: 'gestor', label: 'Gestor' },
+    { value: 'porteiro', label: 'Porteiro' },
+    { value: 'portaria', label: 'Portaria' },
+    { value: 'triagem', label: 'Triagem' },
+    { value: 'morador', label: 'Morador' },
+  ]
+
   useEffect(() => {
-    Promise.all([getUnits(), getLinks()])
-      .then(([u, l]) => {
-        setUnits(u as Unit[])
+    Promise.all([
+      pb.collection('condos').getFullList(),
+      pb.collection('invitation_links').getFullList({ expand: 'condo_id', sort: '-created' }),
+    ])
+      .then(([c, l]) => {
+        setCondos(c)
         setLinks(l)
         setLoading(false)
       })
-      .catch(console.error)
+      .catch((err) => {
+        console.error('Failed to fetch data:', err)
+        setLoading(false)
+      })
   }, [])
-
-  const towers = Array.from(new Set(units.map((u) => u.tower)))
-  const filteredApts = units.filter((u) => u.tower === selectedTower)
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedTower || !selectedApt) return
-
-    const unit = units.find((u) => u.tower === selectedTower && u.apartment === selectedApt)
-    if (!unit) return
+    if (!selectedCondo || !selectedRole) return
 
     const token = Math.random().toString(36).substring(2, 10).toUpperCase()
-    const expiresAt = new Date()
-    expiresAt.setHours(expiresAt.getHours() + 48)
 
     try {
-      const newLink = await createLink({
-        unit_id: unit.id,
+      const newLink = await pb.collection('invitation_links').create({
+        condo_id: selectedCondo,
+        role: selectedRole,
         token,
-        expires_at: expiresAt.toISOString(),
         used: false,
       })
-      const linkWithUnit = { ...newLink, expand: { unit_id: unit } }
-      setLinks([linkWithUnit, ...links])
-      toast({ title: 'Link gerado com sucesso!', description: 'O link é válido por 48 horas.' })
-      setSelectedApt('')
+      const condo = condos.find((c) => c.id === selectedCondo)
+      const linkWithCondo = { ...newLink, expand: { condo_id: condo } }
+      setLinks([linkWithCondo, ...links])
+      toast({ title: 'Link gerado com sucesso!', description: 'O link está pronto para uso.' })
+      setSelectedRole('')
     } catch (err: any) {
-      console.error('Failed to generate link:', err, err.response)
+      console.error('Failed to generate link:', err)
       toast({ title: 'Erro', description: 'Falha ao gerar link.', variant: 'destructive' })
     }
   }
@@ -75,7 +81,7 @@ export default function GestorLinks() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-primary">Geração de Links</h2>
         <p className="text-muted-foreground">
-          Crie links de convite para novos moradores se cadastrarem.
+          Crie links de convite para cadastrar novos usuários e moradores.
         </p>
       </div>
 
@@ -83,51 +89,41 @@ export default function GestorLinks() {
         <Card>
           <CardHeader>
             <CardTitle>Novo Convite</CardTitle>
-            <CardDescription>Gere um link seguro de uso único (48h).</CardDescription>
+            <CardDescription>Gere um link seguro de uso único.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleGenerate} className="space-y-4">
               <div className="space-y-2">
-                <Label>Torre / Bloco</Label>
-                <Select
-                  value={selectedTower}
-                  onValueChange={(v) => {
-                    setSelectedTower(v)
-                    setSelectedApt('')
-                  }}
-                >
+                <Label>Condomínio</Label>
+                <Select value={selectedCondo} onValueChange={setSelectedCondo}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione a Torre" />
+                    <SelectValue placeholder="Selecione o Condomínio" />
                   </SelectTrigger>
                   <SelectContent>
-                    {towers.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        Torre {t}
+                    {condos.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Apartamento</Label>
-                <Select
-                  value={selectedApt}
-                  onValueChange={setSelectedApt}
-                  disabled={!selectedTower}
-                >
+                <Label>Perfil de Acesso</Label>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o Apto" />
+                    <SelectValue placeholder="Selecione o Perfil" />
                   </SelectTrigger>
                   <SelectContent>
-                    {filteredApts.map((a) => (
-                      <SelectItem key={a.id} value={a.apartment}>
-                        Apto {a.apartment}
+                    {roles.map((r) => (
+                      <SelectItem key={r.value} value={r.value}>
+                        {r.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <Button type="submit" className="w-full" disabled={!selectedTower || !selectedApt}>
+              <Button type="submit" className="w-full" disabled={!selectedCondo || !selectedRole}>
                 <Link2 className="mr-2 h-4 w-4" /> Gerar Link
               </Button>
             </form>
@@ -137,17 +133,16 @@ export default function GestorLinks() {
         <Card>
           <CardHeader>
             <CardTitle>Links Ativos</CardTitle>
-            <CardDescription>Links válidos no momento.</CardDescription>
+            <CardDescription>Links gerados não utilizados.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
               {loading && <p className="text-sm text-muted-foreground">Carregando...</p>}
-              {!loading && links.length === 0 && (
+              {!loading && links.filter((l) => !l.used).length === 0 && (
                 <p className="text-sm text-muted-foreground">Nenhum link ativo.</p>
               )}
               {links.map((l) => {
-                const expired = new Date(l.expires_at) < new Date()
-                if (expired || l.used) return null
+                if (l.used) return null
 
                 return (
                   <div
@@ -155,11 +150,11 @@ export default function GestorLinks() {
                     className="flex items-center justify-between p-3 border rounded-lg bg-white shadow-subtle"
                   >
                     <div>
-                      <p className="font-medium text-sm text-primary">
-                        T{l.expand?.unit_id?.tower} - {l.expand?.unit_id?.apartment}
+                      <p className="font-medium text-sm text-primary capitalize">
+                        {l.role} - {l.expand?.condo_id?.name || 'Sem Condomínio'}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Expira em: {format(new Date(l.expires_at), 'dd/MM HH:mm')}
+                        Criado em: {format(new Date(l.created), 'dd/MM HH:mm')}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -183,7 +178,7 @@ export default function GestorLinks() {
                             size="icon"
                             onClick={() => {
                               const text = encodeURIComponent(
-                                `Olá! Segue o seu link de convite para o sistema de encomendas do condomínio: ${window.location.origin}/cadastro?token=${l.token}`,
+                                `Olá! Segue o seu link de convite para o sistema: ${window.location.origin}/cadastro?token=${l.token}`,
                               )
                               window.open(`https://wa.me/?text=${text}`, '_blank')
                             }}
@@ -200,11 +195,9 @@ export default function GestorLinks() {
                             variant="outline"
                             size="icon"
                             onClick={() => {
-                              const subject = encodeURIComponent(
-                                'Convite para Sistema de Encomendas',
-                              )
+                              const subject = encodeURIComponent('Convite para o Sistema')
                               const body = encodeURIComponent(
-                                `Olá! Segue o seu link de convite para o sistema de encomendas do condomínio:\n\n${window.location.origin}/cadastro?token=${l.token}`,
+                                `Olá! Segue o seu link de convite para acessar o sistema:\n\n${window.location.origin}/cadastro?token=${l.token}`,
                               )
                               window.location.href = `mailto:?subject=${subject}&body=${body}`
                             }}
