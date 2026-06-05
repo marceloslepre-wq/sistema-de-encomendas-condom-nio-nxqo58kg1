@@ -346,7 +346,7 @@ export default function PortariaRegistro() {
           phone: digits,
           message: 'Requisitando envio de código de acesso',
           apiKey: 'Gerenciado pelo Backend (PocketBase)',
-          url: `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/enviar-codigo-whatsapp`,
+          url: '/backend/v1/enviar-codigo-whatsapp',
         },
         null,
         2,
@@ -354,55 +354,30 @@ export default function PortariaRegistro() {
     )
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/enviar-codigo-whatsapp`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: pb.authStore.token },
-          body: JSON.stringify({ phone: digits }),
-        },
-      )
-
-      const responseBody = await response.json().catch((err) => {
-        console.error('Error parsing response JSON:', err)
-        return {}
+      const responseBody = await pb.send('/backend/v1/enviar-codigo-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: digits }),
       })
 
       console.log(
         'Evolution API Response Logging:',
         JSON.stringify(
           {
-            status: response.ok ? 'success' : 'error',
-            statusCode: response.status,
+            status: 'success',
             body: responseBody,
-            error: response.ok
-              ? null
-              : responseBody.error || responseBody.message || 'Erro desconhecido',
           },
           null,
           2,
         ),
       )
 
-      if (!response.ok) {
-        console.error(
-          'Error 400 Visibility:',
-          JSON.stringify(
-            {
-              statusCode: response.status,
-              mensagem_erro:
-                responseBody.error || responseBody.message || 'Falha ao comunicar com a API',
-            },
-            null,
-            2,
-          ),
-        )
-
+      if (!responseBody.success) {
         toast({
           title: 'Erro no Envio',
           description:
-            responseBody.error ||
             responseBody.message ||
+            responseBody.error ||
             'Falha ao comunicar com a API do WhatsApp.',
           variant: 'destructive',
         })

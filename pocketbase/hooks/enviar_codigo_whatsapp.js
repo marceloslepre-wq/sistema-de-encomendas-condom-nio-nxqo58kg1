@@ -66,6 +66,18 @@ routerAdd(
       const code = $security.randomStringWithAlphabet(6, '0123456789')
       const message = `Seu código de validação é: ${code}`
 
+      $app
+        .logger()
+        .info(
+          'Pre-dispatch',
+          'phone',
+          exactPhone,
+          'message',
+          message,
+          'numero_sender',
+          senderNumber,
+        )
+
       // Persist verification code
       try {
         const verifCol = $app.findCollectionByNameOrId('whatsapp_verifications')
@@ -101,19 +113,20 @@ routerAdd(
       let statusCode = 400
 
       try {
+        const payloadStr = JSON.stringify({
+          number: exactPhone,
+          options: {
+            delay: 0,
+            presence: 'composing',
+            linkPreview: false,
+          },
+          text: message,
+        })
         const res = $http.send({
           url: url,
           method: 'POST',
           headers: headers,
-          body: JSON.stringify({
-            number: exactPhone,
-            options: {
-              delay: 0,
-              presence: 'composing',
-              linkPreview: false,
-            },
-            text: message,
-          }),
+          body: payloadStr,
           timeout: 10,
         })
 
@@ -121,23 +134,23 @@ routerAdd(
         isSuccess = statusCode >= 200 && statusCode < 300
         parsedJson = res.json || {}
 
+        $app.logger().info('Resposta Evolution:', 'data', JSON.stringify(parsedJson))
+
         if (!isSuccess) {
           $app
             .logger()
             .error(
-              'Evolution API Error',
+              'ERRO Evolution:',
               'url',
               url,
               'status',
               statusCode,
-              'response',
+              'error',
               JSON.stringify(parsedJson),
             )
         }
       } catch (err) {
-        $app
-          .logger()
-          .error('Evolution API Exception', 'url', url, 'error', err.message || String(err))
+        $app.logger().error('ERRO Evolution:', 'url', url, 'error', err.message || String(err))
         parsedJson = { error: err.message || String(err) }
         statusCode = 500
       }
