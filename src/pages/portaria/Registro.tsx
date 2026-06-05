@@ -56,6 +56,8 @@ type TableEntry = {
   unitId: string
   residentId: string
   volumes: number
+  residents?: Morador[]
+  loadingResidents?: boolean
 }
 
 export default function PortariaRegistro() {
@@ -66,7 +68,14 @@ export default function PortariaRegistro() {
   const [carriers, setCarriers] = useState<Carrier[]>([])
 
   const [entries, setEntries] = useState<TableEntry[]>([
-    { id: crypto.randomUUID(), unitId: '', residentId: '', volumes: 1 },
+    {
+      id: crypto.randomUUID(),
+      unitId: '',
+      residentId: '',
+      volumes: 1,
+      residents: [],
+      loadingResidents: false,
+    },
   ])
   const [carrier, setCarrier] = useState('')
 
@@ -115,7 +124,17 @@ export default function PortariaRegistro() {
   useRealtime('carriers', () => loadCarriers())
 
   const handleAddEntry = () => {
-    setEntries([...entries, { id: crypto.randomUUID(), unitId: '', residentId: '', volumes: 1 }])
+    setEntries([
+      ...entries,
+      {
+        id: crypto.randomUUID(),
+        unitId: '',
+        residentId: '',
+        volumes: 1,
+        residents: [],
+        loadingResidents: false,
+      },
+    ])
   }
 
   const removeEntry = (id: string) => {
@@ -168,7 +187,9 @@ export default function PortariaRegistro() {
 
       for (const group of Object.values(groups)) {
         const unit = units.find((u) => u.id === group.unitId)
-        const resident = moradores.find((m) => m.id === group.residentId)
+        const resident =
+          group.residents?.find((m) => m.id === group.residentId) ||
+          moradores.find((m) => m.id === group.residentId)
 
         if (!unit || !resident) {
           throw new Error('Unidade ou morador referenciado não foi encontrado no sistema.')
@@ -272,7 +293,16 @@ export default function PortariaRegistro() {
   }
 
   const handleNewRegistration = () => {
-    setEntries([{ id: crypto.randomUUID(), unitId: '', residentId: '', volumes: 1 }])
+    setEntries([
+      {
+        id: crypto.randomUUID(),
+        unitId: '',
+        residentId: '',
+        volumes: 1,
+        residents: [],
+        loadingResidents: false,
+      },
+    ])
     setCarrier('')
     setCourierName('')
     setCourierCpf('')
@@ -515,20 +545,19 @@ export default function PortariaRegistro() {
                     <TableBody>
                       {entries.map((entry) => {
                         const selectedUnit = units.find((u) => u.id === entry.unitId)
-                        const filteredResidents = selectedUnit
-                          ? moradores.filter(
-                              (m) =>
-                                m.torre === selectedUnit.tower &&
-                                m.apartamento === selectedUnit.apartment,
-                            )
-                          : []
+                        const filteredResidents = entry.residents || []
                         return (
                           <TableRow key={entry.id} className="animate-fade-in">
                             <TableCell className="align-top pt-4 pl-4">
                               <Select
                                 value={entry.unitId}
                                 onValueChange={(val) => {
-                                  updateEntry(entry.id, { unitId: val, residentId: '' })
+                                  updateEntry(entry.id, {
+                                    unitId: val,
+                                    residentId: '',
+                                    residents: [],
+                                    loadingResidents: true,
+                                  })
                                   const unit = units.find((u) => u.id === val)
                                   if (unit) {
                                     console.log(
@@ -542,14 +571,24 @@ export default function PortariaRegistro() {
 
                                     pb.collection('moradores')
                                       .getFullList({
-                                        filter: `torre="${unit.tower}" && apartamento="${unit.apartment}"`,
+                                        filter: pb.filter('torre={:torre} && apartamento={:apto}', {
+                                          torre: unit.tower,
+                                          apto: unit.apartment,
+                                        }),
                                       })
                                       .then((resultado) => {
                                         console.log('Resultado query:', resultado)
+                                        updateEntry(entry.id, {
+                                          residents: resultado as Morador[],
+                                          loadingResidents: false,
+                                        })
                                       })
                                       .catch((erro) => {
                                         console.log('ERRO query:', erro)
-                                        throw erro
+                                        updateEntry(entry.id, {
+                                          residents: [],
+                                          loadingResidents: false,
+                                        })
                                       })
                                   }
                                 }}
@@ -570,15 +609,21 @@ export default function PortariaRegistro() {
                               <Select
                                 value={entry.residentId}
                                 onValueChange={(val) => updateEntry(entry.id, { residentId: val })}
+                                disabled={
+                                  entry.loadingResidents ||
+                                  (!entry.unitId && filteredResidents.length === 0)
+                                }
                               >
                                 <SelectTrigger className="bg-background">
                                   <SelectValue
                                     placeholder={
                                       !entry.unitId
                                         ? 'Selecione a unidade'
-                                        : filteredResidents.length === 0
-                                          ? 'Nenhum morador encontrado'
-                                          : 'Selecione o morador'
+                                        : entry.loadingResidents
+                                          ? 'Carregando moradores...'
+                                          : filteredResidents.length === 0
+                                            ? 'Nenhum morador encontrado'
+                                            : 'Selecione o morador'
                                     }
                                   />
                                 </SelectTrigger>
