@@ -345,13 +345,14 @@ export default function PortariaRegistro() {
     console.log('Enviando para entregador:', {
       phone: digits,
       message,
+      codigo: generatedCode,
     })
 
     try {
       const responseBody = await pb.send('/backend/v1/enviar-codigo-whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: digits, message }),
+        body: JSON.stringify({ phone: digits, message, codigo: generatedCode }),
       })
 
       console.log('Resposta hook:', responseBody)

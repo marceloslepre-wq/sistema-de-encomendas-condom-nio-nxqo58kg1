@@ -8,17 +8,21 @@
   ====================================================================================================
 */
 
-// Rota principal usada pelo frontend
 routerAdd(
   'POST',
   '/backend/v1/enviar-codigo-whatsapp',
   (e) => {
     try {
       const body = e.requestInfo().body || {}
-      const phone = body.phone
+      const { phone, message, codigo } = body
 
-      if (typeof phone !== 'string' || !phone.trim()) {
-        return e.json(200, { success: false, message: 'Phone is required' })
+      console.log(`Hook recebido: ${JSON.stringify({ phone, message })}`)
+
+      if (!phone || !message || !codigo) {
+        return e.json(200, {
+          success: false,
+          message: 'Parâmetros phone, message e codigo são obrigatórios.',
+        })
       }
 
       const apiUrl = $secrets.get('EVOLUTION_API_URL')
@@ -26,17 +30,7 @@ routerAdd(
       const apikey = $secrets.get('EVOLUTION_API_KEY')
 
       if (!apiUrl || !instance || !apikey) {
-        $app
-          .logger()
-          .error(
-            'Missing WhatsApp secrets',
-            'apiUrl',
-            !!apiUrl,
-            'instance',
-            !!instance,
-            'apikey',
-            !!apikey,
-          )
+        $app.logger().error('Missing WhatsApp secrets')
         return e.json(200, {
           success: false,
           message: 'Serviço de WhatsApp não configurado corretamente.',
@@ -47,43 +41,29 @@ routerAdd(
       if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1)
       const url = `${baseUrl}/message/sendText/${instance}`
 
+      console.log(`URL: ${url}`)
+
       const headers = {
         'Content-Type': 'application/json',
         apikey: apikey,
       }
 
       // Limpar formatações e adicionar o prefixo 55 (Brasil) ao número de telefone
-      const numericPhone = phone.replace(/\D/g, '')
+      const numericPhone = String(phone).replace(/\D/g, '')
       const exactPhone =
         numericPhone.startsWith('55') && numericPhone.length > 11
           ? numericPhone
           : `55${numericPhone}`
-
-      // Extract code from message or generate a new one
-      const codeMatch = body.message ? body.message.match(/\d{6}/) : null
-      const code =
-        body.code ||
-        (codeMatch ? codeMatch[0] : $security.randomStringWithAlphabet(6, '0123456789'))
-      const message = body.message || `Seu código de validação: ${code}`
-
-      $app
-        .logger()
-        .info(
-          'Enviando para Evolution:',
-          'data',
-          JSON.stringify({ url, phone: exactPhone, message }),
-        )
 
       // Persist verification code
       try {
         const verifCol = $app.findCollectionByNameOrId('whatsapp_verifications')
         const verifRecord = new Record(verifCol)
         verifRecord.set('phone', exactPhone)
-        verifRecord.set('code', code)
+        verifRecord.set('code', codigo)
 
         const expires = new Date()
         expires.setMinutes(expires.getMinutes() + 15)
-        // Store explicitly formatted to avoid 'T' lexicographical comparison issues
         verifRecord.set('expires_at', expires.toISOString().replace('T', ' '))
         verifRecord.set('used', false)
         verifRecord.set('attempts', 0)
@@ -95,7 +75,7 @@ routerAdd(
           .error('Failed to save whatsapp_verifications', 'error', err.message || String(err))
         return e.json(200, {
           success: false,
-          message: 'Falha ao gerar código de verificação internamente.',
+          message: 'Falha ao salvar código de verificação internamente.',
         })
       }
 
@@ -108,11 +88,14 @@ routerAdd(
       let parsedJson = null
       let statusCode = 400
 
+      console.log('Enviando para Evolution...')
+
       try {
         const payloadStr = JSON.stringify({
           number: exactPhone,
           text: message,
         })
+
         const res = $http.send({
           url: url,
           method: 'POST',
@@ -125,25 +108,15 @@ routerAdd(
         isSuccess = statusCode >= 200 && statusCode < 300
         parsedJson = res.json || {}
 
-        $app.logger().info('Resposta Evolution:', 'data', JSON.stringify(parsedJson))
+        console.log(`Resposta Evolution: ${JSON.stringify(parsedJson)}`)
 
         if (!isSuccess) {
-          $app
-            .logger()
-            .error(
-              'ERRO Evolution:',
-              'data',
-              JSON.stringify({ url, status: statusCode, error: parsedJson }),
-            )
+          console.log(
+            `ERRO Evolution: ${JSON.stringify({ status: statusCode, error: parsedJson })}`,
+          )
         }
       } catch (err) {
-        $app
-          .logger()
-          .error(
-            'ERRO Evolution:',
-            'data',
-            JSON.stringify({ url, error: err.message || String(err) }),
-          )
+        console.log(`ERRO Evolution: ${err.message || String(err)}`)
         parsedJson = { error: err.message || String(err) }
         statusCode = 500
       }
@@ -161,7 +134,7 @@ routerAdd(
         notif.set('celular', exactPhone)
         notif.set('sucesso', isSuccess)
         notif.set('sender_match', true)
-        notif.set('sender_number', '') // Removed requirement
+        notif.set('sender_number', '')
         $app.save(notif)
       } catch (err) {
         $app
