@@ -75,21 +75,23 @@ export default function GestorMoradores() {
     setSubmitting(true)
     setFieldErrors({})
     try {
-      const payload = { ...data, role: 'morador' }
+      const payload: any = {
+        email: data.email,
+        name: data.name,
+        phone: data.phone,
+        role: 'morador',
+      }
+
       if (editingUser) {
-        if (!payload.password) {
-          delete payload.password
-          delete payload.confirm
-        } else {
-          payload.passwordConfirm = payload.confirm
+        if (data.password) {
+          payload.password = data.password
+          payload.passwordConfirm = data.confirm
         }
-        delete payload.confirm
         await pb.collection('users').update(editingUser.id, payload)
         toast({ title: 'Morador atualizado com sucesso.' })
       } else {
-        payload.passwordConfirm = payload.confirm
-        delete payload.confirm
-        payload.status = 'Ativo'
+        payload.password = data.password
+        payload.passwordConfirm = data.confirm
         await pb.collection('users').create(payload)
         toast({ title: 'Morador criado com sucesso.' })
       }
@@ -99,9 +101,16 @@ export default function GestorMoradores() {
       console.error('Failed to save resident:', e, e.response)
       const errors = extractFieldErrors(e)
       setFieldErrors(errors)
-      const errorMsg =
-        Object.values(errors)[0] ||
-        'Verifique os dados informados. CPF ou Email pode já estar em uso.'
+
+      let errorMsg = 'Não foi possível salvar o registro. Verifique os dados informados.'
+      if (Object.keys(errors).length > 0) {
+        errorMsg = Object.values(errors)[0]
+      } else if (e?.response?.message) {
+        errorMsg = e.response.message
+      } else if (e?.message) {
+        errorMsg = e.message
+      }
+
       toast({
         title: 'Erro ao salvar',
         description: errorMsg,
@@ -174,12 +183,14 @@ export default function GestorMoradores() {
   const filtered = users.filter(
     (u) =>
       u.role === 'morador' &&
-      units.some((unit) => unit.id === u.unit_id) &&
+      (!u.unit_id || units.some((unit) => unit.id === u.unit_id)) &&
       (u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.expand?.unit_id?.apartment?.includes(searchTerm)),
   )
 
-  const cadastrados = filtered.filter((u) => u.status === 'Ativo' || u.status === 'Bloqueado')
+  const cadastrados = filtered.filter(
+    (u) => u.status === 'Ativo' || u.status === 'Bloqueado' || !u.status,
+  )
   const pendentes = filtered.filter((u) => u.status === 'Pendente')
 
   if (loading) {
@@ -253,7 +264,9 @@ export default function GestorMoradores() {
                     {cadastrados.map((r) => (
                       <TableRow key={r.id}>
                         <TableCell className="font-medium whitespace-nowrap">
-                          T{r.expand?.unit_id?.tower} - {r.expand?.unit_id?.apartment}
+                          {r.expand?.unit_id
+                            ? `T${r.expand.unit_id.tower} - ${r.expand.unit_id.apartment}`
+                            : '-'}
                         </TableCell>
                         <TableCell>{r.name}</TableCell>
                         <TableCell>{r.cpf || '-'}</TableCell>
@@ -261,10 +274,12 @@ export default function GestorMoradores() {
                         <TableCell>{r.email}</TableCell>
                         <TableCell>
                           <Badge
-                            variant={r.status === 'Ativo' ? 'default' : 'destructive'}
-                            className={r.status === 'Ativo' ? 'bg-success hover:bg-success/80' : ''}
+                            variant={r.status === 'Bloqueado' ? 'destructive' : 'default'}
+                            className={
+                              r.status !== 'Bloqueado' ? 'bg-success hover:bg-success/80' : ''
+                            }
                           >
-                            {r.status}
+                            {r.status || 'Ativo'}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
@@ -329,12 +344,14 @@ export default function GestorMoradores() {
                     {pendentes.map((r) => (
                       <TableRow key={r.id}>
                         <TableCell className="font-medium whitespace-nowrap">
-                          T{r.expand?.unit_id?.tower} - {r.expand?.unit_id?.apartment}
+                          {r.expand?.unit_id
+                            ? `T${r.expand.unit_id.tower} - ${r.expand.unit_id.apartment}`
+                            : '-'}
                         </TableCell>
                         <TableCell>{r.name}</TableCell>
                         <TableCell>{r.email}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary">{r.status}</Badge>
+                          <Badge variant="secondary">{r.status || 'Pendente'}</Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
