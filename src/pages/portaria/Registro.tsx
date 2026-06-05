@@ -128,6 +128,17 @@ export default function PortariaRegistro() {
     setIsSubmitting(true)
 
     try {
+      if (entries.length === 0) throw new Error('Adicione pelo menos uma encomenda.')
+      const hasInvalid = entries.some((e) => !e.unitId || !e.residentId || e.volumes < 1)
+      if (hasInvalid)
+        throw new Error('Existem encomendas com campos obrigatórios ausentes ou inválidos.')
+      if (!carrier) throw new Error('Selecione uma transportadora.')
+      if (!courierName) throw new Error('Nome do entregador é obrigatório.')
+      if (courierCpf.replace(/\D/g, '').length !== 11)
+        throw new Error('CPF do entregador inválido.')
+      if (!isCodeVerified && !bypassValidation)
+        throw new Error('A validação via WhatsApp é obrigatória.')
+
       const groups = entries.reduce(
         (acc, entry) => {
           const key = `${entry.unitId}_${entry.residentId}`
@@ -143,20 +154,24 @@ export default function PortariaRegistro() {
         const resident = users.find((u) => u.id === group.residentId)
 
         if (!unit || !resident) {
-          throw new Error('Unidade ou morador não encontrado.')
+          throw new Error('Unidade ou morador referenciado não foi encontrado no sistema.')
+        }
+
+        if (!group.unitId || !group.residentId) {
+          throw new Error(
+            'As referências de unidade e morador (unit_id, resident_id) são obrigatórias.',
+          )
         }
 
         const unidadeStr = `${unit.tower} - ${unit.apartment}`
         const moradorNome = resident.name
+        const codValidado = bypassValidation ? 'MANUAL' : validationCode
 
-        console.log('Tentando gravar:', {
-          unidade: unidadeStr,
-          morador: moradorNome,
-          volume: group.volumes,
-          transportadora: carrier,
-        })
+        if (!codValidado) {
+          throw new Error('Código de validação está ausente.')
+        }
 
-        const resultado = await pb.collection('recebimentos_auditoria').create({
+        await pb.collection('recebimentos_auditoria').create({
           morador_nome: moradorNome,
           morador_cpf: resident.cpf || '',
           morador_celular: resident.phone || '',
@@ -165,7 +180,7 @@ export default function PortariaRegistro() {
           entregador_celular: courierPhone.replace(/\D/g, ''),
           data_hora_recebimento: new Date().toISOString(),
           status: 'ENTRADA_PORTARIA',
-          codigo_validado: bypassValidation ? 'MANUAL' : validationCode,
+          codigo_validado: codValidado,
           codigo_liberacao: '',
           unidade: unidadeStr,
           volumes: group.volumes,
@@ -173,29 +188,29 @@ export default function PortariaRegistro() {
           unit_id: group.unitId,
           resident_id: group.residentId,
         })
-
-        console.log('Gravado com sucesso:', resultado)
       }
 
       setRegistrationSuccess(true)
       toast({
         title: 'Sucesso!',
-        description: 'Encomendas registradas com sucesso!',
+        description: 'Encomendas registradas com sucesso e já disponíveis na Triagem.',
         className: 'bg-success text-white',
       })
       setRefreshTrigger((prev) => prev + 1)
     } catch (err: any) {
       console.error('ERRO ao gravar:', err)
       const fieldErrors = extractFieldErrors(err)
-      let detailedMsg = getErrorMessage(err)
+      let detailedMsg = err.message || getErrorMessage(err)
 
       if (Object.keys(fieldErrors).length > 0) {
-        const fields = Object.keys(fieldErrors).join(', ')
-        detailedMsg = `Campo(s) inválido(s): ${fields}. ${detailedMsg}`
+        const fields = Object.entries(fieldErrors)
+          .map(([key, val]) => `Campo '${key}': ${val}`)
+          .join(' | ')
+        detailedMsg = `Falha ao salvar: ${fields}`
       }
 
       toast({
-        title: 'Erro ao salvar no banco',
+        title: 'Falha ao salvar',
         description: detailedMsg,
         variant: 'destructive',
       })
