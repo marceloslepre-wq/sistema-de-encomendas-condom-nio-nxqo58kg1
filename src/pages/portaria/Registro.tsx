@@ -88,13 +88,19 @@ export default function PortariaRegistro() {
   useEffect(() => {
     getUnits()
       .then(setUnits)
-      .catch(() => {})
+      .catch((err) => {
+        console.error('Error fetching units:', err)
+      })
     getUsers()
       .then(setUsers)
-      .catch(() => {})
+      .catch((err) => {
+        console.error('Error fetching users:', err)
+      })
     getCarriers()
       .then(setCarriers)
-      .catch(() => {})
+      .catch((err) => {
+        console.error('Error fetching carriers:', err)
+      })
   }, [])
 
   const handleAddEntry = () => {
@@ -171,7 +177,7 @@ export default function PortariaRegistro() {
           throw new Error('Código de validação está ausente.')
         }
 
-        await pb.collection('recebimentos_auditoria').create({
+        const payload = {
           morador_nome: moradorNome,
           morador_cpf: resident.cpf || '',
           morador_celular: resident.phone || '',
@@ -187,7 +193,39 @@ export default function PortariaRegistro() {
           carrier: carrier,
           unit_id: group.unitId,
           resident_id: group.residentId,
-        })
+        }
+
+        console.log(
+          'Database Submission Logging:',
+          JSON.stringify(
+            {
+              unidade: payload.unidade,
+              morador: payload.morador_nome,
+              volumes: payload.volumes,
+              fullPayload: payload,
+            },
+            null,
+            2,
+          ),
+        )
+
+        try {
+          const record = await pb.collection('recebimentos_auditoria').create(payload)
+          console.log(
+            'Database Confirmation Logging:',
+            JSON.stringify(
+              {
+                id: record.id,
+                timestamp: new Date().toISOString(),
+              },
+              null,
+              2,
+            ),
+          )
+        } catch (dbErr: any) {
+          console.error('Database Failure Logging:', dbErr)
+          throw dbErr // rethrow to be caught by the outer block
+        }
       }
 
       setRegistrationSuccess(true)
@@ -214,6 +252,9 @@ export default function PortariaRegistro() {
         description: detailedMsg,
         variant: 'destructive',
       })
+
+      setIsSubmitting(false)
+      throw err // Do not swallow the error per AC
     } finally {
       setIsSubmitting(false)
     }
@@ -247,6 +288,20 @@ export default function PortariaRegistro() {
 
     setIsSendingCode(true)
 
+    console.log(
+      'Evolution API Request Logging:',
+      JSON.stringify(
+        {
+          phone: digits,
+          message: 'Requisitando envio de código de acesso',
+          apiKey: 'Gerenciado pelo Backend (PocketBase)',
+          url: `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/enviar-codigo-whatsapp`,
+        },
+        null,
+        2,
+      ),
+    )
+
     try {
       const response = await fetch(
         `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/enviar-codigo-whatsapp`,
@@ -257,11 +312,47 @@ export default function PortariaRegistro() {
         },
       )
 
+      const responseBody = await response.json().catch((err) => {
+        console.error('Error parsing response JSON:', err)
+        return {}
+      })
+
+      console.log(
+        'Evolution API Response Logging:',
+        JSON.stringify(
+          {
+            status: response.ok ? 'success' : 'error',
+            statusCode: response.status,
+            body: responseBody,
+            error: response.ok
+              ? null
+              : responseBody.error || responseBody.message || 'Erro desconhecido',
+          },
+          null,
+          2,
+        ),
+      )
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
+        console.error(
+          'Error 400 Visibility:',
+          JSON.stringify(
+            {
+              statusCode: response.status,
+              mensagem_erro:
+                responseBody.error || responseBody.message || 'Falha ao comunicar com a API',
+            },
+            null,
+            2,
+          ),
+        )
+
         toast({
           title: 'Erro no Envio',
-          description: errorData.error || 'Falha ao comunicar com a API do WhatsApp.',
+          description:
+            responseBody.error ||
+            responseBody.message ||
+            'Falha ao comunicar com a API do WhatsApp.',
           variant: 'destructive',
         })
         setIsCodeSent(false)
@@ -273,12 +364,14 @@ export default function PortariaRegistro() {
       setBypassValidation(false)
       setValidationCode('')
     } catch (err: any) {
+      console.error('Evolution API Connection Error:', err)
       toast({
         title: 'Erro de Conexão',
         description: 'Não foi possível conectar à API de WhatsApp.',
         variant: 'destructive',
       })
       setIsCodeSent(false)
+      throw err // Do not swallow the error per AC
     } finally {
       setIsSendingCode(false)
     }
@@ -297,11 +390,13 @@ export default function PortariaRegistro() {
 
     setIsVerifyingCode(true)
     try {
-      await pb.send('/backend/v1/verify-whatsapp-code', {
+      const verifyResponse = await pb.send('/backend/v1/verify-whatsapp-code', {
         method: 'POST',
         body: JSON.stringify({ phone: digits, code: validationCode }),
         headers: { 'Content-Type': 'application/json' },
       })
+
+      console.log('Verify API Response Logging:', verifyResponse)
 
       setIsCodeVerified(true)
 
@@ -311,11 +406,14 @@ export default function PortariaRegistro() {
         className: 'bg-success text-white',
       })
     } catch (err: any) {
+      console.error('Verify API Failure Logging:', err)
       toast({
         title: 'Erro na Verificação',
         description: 'Código inválido. Tente novamente.',
         variant: 'destructive',
       })
+      setIsVerifyingCode(false)
+      throw err // Do not swallow the error per AC
     } finally {
       setIsVerifyingCode(false)
     }
