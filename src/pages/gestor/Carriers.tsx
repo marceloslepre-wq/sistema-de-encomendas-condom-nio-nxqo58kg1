@@ -11,7 +11,13 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Search, Plus, Trash2, Edit } from 'lucide-react'
-import { getCarriers, createCarrier, updateCarrier, deleteCarrier, Carrier } from '@/services/api'
+import {
+  getCarriers,
+  createCarrier,
+  updateCarrier,
+  deleteCarrier,
+  type Carrier,
+} from '@/services/carriers'
 import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
 import {

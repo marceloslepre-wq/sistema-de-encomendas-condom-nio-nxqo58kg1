@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-05T16:42:38.987Z",
+  "generatedAt": "2026-06-05T16:44:44.660Z",
   "collections": [
     {
       "name": "users",
@@ -357,6 +357,46 @@
         {
           "name": "sucesso",
           "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "carriers",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')",
+        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
           "required": false,
           "system": false
         },
