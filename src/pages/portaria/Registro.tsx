@@ -561,37 +561,57 @@ export default function PortariaRegistro() {
                               <Select
                                 value={entry.unitId}
                                 onValueChange={(val) => {
-                                  updateEntry(entry.id, (curr) => ({
+                                  updateEntry(entry.id, () => ({
                                     unitId: val,
                                     residentId: '',
                                     residents: [],
                                     loadingResidents: true,
                                   }))
+
                                   const unit = units.find((u) => u.id === val)
-                                  if (unit) {
-                                    pb.collection('moradores')
-                                      .getFullList({
-                                        filter: `torre="${unit.tower.replace(/"/g, '\\"')}" && apartamento="${unit.apartment.replace(/"/g, '\\"')}"`,
-                                      })
-                                      .then((resultado) => {
-                                        updateEntry(entry.id, (curr) =>
-                                          curr.unitId === val
-                                            ? {
-                                                residents: resultado as Morador[],
-                                                loadingResidents: false,
-                                              }
-                                            : {},
-                                        )
-                                      })
-                                      .catch((erro) => {
-                                        console.error('ERRO query moradores:', erro)
-                                        updateEntry(entry.id, (curr) =>
-                                          curr.unitId === val
-                                            ? { residents: [], loadingResidents: false }
-                                            : {},
-                                        )
-                                      })
+                                  const towerStr = unit?.tower ? String(unit.tower).trim() : ''
+                                  const aptStr = unit?.apartment
+                                    ? String(unit.apartment).trim()
+                                    : ''
+
+                                  if (!unit || !towerStr || !aptStr) {
+                                    updateEntry(entry.id, (curr) =>
+                                      curr.unitId === val ? { loadingResidents: false } : {},
+                                    )
+                                    return
                                   }
+
+                                  const safeTower = towerStr.replace(/"/g, '\\"')
+                                  const safeApartment = aptStr.replace(/"/g, '\\"')
+
+                                  pb.collection('moradores')
+                                    .getFullList({
+                                      filter: `torre = "${safeTower}" && apartamento = "${safeApartment}"`,
+                                    })
+                                    .then((resultado) => {
+                                      updateEntry(entry.id, (curr) =>
+                                        curr.unitId === val
+                                          ? {
+                                              residents: resultado as Morador[],
+                                              loadingResidents: false,
+                                            }
+                                          : {},
+                                      )
+                                    })
+                                    .catch((erro) => {
+                                      console.error('ERRO query moradores:', erro)
+                                      toast({
+                                        title: 'Erro de Busca',
+                                        description:
+                                          'Não foi possível carregar os moradores desta unidade. Verifique os dados e tente novamente.',
+                                        variant: 'destructive',
+                                      })
+                                      updateEntry(entry.id, (curr) =>
+                                        curr.unitId === val
+                                          ? { residents: [], loadingResidents: false }
+                                          : {},
+                                      )
+                                    })
                                 }}
                               >
                                 <SelectTrigger className="bg-background">
