@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-05T15:55:16.556Z",
+  "generatedAt": "2026-06-05T16:00:08.604Z",
   "collections": [
     {
       "name": "users",
@@ -17,30 +17,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
-        },
-        {
-          "name": "role",
-          "type": "select",
-          "required": false,
-          "system": false,
-          "selectValues": [
-            "porteiro",
-            "triagem",
-            "gestor"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         },
         {
           "name": "name",
@@ -53,6 +37,13 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "role",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["gestor", "porteiro", "portaria", "triagem", "morador"]
         }
       ],
       "indexes": [
@@ -106,19 +97,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
       "indexes": []
@@ -158,19 +144,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
       "indexes": []
@@ -179,10 +160,10 @@
       "name": "recebimentos_auditoria",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.role = 'porteiro' || @request.auth.role = 'triagem' || @request.auth.role = 'gestor'",
-        "view": "@request.auth.role = 'porteiro' || @request.auth.role = 'triagem' || @request.auth.role = 'gestor'",
-        "create": "@request.auth.role = 'porteiro' || @request.auth.role = 'triagem' || @request.auth.role = 'gestor'",
-        "update": "@request.auth.role = 'porteiro' || @request.auth.role = 'triagem' || @request.auth.role = 'gestor'",
+        "list": "@request.auth.role = 'portaria' || @request.auth.role = 'triagem' || @request.auth.role = 'gestor'",
+        "view": "@request.auth.role = 'portaria' || @request.auth.role = 'triagem' || @request.auth.role = 'gestor'",
+        "create": "@request.auth.role = 'portaria' || @request.auth.role = 'triagem' || @request.auth.role = 'gestor'",
+        "update": "@request.auth.role = 'portaria' || @request.auth.role = 'triagem' || @request.auth.role = 'gestor'",
         "delete": null
       },
       "fields": [
@@ -221,28 +202,21 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "created",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
       "indexes": []
@@ -281,19 +255,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
       "indexes": []
@@ -338,9 +307,7 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "sucesso",
@@ -353,19 +320,14 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate"
-          ]
+          "autodateTriggers": ["onCreate"]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": [
-            "onCreate",
-            "onUpdate"
-          ]
+          "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
       "indexes": []
