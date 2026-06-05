@@ -187,21 +187,29 @@ export default function SalaTriagem() {
       const code = Math.floor(100000 + Math.random() * 900000).toString()
       const formData = new FormData()
       formData.append('status', 'LIBERADO_RETIRADA')
-      formData.append('codigo_liberacao', code)
-      formData.append('tracking_code', trackingCode)
+      formData.append('codigo_validacao', code)
+      formData.append('codigo_rastreio', trackingCode)
       formData.append('volume_type', volumeType)
       formData.append('shelf_location', shelfLocation)
 
-      if (selectedVolume.unit_id) formData.append('unit_id', selectedVolume.unit_id)
-      if (selectedVolume.resident_id) formData.append('resident_id', selectedVolume.resident_id)
-      formData.append('carrier', selectedVolume.carrier || '')
-      formData.append('volumes', '1') // Processing individual volume
+      if (selectedVolume.unidade_id || (selectedVolume as any).unit_id)
+        formData.append('unidade_id', selectedVolume.unidade_id || (selectedVolume as any).unit_id)
+      if (selectedVolume.morador_id || (selectedVolume as any).resident_id)
+        formData.append(
+          'morador_id',
+          selectedVolume.morador_id || (selectedVolume as any).resident_id,
+        )
+      formData.append(
+        'transportadora',
+        selectedVolume.transportadora || (selectedVolume as any).carrier || '',
+      )
+      formData.append('volume', '1') // Processing individual volume
       formData.append(
         'entry_date',
-        selectedVolume.data_hora_recebimento || new Date().toISOString(),
+        (selectedVolume as any).data_hora_recebimento || new Date().toISOString(),
       )
-      formData.append('courier_name', selectedVolume.entregador_nome || '')
-      formData.append('courier_cpf', selectedVolume.entregador_cpf || '')
+      formData.append('entregador_nome', selectedVolume.entregador_nome || '')
+      formData.append('entregador_cpf', selectedVolume.entregador_cpf || '')
 
       if (photo) {
         formData.append('photo', photo)
@@ -221,7 +229,7 @@ export default function SalaTriagem() {
       }
       if (isAllProcessed && selectedVolume.status !== 'LIBERADO_RETIRADA') {
         updateData.data_hora_liberado = new Date().toISOString()
-        updateData.codigo_liberacao = code
+        updateData.codigo_validacao = code
       }
 
       await updateRecebimentoAuditoria(selectedVolume.id, updateData)

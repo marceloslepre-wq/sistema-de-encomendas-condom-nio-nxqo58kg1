@@ -66,7 +66,7 @@ export const updateParcel = (id: string, data: any) => pb.collection('parcels').
 export const updateParcelWithFormData = (id: string, formData: FormData) =>
   pb.collection('parcels').update(id, formData)
 export const createParcelWithFormData = (formData: FormData) =>
-  pb.collection('parcels').create(formData)
+  pb.collection('recebimentos_auditoria').create(formData)
 export const updateRecebimentoAuditoria = (id: string, data: any) =>
   pb.collection('recebimentos_auditoria').update(id, data)
 export const getFileUrl = (record: any, filename: string) => pb.files.getUrl(record, filename)
