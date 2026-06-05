@@ -15,16 +15,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Trash2, Plus } from 'lucide-react'
+import { getCondo, updateCondo } from '@/services/condos'
 import {
-  getCondo,
-  updateCondo,
-  getVolumeTypes,
-  createVolumeType,
-  deleteVolumeType,
-  getShelfLocations,
-  createShelfLocation,
-  deleteShelfLocation,
-} from '@/services/api'
+  getTemplatesNotificacao,
+  createTemplateNotificacao,
+  deleteTemplateNotificacao,
+} from '@/services/templates_notificacao'
 
 export default function GestorConfiguracoes() {
   const [condoId, setCondoId] = useState('')
@@ -39,17 +35,15 @@ export default function GestorConfiguracoes() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  const [volumeTypes, setVolumeTypes] = useState<any[]>([])
-  const [newVolumeType, setNewVolumeType] = useState('')
-
-  const [shelfLocations, setShelfLocations] = useState<any[]>([])
-  const [newShelfLocation, setNewShelfLocation] = useState('')
+  const [templates, setTemplates] = useState<any[]>([])
+  const [newTemplateStatus, setNewTemplateStatus] = useState('')
+  const [newTemplateMensagem, setNewTemplateMensagem] = useState('')
 
   const { toast } = useToast()
 
   useEffect(() => {
-    Promise.all([getCondo(), getVolumeTypes(), getShelfLocations()]).then(
-      ([condo, vTypes, sLocs]) => {
+    Promise.all([getCondo(), getTemplatesNotificacao()])
+      .then(([condo, tmpls]) => {
         if (condo) {
           setCondoId(condo.id)
           setFormData({
@@ -61,11 +55,17 @@ export default function GestorConfiguracoes() {
             guards: condo.janitor_settings?.guards || 0,
           })
         }
-        setVolumeTypes(vTypes)
-        setShelfLocations(sLocs)
+        setTemplates(tmpls)
         setLoading(false)
-      },
-    )
+      })
+      .catch(() => {
+        setLoading(false)
+        toast({
+          title: 'Erro',
+          description: 'Falha ao carregar as configurações.',
+          variant: 'destructive',
+        })
+      })
   }, [])
 
   const handleSaveCondo = async () => {
@@ -90,47 +90,30 @@ export default function GestorConfiguracoes() {
     }
   }
 
-  const handleAddVolumeType = async () => {
-    if (!newVolumeType) return
+  const handleAddTemplate = async () => {
+    if (!newTemplateStatus || !newTemplateMensagem) return
     try {
-      const res = await createVolumeType({ name: newVolumeType })
-      setVolumeTypes([...volumeTypes, res])
-      setNewVolumeType('')
-      toast({ title: 'Tipo de volume adicionado' })
+      const res = await createTemplateNotificacao({
+        status: newTemplateStatus,
+        mensagem_template: newTemplateMensagem,
+        ativo: true,
+      })
+      setTemplates([...templates, res])
+      setNewTemplateStatus('')
+      setNewTemplateMensagem('')
+      toast({ title: 'Template adicionado com sucesso' })
     } catch (e) {
-      toast({ title: 'Erro', variant: 'destructive' })
+      toast({ title: 'Erro ao adicionar template', variant: 'destructive' })
     }
   }
 
-  const handleDeleteVolumeType = async (id: string) => {
+  const handleDeleteTemplate = async (id: string) => {
     try {
-      await deleteVolumeType(id)
-      setVolumeTypes(volumeTypes.filter((v) => v.id !== id))
-      toast({ title: 'Tipo de volume removido' })
+      await deleteTemplateNotificacao(id)
+      setTemplates(templates.filter((t) => t.id !== id))
+      toast({ title: 'Template removido com sucesso' })
     } catch (e) {
-      toast({ title: 'Erro', variant: 'destructive' })
-    }
-  }
-
-  const handleAddShelfLocation = async () => {
-    if (!newShelfLocation) return
-    try {
-      const res = await createShelfLocation({ name: newShelfLocation })
-      setShelfLocations([...shelfLocations, res])
-      setNewShelfLocation('')
-      toast({ title: 'Localização adicionada' })
-    } catch (e) {
-      toast({ title: 'Erro', variant: 'destructive' })
-    }
-  }
-
-  const handleDeleteShelfLocation = async (id: string) => {
-    try {
-      await deleteShelfLocation(id)
-      setShelfLocations(shelfLocations.filter((s) => s.id !== id))
-      toast({ title: 'Localização removida' })
-    } catch (e) {
-      toast({ title: 'Erro', variant: 'destructive' })
+      toast({ title: 'Erro ao remover template', variant: 'destructive' })
     }
   }
 
@@ -148,7 +131,7 @@ export default function GestorConfiguracoes() {
       <Tabs defaultValue="geral" className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="geral">Geral</TabsTrigger>
-          <TabsTrigger value="logistica">Logística</TabsTrigger>
+          <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
         </TabsList>
 
         <TabsContent value="geral" className="space-y-6">
@@ -220,71 +203,49 @@ export default function GestorConfiguracoes() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="logistica" className="space-y-6">
+        <TabsContent value="notificacoes" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Tipos de Volume</CardTitle>
-              <CardDescription>Utilizados na triagem de encomendas.</CardDescription>
+              <CardTitle>Templates de Notificação</CardTitle>
+              <CardDescription>Mensagens automáticas enviadas aos moradores.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Novo tipo..."
-                  value={newVolumeType}
-                  onChange={(e) => setNewVolumeType(e.target.value)}
-                />
-                <Button onClick={handleAddVolumeType}>
+              <div className="flex flex-col md:flex-row gap-2">
+                <div className="flex-1 space-y-2">
+                  <Input
+                    placeholder="Status (ex: recebido, retirado)"
+                    value={newTemplateStatus}
+                    onChange={(e) => setNewTemplateStatus(e.target.value)}
+                  />
+                </div>
+                <div className="flex-[2] space-y-2">
+                  <Input
+                    placeholder="Mensagem do template..."
+                    value={newTemplateMensagem}
+                    onChange={(e) => setNewTemplateMensagem(e.target.value)}
+                  />
+                </div>
+                <Button className="mt-auto" onClick={handleAddTemplate}>
                   <Plus className="w-4 h-4 mr-2" /> Adicionar
                 </Button>
               </div>
-              <div className="space-y-2">
-                {volumeTypes.map((v) => (
+              <div className="space-y-2 mt-4">
+                {templates.map((t) => (
                   <div
-                    key={v.id}
-                    className="flex items-center justify-between p-2 border rounded-md"
+                    key={t.id}
+                    className="flex items-center justify-between p-3 border rounded-md bg-card"
                   >
-                    <span>{v.name}</span>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm text-muted-foreground uppercase">
+                        {t.status}
+                      </span>
+                      <span>{t.mensagem_template}</span>
+                    </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-destructive"
-                      onClick={() => handleDeleteVolumeType(v.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Localizações (Prateleiras)</CardTitle>
-              <CardDescription>Locais de armazenamento na sala de triagem.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Nova localização..."
-                  value={newShelfLocation}
-                  onChange={(e) => setNewShelfLocation(e.target.value)}
-                />
-                <Button onClick={handleAddShelfLocation}>
-                  <Plus className="w-4 h-4 mr-2" /> Adicionar
-                </Button>
-              </div>
-              <div className="space-y-2">
-                {shelfLocations.map((s) => (
-                  <div
-                    key={s.id}
-                    className="flex items-center justify-between p-2 border rounded-md"
-                  >
-                    <span>{s.name}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive"
-                      onClick={() => handleDeleteShelfLocation(s.id)}
+                      className="text-destructive flex-shrink-0 ml-4"
+                      onClick={() => handleDeleteTemplate(t.id)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
