@@ -24,8 +24,22 @@ routerAdd(
       const apiUrl = $secrets.get('EVOLUTION_API_URL')
       const instance = $secrets.get('EVOLUTION_INSTANCE')
       const apikey = $secrets.get('EVOLUTION_API_KEY')
+      const senderNumber = $secrets.get('EVOLUTION_NUMERO_SENDER')
 
-      if (!apiUrl || !instance || !apikey) {
+      if (!apiUrl || !instance || !apikey || !senderNumber) {
+        $app
+          .logger()
+          .error(
+            'Missing WhatsApp secrets',
+            'apiUrl',
+            !!apiUrl,
+            'instance',
+            !!instance,
+            'apikey',
+            !!apikey,
+            'senderNumber',
+            !!senderNumber,
+          )
         return e.json(200, {
           success: false,
           message: 'Serviço de WhatsApp não configurado corretamente.',
@@ -128,11 +142,28 @@ routerAdd(
         statusCode = 500
       }
 
-      if (isSuccess) {
-        logRecord.set('status', 'success')
-        logRecord.set('response', { ...parsedJson, successUrl: url })
-        $app.save(logRecord)
+      logRecord.set('status', isSuccess ? 'success' : 'error')
+      logRecord.set('response', isSuccess ? { ...parsedJson, successUrl: url } : parsedJson)
+      $app.save(logRecord)
 
+      try {
+        const notifCol = $app.findCollectionByNameOrId('notificacoes_enviadas')
+        const notif = new Record(notifCol)
+        notif.set('morador', 'Portaria/Entregador')
+        notif.set('status', isSuccess ? 'enviado' : 'falha')
+        notif.set('mensagem', message)
+        notif.set('celular', exactPhone)
+        notif.set('sucesso', isSuccess)
+        notif.set('sender_match', true) // Matches the configured sender
+        notif.set('sender_number', senderNumber)
+        $app.save(notif)
+      } catch (err) {
+        $app
+          .logger()
+          .error('Failed to save notificacoes_enviadas', 'error', err.message || String(err))
+      }
+
+      if (isSuccess) {
         let messageId = 'unknown'
         if (parsedJson) {
           if (parsedJson.messageId) messageId = parsedJson.messageId
@@ -145,10 +176,6 @@ routerAdd(
           messageId: messageId,
         })
       }
-
-      logRecord.set('status', 'error')
-      logRecord.set('response', parsedJson)
-      $app.save(logRecord)
 
       const errorMsg =
         parsedJson?.message ||

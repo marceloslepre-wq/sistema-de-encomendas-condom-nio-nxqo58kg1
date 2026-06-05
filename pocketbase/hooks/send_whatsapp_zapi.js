@@ -41,17 +41,37 @@ routerAdd(
     // Secrets configuradas no Skip Cloud (aba "Segredos")
     const apiUrl = $secrets.get('EVOLUTION_API_URL')
     const apiKey = $secrets.get('EVOLUTION_API_KEY')
+    const instance = $secrets.get('EVOLUTION_INSTANCE')
+    const senderNumber = $secrets.get('EVOLUTION_NUMERO_SENDER')
 
-    if (!apiUrl || !String(apiUrl).trim()) {
-      return e.internalServerError('Missing Skip Cloud secret: EVOLUTION_API_URL')
-    }
-
-    if (!apiKey || !String(apiKey).trim()) {
-      return e.internalServerError('Missing Skip Cloud secret: EVOLUTION_API_KEY')
+    if (
+      !apiUrl ||
+      !String(apiUrl).trim() ||
+      !apiKey ||
+      !String(apiKey).trim() ||
+      !instance ||
+      !senderNumber
+    ) {
+      $app
+        .logger()
+        .error(
+          'Missing WhatsApp secrets',
+          'apiUrl',
+          !!apiUrl,
+          'apiKey',
+          !!apiKey,
+          'instance',
+          !!instance,
+          'senderNumber',
+          !!senderNumber,
+        )
+      return e.internalServerError(
+        'Missing Skip Cloud configuration for WhatsApp (URL, API_KEY, INSTANCE or NUMERO_SENDER)',
+      )
     }
 
     const baseUrl = String(apiUrl).replace(/\/+$/, '')
-    const url = `${baseUrl}/message/sendText/Encomenda`
+    const url = `${baseUrl}/message/sendText/${instance}`
 
     const phoneNum = normalizeBrazilianNumber(body.phone)
     if (phoneNum.length < 12 || phoneNum.length > 13) {
@@ -143,6 +163,27 @@ routerAdd(
         $app
           .logger()
           .error('Failed to save whatsapp log', 'error', logErr.message || String(logErr))
+      }
+
+      try {
+        const notifCol = $app.findCollectionByNameOrId('notificacoes_enviadas')
+        const notif = new Record(notifCol)
+        notif.set('morador', 'Desconhecido')
+        notif.set('status', isSuccess ? 'enviado' : 'falha')
+        notif.set('mensagem', originalMessage)
+        notif.set('celular', phoneNum)
+        notif.set('sucesso', isSuccess)
+        notif.set('sender_match', true)
+        notif.set('sender_number', senderNumber)
+        $app.save(notif)
+      } catch (notifErr) {
+        $app
+          .logger()
+          .error(
+            'Failed to save notificacoes_enviadas',
+            'error',
+            notifErr.message || String(notifErr),
+          )
       }
 
       if (parseFailed) {
