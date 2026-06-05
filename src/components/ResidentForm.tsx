@@ -233,6 +233,7 @@ export function ResidentForm({
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           placeholder="joao@exemplo.com"
+          disabled={isEdit}
         />
         {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
       </div>

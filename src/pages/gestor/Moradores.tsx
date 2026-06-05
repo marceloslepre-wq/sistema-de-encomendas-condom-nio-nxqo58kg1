@@ -75,24 +75,28 @@ export default function GestorMoradores() {
     setSubmitting(true)
     setFieldErrors({})
     try {
-      const payload: any = {
-        email: data.email,
-        name: data.name,
-        phone: data.phone,
-        role: 'morador',
-      }
-
       if (editingUser) {
-        if (data.password) {
-          payload.password = data.password
-          payload.passwordConfirm = data.confirm
+        const updatePayload: any = {
+          name: data.name,
+          phone: data.phone,
+          role: 'morador',
         }
-        await pb.collection('users').update(editingUser.id, payload)
+        if (data.password) {
+          updatePayload.password = data.password
+          updatePayload.passwordConfirm = data.confirm
+        }
+        await pb.collection('users').update(editingUser.id, updatePayload)
         toast({ title: 'Morador atualizado com sucesso.' })
       } else {
-        payload.password = data.password
-        payload.passwordConfirm = data.confirm
-        await pb.collection('users').create(payload)
+        const createPayload: any = {
+          email: data.email,
+          name: data.name,
+          phone: data.phone,
+          role: 'morador',
+          password: data.password,
+          passwordConfirm: data.confirm,
+        }
+        await pb.collection('users').create(createPayload)
         toast({ title: 'Morador criado com sucesso.' })
       }
       setIsFormOpen(false)
