@@ -15,6 +15,20 @@ export const createUnit = (data: any) => pb.collection('units').create(data)
 export const updateUnit = (id: string, data: any) => pb.collection('units').update(id, data)
 export const deleteUnit = (id: string) => pb.collection('units').delete(id)
 
+export type Morador = RecordModel & {
+  nome: string
+  email: string
+  cpf: string
+  torre: string
+  apartamento: string
+  telefone: string
+}
+
+export const getMoradores = () => pb.collection('moradores').getFullList({ sort: '-created' })
+export const createMorador = (data: any) => pb.collection('moradores').create(data)
+export const updateMorador = (id: string, data: any) => pb.collection('moradores').update(id, data)
+export const deleteMorador = (id: string) => pb.collection('moradores').delete(id)
+
 export const getUsers = () =>
   pb.collection('users').getFullList({ expand: 'unit_id', sort: '-created' })
 
