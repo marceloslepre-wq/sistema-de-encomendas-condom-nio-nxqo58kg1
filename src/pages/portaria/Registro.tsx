@@ -230,77 +230,69 @@ export default function PortariaRegistro() {
           throw new Error('Código de validação está ausente.')
         }
 
-        const payload: Record<string, any> = {
-          unidade: unidadeStr,
-          morador: moradorNome,
-          volume: String(group.volumes),
-          transportadora: carrier,
-          status: 'ENTRADA_PORTARIA',
-          unidade_id: group.unitId,
-          morador_id: userId || '',
-          entregador_nome: courierName,
-          entregador_cpf: courierCpf.replace(/\D/g, ''),
-          codigo_rastreio: '',
-          observacoes: `Validação: ${codValidado} | Celular Entregador: ${courierPhone.replace(/\D/g, '')}`,
-          celular_validacao: courierPhone.replace(/\D/g, ''),
-          codigo_validacao: codValidado,
-        }
-
-        if (pb.authStore.record?.id) {
-          payload.recebido_por = pb.authStore.record.id
-        }
-
+        const totalVolumes = group.volumes
+        const groupId = crypto.randomUUID()
+        const tickets = Array.from({ length: totalVolumes }).map(
+          (_, i) => `${i + 1}/${totalVolumes}`,
+        )
         console.log(
-          'Database Submission Logging:',
-          JSON.stringify(
-            {
+          `Criando tickets: { entrada_id: '${groupId}', total_volumes: ${totalVolumes}, tickets: [${tickets.map((t) => `'${t}'`).join(', ')}] }`,
+        )
+
+        for (let i = 0; i < totalVolumes; i++) {
+          const volumeLabel = `${i + 1}/${totalVolumes}`
+          const payload: Record<string, any> = {
+            unidade: unidadeStr,
+            morador: moradorNome,
+            volume: volumeLabel,
+            transportadora: carrier,
+            status: 'ENTRADA_PORTARIA',
+            unidade_id: group.unitId,
+            morador_id: userId || '',
+            entregador_nome: courierName,
+            entregador_cpf: courierCpf.replace(/\D/g, ''),
+            codigo_rastreio: '',
+            observacoes: `Validação: ${codValidado} | Celular Entregador: ${courierPhone.replace(/\D/g, '')}`,
+            celular_validacao: courierPhone.replace(/\D/g, ''),
+            codigo_validacao: codValidado,
+          }
+
+          if (pb.authStore.record?.id) {
+            payload.recebido_por = pb.authStore.record.id
+          }
+
+          try {
+            const record = await pb.collection('recebimentos_auditoria').create(payload)
+
+            await pb.collection('historico_andamento').create({
+              recebimento_id: record.id,
+              status: 'Entrada',
+              observacoes: 'Registrado na portaria',
+            })
+
+            console.log('Entrada registrada:', {
               unidade: payload.unidade,
               morador: payload.morador,
               volume: payload.volume,
-              fullPayload: payload,
-            },
-            null,
-            2,
-          ),
-        )
-
-        try {
-          const record = await pb.collection('recebimentos_auditoria').create(payload)
-          console.log(
-            'Database Confirmation Logging:',
-            JSON.stringify(
-              {
-                id: record.id,
-                timestamp: new Date().toISOString(),
-              },
-              null,
-              2,
-            ),
-          )
-
-          const unidade = payload.unidade
-          const morador = payload.morador
-          const volume = payload.volume
-          console.log('Entrada registrada:', { unidade, morador, volume })
-
-          const message = `Sua encomenda ${volume} chegou na portaria`
-          const phone_morador = payload.celular_validacao
-
-          console.log('Enviando notificação para morador:', { phone_morador, message })
-
-          try {
-            const resposta = await pb.send('/backend/v1/enviar-notificacao-morador', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ phone: phone_morador, message }),
             })
-            console.log('Resposta notificação:', resposta)
-          } catch (erro) {
-            console.log('ERRO notificação:', erro)
+
+            if (i === 0) {
+              const message = `Sua encomenda chegou na portaria (Total: ${totalVolumes} volumes)`
+              const phone_morador = payload.celular_validacao
+              try {
+                await pb.send('/backend/v1/enviar-notificacao-morador', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ phone: phone_morador, message }),
+                })
+              } catch (erro) {
+                console.log('ERRO notificação:', erro)
+              }
+            }
+          } catch (dbErr: any) {
+            console.error('Database Failure Logging:', dbErr)
+            throw dbErr
           }
-        } catch (dbErr: any) {
-          console.error('Database Failure Logging:', dbErr)
-          throw dbErr // rethrow to be caught by the outer block
         }
       }
 

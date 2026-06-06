@@ -52,6 +52,12 @@ export default function SalaRetirada() {
         status: 'RETIRADO',
       })
 
+      await pb.collection('historico_andamento').create({
+        recebimento_id: selectedParcel.id,
+        status: 'Retirado',
+        observacoes: 'Entregue ao morador',
+      })
+
       toast({
         title: 'Sucesso',
         description: 'Encomenda retirada com sucesso!',
