@@ -14,6 +14,16 @@ import { useToast } from '@/hooks/use-toast'
 import { Plus, Trash2, Loader2 } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 
 export default function GestorLogistica() {
   const { toast } = useToast()
@@ -22,6 +32,8 @@ export default function GestorLogistica() {
   const [newVolumeType, setNewVolumeType] = useState('')
   const [newShelfLocation, setNewShelfLocation] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isVolumeModalOpen, setIsVolumeModalOpen] = useState(false)
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false)
 
   const loadData = async () => {
     try {
@@ -53,6 +65,7 @@ export default function GestorLogistica() {
     try {
       await pb.collection('volume_types').create({ name: newVolumeType })
       setNewVolumeType('')
+      setIsVolumeModalOpen(false)
       loadData()
       toast({ title: 'Sucesso', description: 'Tipo de volume adicionado.' })
     } catch (err) {
@@ -82,6 +95,7 @@ export default function GestorLogistica() {
     try {
       await pb.collection('shelf_locations').create({ name: newShelfLocation })
       setNewShelfLocation('')
+      setIsLocationModalOpen(false)
       loadData()
       toast({ title: 'Sucesso', description: 'Localização adicionada.' })
     } catch (err) {
@@ -119,23 +133,53 @@ export default function GestorLogistica() {
 
         <TabsContent value="volumes" className="space-y-4">
           <Card>
-            <CardHeader className="pb-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Novo tipo de volume (ex: Caixa P, Envelope...)"
-                  value={newVolumeType}
-                  onChange={(e) => setNewVolumeType(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddVolumeType()}
-                />
-                <Button onClick={handleAddVolumeType} disabled={loading}>
-                  {loading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Plus className="w-4 h-4 mr-2" />
-                  )}
-                  Adicionar
-                </Button>
+            <CardHeader className="pb-4 flex flex-row items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium">Tipos de Volume</h3>
+                <p className="text-sm text-muted-foreground">
+                  Listagem de todos os tipos de volume cadastrados.
+                </p>
               </div>
+              <Dialog open={isVolumeModalOpen} onOpenChange={setIsVolumeModalOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar Novo
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Adicionar Tipo de Volume</DialogTitle>
+                    <DialogDescription>
+                      Insira o nome do novo tipo de volume (ex: Caixa P, Envelope).
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="volume-name">Nome do Tipo de Volume</Label>
+                      <Input
+                        id="volume-name"
+                        placeholder="Ex: Caixa P"
+                        value={newVolumeType}
+                        onChange={(e) => setNewVolumeType(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddVolumeType()}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsVolumeModalOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleAddVolumeType}
+                      disabled={loading || !newVolumeType.trim()}
+                    >
+                      {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                      Salvar
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border bg-card">
@@ -179,23 +223,53 @@ export default function GestorLogistica() {
 
         <TabsContent value="locations" className="space-y-4">
           <Card>
-            <CardHeader className="pb-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Novo local (ex: Prateleira A, Chão...)"
-                  value={newShelfLocation}
-                  onChange={(e) => setNewShelfLocation(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddShelfLocation()}
-                />
-                <Button onClick={handleAddShelfLocation} disabled={loading}>
-                  {loading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Plus className="w-4 h-4 mr-2" />
-                  )}
-                  Adicionar
-                </Button>
+            <CardHeader className="pb-4 flex flex-row items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium">Locais de Prateleira</h3>
+                <p className="text-sm text-muted-foreground">
+                  Listagem de todos os locais de prateleira cadastrados.
+                </p>
               </div>
+              <Dialog open={isLocationModalOpen} onOpenChange={setIsLocationModalOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar Novo
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Adicionar Local de Prateleira</DialogTitle>
+                    <DialogDescription>
+                      Insira o nome do novo local de prateleira (ex: Prateleira A, Chão).
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="location-name">Nome do Local</Label>
+                      <Input
+                        id="location-name"
+                        placeholder="Ex: Prateleira A"
+                        value={newShelfLocation}
+                        onChange={(e) => setNewShelfLocation(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddShelfLocation()}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsLocationModalOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleAddShelfLocation}
+                      disabled={loading || !newShelfLocation.trim()}
+                    >
+                      {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                      Salvar
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border bg-card">
