@@ -41,11 +41,12 @@ export default function MoradorDashboard() {
         .catch(() => null)
 
       if (moradorRecord) {
-        if (moradorRecord.apartamento) {
-          conditions.push(`unidade ~ "${moradorRecord.apartamento}"`)
-        }
-        if (moradorRecord.nome) {
-          conditions.push(`morador ~ "${moradorRecord.nome}"`)
+        const unitFilter = []
+        if (moradorRecord.torre) unitFilter.push(`unidade ~ "${moradorRecord.torre}"`)
+        if (moradorRecord.apartamento) unitFilter.push(`unidade ~ "${moradorRecord.apartamento}"`)
+
+        if (unitFilter.length > 0) {
+          conditions.push(`(${unitFilter.join(' && ')})`)
         }
       }
 
@@ -191,6 +192,41 @@ export default function MoradorDashboard() {
                           </p>
                         </div>
                       </div>
+
+                      {((pkg as any).codigo_rastreio || (pkg as any).photo) && (
+                        <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-border/50">
+                          {(pkg as any).codigo_rastreio && (
+                            <div>
+                              <p className="text-sm font-semibold mb-2 text-muted-foreground flex items-center gap-2">
+                                <Package className="w-4 h-4" /> Código de Rastreio
+                              </p>
+                              <div className="p-3 bg-muted/30 border rounded-md inline-block">
+                                <p className="font-mono font-medium text-base text-foreground">
+                                  {(pkg as any).codigo_rastreio}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {(pkg as any).photo && (
+                            <div>
+                              <p className="text-sm font-semibold mb-2 text-muted-foreground flex items-center gap-2">
+                                <Package className="w-4 h-4" /> Foto da Encomenda
+                              </p>
+                              <div className="border rounded-md overflow-hidden w-40 h-40 bg-muted/50">
+                                <img
+                                  src={pb.files.getURL(pkg as any, (pkg as any).photo)}
+                                  alt="Foto da Encomenda"
+                                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                                  onError={(e) => {
+                                    ;(e.target as HTMLImageElement).style.display = 'none'
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {pkgHistory.length > 0 && (
                         <div className="mt-6 pt-6 border-t border-border/50">

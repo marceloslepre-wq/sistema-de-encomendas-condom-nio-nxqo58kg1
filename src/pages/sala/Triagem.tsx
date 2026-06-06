@@ -223,17 +223,21 @@ export default function SalaTriagem() {
         (_, i) => updatedStatuses[i + 1] === 'Processado' || updatedStatuses[i + 1] === 'Entregue',
       )
 
-      const updateData: any = {
-        volume_statuses: updatedStatuses,
-        status: isAllProcessed ? 'LIBERADO_RETIRADA' : 'EM_TRIAGEM',
-      }
+      const formDataUpdate = new FormData()
+      formDataUpdate.append('volume_statuses', JSON.stringify(updatedStatuses))
+      formDataUpdate.append('status', isAllProcessed ? 'LIBERADO_RETIRADA' : 'EM_TRIAGEM')
       if (isAllProcessed && selectedVolume.status !== 'LIBERADO_RETIRADA') {
-        updateData.data_hora_liberado = new Date().toISOString()
-        updateData.codigo_validacao = code
+        formDataUpdate.append('data_hora_liberado', new Date().toISOString())
+        formDataUpdate.append('codigo_validacao', code)
+      }
+      if (trackingCode) {
+        formDataUpdate.append('codigo_rastreio', trackingCode)
+      }
+      if (photo) {
+        formDataUpdate.append('photo', photo)
       }
 
-      await updateRecebimentoAuditoria(selectedVolume.id, updateData)
-
+      await pb.collection('recebimentos_auditoria').update(selectedVolume.id, formDataUpdate)
       toast({ title: 'Sucesso', description: 'Volume liberado para retirada.' })
       setDialogOpen(false)
       setSelectedVolume(null)
