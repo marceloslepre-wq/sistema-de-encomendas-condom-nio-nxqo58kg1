@@ -170,14 +170,50 @@ export default function SalaTriagem() {
 
   const handleStartTriage = async (vol: ExpandedVolume) => {
     try {
-      if (vol.status === 'ENTRADA_PORTARIA') {
+      const dataAtualizacao = new Date().toISOString()
+      let updatedVol = { ...vol }
+
+      if (vol._volumeStatus === 'Pendente') {
+        const recebimento = recebimentos.find((r) => r.id === vol.id)
+        if (recebimento) {
+          const currentStatuses = recebimento.volume_statuses || {}
+          const updatedStatuses = {
+            ...currentStatuses,
+            [vol._volumeIndex]: 'Em sala de encomendas',
+          }
+          const total = parseInt((recebimento.volumes as any) || '1')
+
+          const updateData: any = {
+            volume_statuses: updatedStatuses,
+            status: 'EM_TRIAGEM',
+            data_hora_triagem: dataAtualizacao,
+          }
+
+          const updated = await updateRecebimentoAuditoria(vol.id, updateData)
+
+          await pb.collection('historico_andamento').create({
+            recebimento_id: vol.id,
+            status: 'Em sala de encomendas',
+            data_atualizacao: dataAtualizacao,
+            observacoes: `Volume ${vol._volumeIndex}/${total} recebido na sala de encomendas`,
+          })
+
+          updatedVol = {
+            ...updatedVol,
+            ...updated,
+            status: 'EM_TRIAGEM',
+            _volumeStatus: 'Em sala de encomendas',
+          }
+        }
+      } else if (vol.status === 'ENTRADA_PORTARIA') {
         const updated = await updateRecebimentoAuditoria(vol.id, {
           status: 'EM_TRIAGEM',
-          data_hora_triagem: new Date().toISOString(),
+          data_hora_triagem: dataAtualizacao,
         })
-        vol = { ...vol, ...updated, status: 'EM_TRIAGEM' }
+        updatedVol = { ...updatedVol, ...updated, status: 'EM_TRIAGEM' }
       }
-      setSelectedVolume(vol)
+
+      setSelectedVolume(updatedVol)
       setDialogOpen(true)
       setTrackingCode('')
       setVolumeType(volumeTypes.length > 0 ? volumeTypes[0].name : '')
@@ -324,7 +360,9 @@ export default function SalaTriagem() {
                       size="sm"
                       variant="outline"
                       onClick={() => handleStartTriage(vol)}
-                      disabled={vol._volumeStatus !== 'Em sala de encomendas'}
+                      disabled={
+                        vol._volumeStatus === 'Processado' || vol._volumeStatus === 'Entregue'
+                      }
                     >
                       <Settings className="w-4 h-4 mr-2" />
                       Processar
