@@ -33,7 +33,7 @@ export default function MoradorDashboard() {
     console.log('Morador logado:', user.email)
 
     try {
-      const conditions = [`morador_id.email = "${user.email}"`]
+      const conditions = [`morador_id = "${user.id}"`, `morador_id.email = "${user.email}"`]
 
       const moradorRecord = await pb
         .collection('moradores')
@@ -41,7 +41,9 @@ export default function MoradorDashboard() {
         .catch(() => null)
 
       if (moradorRecord) {
-        conditions.push(`unidade ~ "${moradorRecord.apartamento}"`)
+        if (moradorRecord.apartamento) {
+          conditions.push(`unidade ~ "${moradorRecord.apartamento}"`)
+        }
         if (moradorRecord.nome) {
           conditions.push(`morador ~ "${moradorRecord.nome}"`)
         }
