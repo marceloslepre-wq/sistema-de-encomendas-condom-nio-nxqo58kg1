@@ -47,7 +47,9 @@ export const getLinks = () =>
 export const createLink = (data: any) => pb.collection('invitation_links').create(data)
 
 export const getParcels = () =>
-  pb.collection('parcels').getFullList({ expand: 'unit_id,resident_id', sort: '-created' })
+  pb
+    .collection('recebimentos_auditoria')
+    .getFullList({ expand: 'unidade_id,morador_id', sort: '-created' })
 
 export const getVolumeTypes = () => pb.collection('volume_types').getFullList()
 export const createVolumeType = (data: any) => pb.collection('volume_types').create(data)
@@ -61,10 +63,11 @@ export const updateShelfLocation = (id: string, data: any) =>
   pb.collection('shelf_locations').update(id, data)
 export const deleteShelfLocation = (id: string) => pb.collection('shelf_locations').delete(id)
 
-export const createParcel = (data: any) => pb.collection('parcels').create(data)
-export const updateParcel = (id: string, data: any) => pb.collection('parcels').update(id, data)
+export const createParcel = (data: any) => pb.collection('recebimentos_auditoria').create(data)
+export const updateParcel = (id: string, data: any) =>
+  pb.collection('recebimentos_auditoria').update(id, data)
 export const updateParcelWithFormData = (id: string, formData: FormData) =>
-  pb.collection('parcels').update(id, formData)
+  pb.collection('recebimentos_auditoria').update(id, formData)
 export const createParcelWithFormData = (formData: FormData) =>
   pb.collection('recebimentos_auditoria').create(formData)
 export const updateRecebimentoAuditoria = (id: string, data: any) =>
@@ -115,13 +118,13 @@ export const updateInvitationLink = (id: string, data: any) =>
   pb.collection('invitation_links').update(id, data)
 
 export const getUnitParcels = (unitId: string, page = 1, filter = '') =>
-  pb.collection('parcels').getList<Parcel>(page, 20, {
-    filter: `unit_id="${unitId}"${filter ? ` && (${filter})` : ''}`,
+  pb.collection('recebimentos_auditoria').getList<any>(page, 20, {
+    filter: `unidade_id="${unitId}"${filter ? ` && (${filter})` : ''}`,
     sort: '-created',
   })
 
 export const getParcelById = (id: string) =>
-  pb.collection('parcels').getOne<Parcel>(id, { expand: 'unit_id' })
+  pb.collection('recebimentos_auditoria').getOne<any>(id, { expand: 'unidade_id' })
 
 export const getParcelAuditLogs = (parcelId: string) =>
   pb.collection('audit_logs').getFullList({ filter: `parcel_id="${parcelId}"`, sort: '-created' })

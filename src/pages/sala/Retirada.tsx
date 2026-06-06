@@ -4,21 +4,24 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 import { Search, Package, CheckCircle2, Loader2, Info } from 'lucide-react'
-import { getParcels, updateParcel, Parcel } from '@/services/api'
+import { RecebimentoAuditoria } from '@/services/api'
 import useRealtime from '@/hooks/use-realtime'
 import { format } from 'date-fns'
+import pb from '@/lib/pocketbase/client'
 
 export default function SalaRetirada() {
   const { toast } = useToast()
-  const [parcels, setParcels] = useState<Parcel[]>([])
+  const [parcels, setParcels] = useState<any[]>([])
   const [search, setSearch] = useState('')
-  const [selectedParcel, setSelectedParcel] = useState<Parcel | null>(null)
+  const [selectedParcel, setSelectedParcel] = useState<any | null>(null)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const loadData = async () => {
     try {
-      const data = await getParcels()
+      const data = await pb
+        .collection('recebimentos_auditoria')
+        .getFullList({ expand: 'unidade_id,morador_id' })
       setParcels(data.filter((p) => p.status === 'LIBERADO_RETIRADA'))
     } catch {
       /* intentionally ignored */
@@ -28,16 +31,16 @@ export default function SalaRetirada() {
   useEffect(() => {
     loadData()
   }, [])
-  useRealtime('parcels', () => loadData())
+  useRealtime('recebimentos_auditoria', () => loadData())
 
   const filteredParcels = parcels.filter((p) => {
     const term = search.toLowerCase()
-    const apt = p.expand?.unit_id?.apartment?.toLowerCase() || ''
-    const name = p.expand?.resident_id?.name?.toLowerCase() || ''
+    const apt = p.expand?.unidade_id?.apartment?.toLowerCase() || p.unidade?.toLowerCase() || ''
+    const name = p.expand?.morador_id?.name?.toLowerCase() || p.morador?.toLowerCase() || ''
     return apt.includes(term) || name.includes(term)
   })
 
-  const handleSelect = (p: Parcel) => {
+  const handleSelect = (p: any) => {
     setSelectedParcel(p)
   }
 
@@ -45,9 +48,8 @@ export default function SalaRetirada() {
     if (!selectedParcel) return
     setIsSubmitting(true)
     try {
-      await updateParcel(selectedParcel.id, {
+      await pb.collection('recebimentos_auditoria').update(selectedParcel.id, {
         status: 'RETIRADO',
-        exit_date: new Date().toISOString(),
       })
 
       toast({
@@ -100,10 +102,14 @@ export default function SalaRetirada() {
                   >
                     <div>
                       <p className="font-bold">
-                        {p.expand?.unit_id?.tower}-{p.expand?.unit_id?.apartment}
+                        {p.expand?.unidade_id
+                          ? `${p.expand.unidade_id.tower}-${p.expand.unidade_id.apartment}`
+                          : p.unidade || 'Unidade N/D'}
                       </p>
-                      <p className="text-sm">{p.expand?.resident_id?.name || 'Morador'}</p>
-                      <p className="text-xs text-muted-foreground mt-1">LOC: {p.shelf_location}</p>
+                      <p className="text-sm">
+                        {p.expand?.morador_id?.name || p.morador || 'Morador'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">VOL: {p.volume || 1}</p>
                     </div>
                     <Button variant="ghost" size="sm">
                       Selecionar
@@ -129,16 +135,18 @@ export default function SalaRetirada() {
               <CardContent className="pt-8 space-y-8 flex flex-col items-center">
                 <div className="text-center space-y-1 w-full">
                   <p className="text-xl font-bold">
-                    {selectedParcel.expand?.unit_id?.tower}-
-                    {selectedParcel.expand?.unit_id?.apartment}
+                    {selectedParcel.expand?.unidade_id
+                      ? `${selectedParcel.expand.unidade_id.tower}-${selectedParcel.expand.unidade_id.apartment}`
+                      : selectedParcel.unidade || 'Unidade N/D'}
                   </p>
                   <p className="text-muted-foreground">
-                    {selectedParcel.expand?.resident_id?.name}
+                    {selectedParcel.expand?.morador_id?.name || selectedParcel.morador || 'Morador'}
                   </p>
                   <div className="bg-muted p-3 rounded-md mt-4 flex items-center justify-center gap-2">
                     <Package className="w-5 h-5" />
                     <span>
-                      {selectedParcel.volume_type} • {selectedParcel.shelf_location}
+                      {selectedParcel.transportadora || 'Pacote'} • VOL:{' '}
+                      {selectedParcel.volume || 1}
                     </span>
                   </div>
                 </div>
