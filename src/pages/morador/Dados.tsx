@@ -15,24 +15,24 @@ export default function MoradorDados() {
   const { toast } = useToast()
 
   const [phone, setPhone] = useState('')
-  const [unitData, setUnitData] = useState<{ tower: string; apartment: string } | null>(null)
+  const [moradorData, setMoradorData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     if (user) {
+      console.log('Morador logado:', user.email)
       setPhone(user.phone || '')
-      if (user.unit_id) {
-        pb.collection('units')
-          .getOne(user.unit_id)
-          .then((unit) => {
-            setUnitData({ tower: unit.tower, apartment: unit.apartment })
-          })
-          .catch(() => {})
-          .finally(() => setLoading(false))
-      } else {
-        setLoading(false)
-      }
+      pb.collection('moradores')
+        .getFirstListItem(`email="${user.email}"`)
+        .then((morador) => {
+          console.log('Perfil carregado:', morador)
+          setMoradorData(morador)
+        })
+        .catch((erro) => {
+          console.log('ERRO:', erro)
+        })
+        .finally(() => setLoading(false))
     }
   }, [user])
 
@@ -50,8 +50,12 @@ export default function MoradorDados() {
     setSubmitting(true)
     try {
       await updateUser(user.id, { phone })
+      if (moradorData) {
+        await pb.collection('moradores').update(moradorData.id, { telefone: phone })
+      }
       toast({ title: 'Dados atualizados com sucesso.' })
-    } catch (err) {
+    } catch (erro) {
+      console.log('ERRO:', erro)
       toast({
         title: 'Erro',
         description: 'Não foi possível atualizar os dados.',
@@ -72,7 +76,7 @@ export default function MoradorDados() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-primary">Meus Dados</h2>
         <p className="text-muted-foreground">Visualize e atualize suas informações de contato.</p>
@@ -96,7 +100,11 @@ export default function MoradorDados() {
                   <User className="h-4 w-4 text-muted-foreground" />
                   Nome Completo
                 </Label>
-                <Input value={user?.name || ''} disabled className="bg-neutralBg" />
+                <Input
+                  value={moradorData?.nome || user?.name || ''}
+                  disabled
+                  className="bg-muted"
+                />
               </div>
 
               <div className="space-y-2">
@@ -104,7 +112,11 @@ export default function MoradorDados() {
                   <Mail className="h-4 w-4 text-muted-foreground" />
                   E-mail
                 </Label>
-                <Input value={user?.email || ''} disabled className="bg-neutralBg" />
+                <Input
+                  value={moradorData?.email || user?.email || ''}
+                  disabled
+                  className="bg-muted"
+                />
               </div>
 
               <div className="space-y-2">
@@ -112,7 +124,7 @@ export default function MoradorDados() {
                   <Hash className="h-4 w-4 text-muted-foreground" />
                   CPF
                 </Label>
-                <Input value={user?.cpf || ''} disabled className="bg-neutralBg" />
+                <Input value={moradorData?.cpf || user?.cpf || ''} disabled className="bg-muted" />
               </div>
 
               <div className="space-y-2">
@@ -135,9 +147,9 @@ export default function MoradorDados() {
                   Torre / Bloco
                 </Label>
                 <Input
-                  value={unitData ? `Torre ${unitData.tower}` : '-'}
+                  value={moradorData ? `Torre ${moradorData.torre}` : '-'}
                   disabled
-                  className="bg-neutralBg"
+                  className="bg-muted"
                 />
               </div>
 
@@ -147,9 +159,9 @@ export default function MoradorDados() {
                   Apartamento
                 </Label>
                 <Input
-                  value={unitData ? `Apto ${unitData.apartment}` : '-'}
+                  value={moradorData ? `Apto ${moradorData.apartamento}` : '-'}
                   disabled
-                  className="bg-neutralBg"
+                  className="bg-muted"
                 />
               </div>
             </div>

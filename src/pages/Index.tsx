@@ -33,8 +33,9 @@ export default function Index() {
     if (!email || !password) return
 
     setIsSubmitting(true)
-    const { error } = await signIn(email, password)
+    const { error, record } = await signIn(email, password)
     if (error) {
+      console.log('ERRO:', error)
       const msg = getErrorMessage(error)
       toast({
         title: 'Acesso Negado',
@@ -42,6 +43,10 @@ export default function Index() {
         variant: 'destructive',
       })
       setIsSubmitting(false)
+    } else {
+      if (record?.role === 'morador') {
+        console.log('Morador logado:', record.email)
+      }
     }
   }
 
