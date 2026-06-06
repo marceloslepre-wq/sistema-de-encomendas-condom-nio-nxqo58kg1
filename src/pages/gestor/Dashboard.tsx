@@ -4,18 +4,19 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts'
 import { Package, Clock, ShieldCheck, CalendarRange } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
-import { getParcels, Parcel } from '@/services/api'
+import { RecebimentoAuditoria } from '@/services/api'
 import { useRealtime } from '@/hooks/use-realtime'
 import { format, subDays, isSameDay } from 'date-fns'
+import pb from '@/lib/pocketbase/client'
 
 export default function GestorDashboard() {
-  const [parcels, setParcels] = useState<Parcel[]>([])
+  const [recebimentos, setRecebimentos] = useState<RecebimentoAuditoria[]>([])
   const [loading, setLoading] = useState(true)
 
   const loadData = async () => {
     try {
-      const data = await getParcels()
-      setParcels(data as Parcel[])
+      const data = await pb.collection('recebimentos_auditoria').getFullList({ sort: '-created' })
+      setRecebimentos(data as RecebimentoAuditoria[])
     } catch (e) {
       console.error(e)
     } finally {
@@ -27,7 +28,7 @@ export default function GestorDashboard() {
     loadData()
   }, [])
 
-  useRealtime('parcels', () => {
+  useRealtime('recebimentos_auditoria', () => {
     loadData()
   })
 
@@ -41,43 +42,56 @@ export default function GestorDashboard() {
     let totalRetrievalTime = 0
     let retrievedCount = 0
 
-    parcels.forEach((p) => {
-      const entry = new Date(p.entry_date)
+    recebimentos.forEach((p) => {
+      const entryStr = p.data_criacao || p.created
+      if (!entryStr) return
+      const entry = new Date(entryStr)
+
       if (isSameDay(entry, today)) todayCount++
       if (entry.getMonth() === thisMonth) monthCount++
 
+      const status = p.status?.toUpperCase() || ''
+
       if (
-        ['RECEBIDO_PORTARIA', 'EM_SALA', 'CATALOGADO', 'DISPONIVEL_RETIRADA'].includes(p.status)
+        ['RECEBIDO_PORTARIA', 'EM_SALA', 'CATALOGADO', 'DISPONIVEL_RETIRADA', 'PENDENTE'].includes(
+          status,
+        )
       ) {
         pendingCount++
       }
 
-      if (p.status === 'RETIRADO' && p.exit_date) {
-        const exit = new Date(p.exit_date)
-        const diffHrs = (exit.getTime() - entry.getTime()) / (1000 * 60 * 60)
-        totalRetrievalTime += diffHrs
-        retrievedCount++
+      if (status === 'RETIRADO' || status === 'ENTREGUE') {
+        const exitStr = p.updated
+        if (exitStr) {
+          const exit = new Date(exitStr)
+          const diffHrs = (exit.getTime() - entry.getTime()) / (1000 * 60 * 60)
+          totalRetrievalTime += Math.max(0, diffHrs)
+          retrievedCount++
+        }
       }
     })
 
     const avgTime = retrievedCount > 0 ? (totalRetrievalTime / retrievedCount).toFixed(1) : '0'
 
     return { todayCount, pendingCount, avgTime, monthCount }
-  }, [parcels])
+  }, [recebimentos])
 
   const chartData = useMemo(() => {
     const data = []
     const today = new Date()
     for (let i = 29; i >= 0; i--) {
       const date = subDays(today, i)
-      const count = parcels.filter((p) => isSameDay(new Date(p.entry_date), date)).length
+      const count = recebimentos.filter((p) => {
+        const entryStr = p.data_criacao || p.created
+        return entryStr && isSameDay(new Date(entryStr), date)
+      }).length
       data.push({
         date: format(date, 'dd/MM'),
         count,
       })
     }
     return data
-  }, [parcels])
+  }, [recebimentos])
 
   if (loading) {
     return (
