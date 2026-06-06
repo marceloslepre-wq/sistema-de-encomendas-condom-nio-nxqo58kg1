@@ -41,7 +41,14 @@ export default function GestorLogistica() {
   }, [])
 
   const handleAddVolumeType = async () => {
-    if (!newVolumeType.trim()) return
+    if (!newVolumeType.trim()) {
+      toast({
+        title: 'Aviso',
+        description: 'Digite um nome para o tipo de volume.',
+        variant: 'destructive',
+      })
+      return
+    }
     setLoading(true)
     try {
       await pb.collection('volume_types').create({ name: newVolumeType })
@@ -67,7 +74,10 @@ export default function GestorLogistica() {
   }
 
   const handleAddShelfLocation = async () => {
-    if (!newShelfLocation.trim()) return
+    if (!newShelfLocation.trim()) {
+      toast({ title: 'Aviso', description: 'Digite um nome para o local.', variant: 'destructive' })
+      return
+    }
     setLoading(true)
     try {
       await pb.collection('shelf_locations').create({ name: newShelfLocation })
@@ -117,7 +127,7 @@ export default function GestorLogistica() {
                   onChange={(e) => setNewVolumeType(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddVolumeType()}
                 />
-                <Button onClick={handleAddVolumeType} disabled={loading || !newVolumeType.trim()}>
+                <Button onClick={handleAddVolumeType} disabled={loading}>
                   {loading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
@@ -177,10 +187,7 @@ export default function GestorLogistica() {
                   onChange={(e) => setNewShelfLocation(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddShelfLocation()}
                 />
-                <Button
-                  onClick={handleAddShelfLocation}
-                  disabled={loading || !newShelfLocation.trim()}
-                >
+                <Button onClick={handleAddShelfLocation} disabled={loading}>
                   {loading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
