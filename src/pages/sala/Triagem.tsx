@@ -109,7 +109,7 @@ export default function SalaTriagem() {
 
   const expandedRows = useMemo(() => {
     return recebimentos.flatMap((r: any) => {
-      const count = r.volumes && r.volumes > 0 ? r.volumes : 1
+      const count = r.volumes && parseInt(r.volumes as any) > 0 ? parseInt(r.volumes as any) : 1
       const statuses = r.volume_statuses || {}
       return Array.from({ length: count }).map((_, i) => {
         const volIndex = i + 1
@@ -124,30 +124,39 @@ export default function SalaTriagem() {
     })
   }, [recebimentos])
 
-  const handleStatusChange = async (id: string, volIndex: number, status: string) => {
-    const recebimento = recebimentos.find((r) => r.id === id)
+  const handleStatusChange = async (vol: ExpandedVolume) => {
+    const recebimento = recebimentos.find((r) => r.id === vol.id)
     if (!recebimento) return
 
     const currentStatuses = recebimento.volume_statuses || {}
-    const updatedStatuses = { ...currentStatuses, [volIndex]: status }
-    const total = recebimento.volumes || 1
+    const updatedStatuses = { ...currentStatuses, [vol._volumeIndex]: 'Em sala de encomendas' }
+    const total = parseInt((recebimento.volumes as any) || '1')
 
-    const isAllProcessed = Array.from({ length: total }).every(
-      (_, i) => updatedStatuses[i + 1] === 'Processado' || updatedStatuses[i + 1] === 'Entregue',
-    )
+    const dataAtualizacao = new Date().toISOString()
 
     try {
       const updateData: any = {
         volume_statuses: updatedStatuses,
-        status: isAllProcessed ? 'LIBERADO_RETIRADA' : 'EM_TRIAGEM',
+        status: 'EM_TRIAGEM',
       }
-      if (isAllProcessed && recebimento.status !== 'LIBERADO_RETIRADA') {
-        updateData.data_hora_liberado = new Date().toISOString()
-      }
-      await updateRecebimentoAuditoria(id, updateData)
+
+      await updateRecebimentoAuditoria(vol.id, updateData)
+
+      await pb.collection('historico_andamento').create({
+        recebimento_id: vol.id,
+        status: 'Em sala de encomendas',
+        data_atualizacao: dataAtualizacao,
+        observacoes: `Volume ${vol._volumeIndex}/${total} recebido na sala de encomendas`,
+      })
+
+      console.log('Status alterado para Em sala de encomendas:', {
+        unidade: vol.unidade,
+        data_atualizacao: dataAtualizacao,
+      })
+
       toast({
         title: 'Status Atualizado',
-        description: `Volume ${volIndex}/${total} atualizado para ${status}.`,
+        description: `Volume ${vol._volumeIndex}/${total} atualizado para Em sala de encomendas.`,
       })
       loadData()
     } catch (error) {
@@ -277,8 +286,6 @@ export default function SalaTriagem() {
               <TableRow>
                 <TableHead className="pl-6">Unidade</TableHead>
                 <TableHead>Morador</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Telefone</TableHead>
                 <TableHead>Volume #</TableHead>
                 <TableHead>Transportadora</TableHead>
                 <TableHead>Status</TableHead>
@@ -292,30 +299,33 @@ export default function SalaTriagem() {
                   <TableCell>
                     {vol._matchedMorador?.nome || vol.morador || vol.morador_nome || 'N/D'}
                   </TableCell>
-                  <TableCell>{vol._matchedMorador?.email || 'N/D'}</TableCell>
-                  <TableCell>{vol._matchedMorador?.telefone || 'N/D'}</TableCell>
                   <TableCell className="font-mono text-muted-foreground whitespace-nowrap">
                     {vol._volumeIndex}/{vol._totalVolumes}
                   </TableCell>
                   <TableCell>{vol.transportadora || vol.carrier || 'N/D'}</TableCell>
                   <TableCell>
-                    <Select
-                      value={vol._volumeStatus}
-                      onValueChange={(val) => handleStatusChange(vol.id, vol._volumeIndex, val)}
-                    >
-                      <SelectTrigger className="w-[160px] h-8 bg-background">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Pendente">Pendente</SelectItem>
-                        <SelectItem value="Em Processamento">Em Processamento</SelectItem>
-                        <SelectItem value="Processado">Processado</SelectItem>
-                        <SelectItem value="Entregue">Entregue</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {vol._volumeStatus === 'Pendente' ? (
+                      <Select onValueChange={() => handleStatusChange(vol)}>
+                        <SelectTrigger className="w-[260px] h-8 bg-background">
+                          <SelectValue placeholder="Selecione o status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Recebido sala de encomendas">
+                            Recebido sala de encomendas
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="text-sm font-medium text-primary">{vol._volumeStatus}</span>
+                    )}
                   </TableCell>
                   <TableCell className="pr-6">
-                    <Button size="sm" variant="outline" onClick={() => handleStartTriage(vol)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleStartTriage(vol)}
+                      disabled={vol._volumeStatus !== 'Em sala de encomendas'}
+                    >
                       <Settings className="w-4 h-4 mr-2" />
                       Processar
                     </Button>

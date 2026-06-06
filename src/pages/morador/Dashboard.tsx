@@ -5,6 +5,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Package, CalendarClock, Clock } from 'lucide-react'
+import { HorizontalTimeline } from '@/components/Timeline'
 import { useAuth } from '@/hooks/use-auth'
 import { RecebimentoAuditoria } from '@/services/api'
 import useRealtime from '@/hooks/use-realtime'
@@ -75,6 +76,7 @@ export default function MoradorDashboard() {
         console.log('Histórico carregado:', [])
         setHistorico([])
       }
+      console.log('Dashboard atualizado com novo status')
     } catch (erro) {
       console.log('ERRO:', erro)
       console.error('Erro ao buscar encomendas', erro)
@@ -105,6 +107,14 @@ export default function MoradorDashboard() {
     return historico
       .filter((h) => h.recebimento_id === pkgId)
       .sort((a, b) => new Date(a.created).getTime() - new Date(b.created).getTime())
+  }
+
+  const getCurrentStep = (pkg: RecebimentoAuditoria, history: HistoricoAndamento[]) => {
+    if (pkg.status === 'RETIRADO') return 4
+    if (pkg.status === 'LIBERADO_RETIRADA') return 2
+    const hasEmSala = history.some((h) => h.status === 'Em sala de encomendas')
+    if (pkg.status === 'EM_TRIAGEM' || hasEmSala) return 1
+    return 0
   }
 
   return (
@@ -228,13 +238,16 @@ export default function MoradorDashboard() {
                         </div>
                       )}
 
-                      {pkgHistory.length > 0 && (
-                        <div className="mt-6 pt-6 border-t border-border/50">
-                          <h4 className="text-sm font-semibold mb-4 flex items-center gap-2 text-muted-foreground">
-                            <Clock className="w-4 h-4" />
-                            Histórico de Andamento
-                          </h4>
-                          <div className="flex flex-col space-y-4 relative ml-2">
+                      <div className="mt-6 pt-6 border-t border-border/50">
+                        <h4 className="text-sm font-semibold mb-6 flex items-center gap-2 text-muted-foreground">
+                          <Clock className="w-4 h-4" />
+                          Acompanhamento
+                        </h4>
+                        <div className="px-4">
+                          <HorizontalTimeline currentStep={getCurrentStep(pkg, pkgHistory)} />
+                        </div>
+                        {pkgHistory.length > 0 && (
+                          <div className="mt-8 flex flex-col space-y-4 relative ml-2">
                             <div className="absolute left-[7px] top-2 bottom-2 w-[2px] bg-border" />
                             {pkgHistory.map((hist, idx) => {
                               const isLast = idx === pkgHistory.length - 1
@@ -270,8 +283,8 @@ export default function MoradorDashboard() {
                               )
                             })}
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 )

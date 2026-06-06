@@ -1,13 +1,13 @@
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useEffect } from 'react'
 
 export function VerticalTimeline({ currentStep }: { currentStep: number }) {
-  const steps = [
-    'Recebida na Portaria',
-    'Em Sala de Encomendas',
-    'Liberada para Retirada',
-    'Encomenda Retirada',
-  ]
+  const steps = ['Entrada', 'Em sala de encomendas', 'Liberado para retirada', 'Retirado']
+
+  useEffect(() => {
+    console.log('Timeline atualizada:', { timeline: steps })
+  }, [currentStep])
 
   return (
     <div className="flex flex-col space-y-6 relative ml-2">
@@ -51,7 +51,11 @@ export function VerticalTimeline({ currentStep }: { currentStep: number }) {
 }
 
 export function HorizontalTimeline({ currentStep }: { currentStep: number }) {
-  const steps = ['Recebido', 'Triagem', 'Liberado', 'Retirado']
+  const steps = ['Entrada', 'Em sala de encomendas', 'Liberado para retirada', 'Retirado']
+
+  useEffect(() => {
+    console.log('Timeline atualizada:', { timeline: steps })
+  }, [currentStep])
 
   return (
     <div className="flex items-center justify-between w-full">
