@@ -19,6 +19,7 @@ export default function CadastroMorador() {
 
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -30,14 +31,15 @@ export default function CadastroMorador() {
   })
 
   useEffect(() => {
-    if (!torreParam || !unidadeParam) {
-      setError('Parâmetros de torre e unidade não encontrados na URL.')
-      return
-    }
-
     const torre = torreParam
     const unidade = unidadeParam
+    console.log('URL params:', { torre, unidade })
     console.log('Formulário carregado:', { torre, unidade })
+
+    if (!torreParam || !unidadeParam) {
+      setError('Torre e Unidade não foram informadas')
+      return
+    }
   }, [torreParam, unidadeParam])
 
   const maskCPF = (value: string) => {
@@ -59,16 +61,44 @@ export default function CadastroMorador() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const cleanCpf = formData.cpf.replace(/\D/g, '')
+    const cleanPhone = formData.telefone.replace(/\D/g, '')
+
+    console.log('Validando campos:', {
+      email: formData.email,
+      cpf: cleanCpf,
+      senha_length: formData.senha.length,
+    })
+
+    const errors: Record<string, string> = {}
+    if (!formData.email.includes('@')) {
+      errors.email = 'Email inválido'
+    }
+    if (cleanCpf.length !== 11) {
+      errors.cpf = 'CPF deve ter 11 dígitos'
+    }
+    if (formData.senha.length < 8) {
+      errors.senha = 'Senha deve ter no mínimo 8 caracteres'
+    }
     if (formData.senha !== formData.confirmarSenha) {
-      toast({ title: 'Erro', description: 'As senhas não coincidem.', variant: 'destructive' })
+      errors.confirmarSenha = 'Senhas não conferem'
+    }
+
+    setFieldErrors(errors)
+
+    if (Object.keys(errors).length > 0) {
       return
     }
 
+    console.log('Enviando cadastro:', {
+      email: formData.email,
+      torre: torreParam,
+      unidade: unidadeParam,
+    })
+
     setSubmitting(true)
     try {
-      const cleanCpf = formData.cpf.replace(/\D/g, '')
-      const cleanPhone = formData.telefone.replace(/\D/g, '')
-
       // Create auth user
       await pb.collection('users').create({
         name: formData.nome,
@@ -108,9 +138,9 @@ export default function CadastroMorador() {
       navigate('/morador/dashboard')
     } catch (erro: any) {
       console.log('ERRO ao cadastrar:', erro)
-      const fieldErrors = extractFieldErrors(erro)
+      const apiErrors = extractFieldErrors(erro)
       const msg =
-        Object.values(fieldErrors).join(', ') ||
+        Object.values(apiErrors).join(', ') ||
         erro.message ||
         'Verifique os dados informados, o CPF ou Email podem já estar em uso.'
       toast({
@@ -192,7 +222,9 @@ export default function CadastroMorador() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="seu@email.com"
+                className={fieldErrors.email ? 'border-destructive' : ''}
               />
+              {fieldErrors.email && <p className="text-sm text-destructive">{fieldErrors.email}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -216,7 +248,9 @@ export default function CadastroMorador() {
                   onChange={(e) => setFormData({ ...formData, cpf: maskCPF(e.target.value) })}
                   placeholder="000.000.000-00"
                   maxLength={14}
+                  className={fieldErrors.cpf ? 'border-destructive' : ''}
                 />
+                {fieldErrors.cpf && <p className="text-sm text-destructive">{fieldErrors.cpf}</p>}
               </div>
             </div>
 
@@ -229,8 +263,11 @@ export default function CadastroMorador() {
                   value={formData.senha}
                   onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
                   placeholder="********"
-                  minLength={8}
+                  className={fieldErrors.senha ? 'border-destructive' : ''}
                 />
+                {fieldErrors.senha && (
+                  <p className="text-sm text-destructive">{fieldErrors.senha}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Confirmar Senha</Label>
@@ -240,12 +277,15 @@ export default function CadastroMorador() {
                   value={formData.confirmarSenha}
                   onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value })}
                   placeholder="********"
-                  minLength={8}
+                  className={fieldErrors.confirmarSenha ? 'border-destructive' : ''}
                 />
+                {fieldErrors.confirmarSenha && (
+                  <p className="text-sm text-destructive">{fieldErrors.confirmarSenha}</p>
+                )}
               </div>
             </div>
 
-            <Button type="submit" className="w-full mt-6" disabled={submitting}>
+            <Button type="submit" className="w-full mt-6" disabled={submitting || !!error}>
               {submitting ? 'Cadastrando...' : 'Cadastrar'}
             </Button>
           </form>
