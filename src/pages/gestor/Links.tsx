@@ -169,6 +169,12 @@ export default function GestorLinks() {
                 </Select>
               </div>
 
+              {selectedTower && selectedApartment && (
+                <div className="text-sm font-medium text-slate-700 bg-slate-100 p-2 rounded text-center">
+                  Torre: {selectedTower} | Unidade: {selectedApartment}
+                </div>
+              )}
+
               <Button
                 type="submit"
                 className="w-full mt-4"
