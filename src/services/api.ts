@@ -34,10 +34,13 @@ export const getUsers = () => pb.collection('users').getFullList({ sort: '-creat
 export const updateUser = (id: string, data: any) => {
   const payload: any = {}
 
-  if (data.name !== undefined) payload.name = data.name
-  if (data.email !== undefined) payload.email = data.email
-  if (data.phone !== undefined) payload.phone = data.phone
-  if (data.role !== undefined) payload.role = data.role
+  const allowedFields = ['name', 'email', 'phone', 'role']
+
+  allowedFields.forEach((field) => {
+    if (field in data) {
+      payload[field] = data[field]
+    }
+  })
 
   if (data.password && String(data.password).trim() !== '') {
     payload.password = data.password
@@ -50,10 +53,13 @@ export const updateUser = (id: string, data: any) => {
 export const adminUpdateUser = (id: string, data: any) => {
   const payload: any = {}
 
-  if (data.name !== undefined) payload.name = data.name
-  if (data.email !== undefined) payload.email = data.email
-  if (data.phone !== undefined) payload.phone = data.phone
-  if (data.role !== undefined) payload.role = data.role
+  const allowedFields = ['name', 'email', 'phone', 'role']
+
+  allowedFields.forEach((field) => {
+    if (field in data) {
+      payload[field] = data[field]
+    }
+  })
 
   if (data.password && String(data.password).trim() !== '') {
     payload.password = data.password
@@ -70,10 +76,13 @@ export const adminUpdateUser = (id: string, data: any) => {
 export const createUser = (data: any) => {
   const payload: any = {}
 
-  if (data.name !== undefined) payload.name = data.name
-  if (data.email !== undefined) payload.email = data.email
-  if (data.phone !== undefined) payload.phone = data.phone
-  if (data.role !== undefined) payload.role = data.role
+  const allowedFields = ['name', 'email', 'phone', 'role']
+
+  allowedFields.forEach((field) => {
+    if (field in data) {
+      payload[field] = data[field]
+    }
+  })
 
   if (data.password && String(data.password).trim() !== '') {
     payload.password = data.password

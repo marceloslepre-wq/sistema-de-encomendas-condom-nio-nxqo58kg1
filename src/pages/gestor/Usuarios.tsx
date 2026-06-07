@@ -135,11 +135,18 @@ export default function GestorUsuarios() {
     setFieldErrors({})
 
     try {
-      const dataToSave: any = {
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        role: formData.role,
+      const dataToSave: any = {}
+
+      if (editingUser) {
+        if (formData.name !== (editingUser.name || '')) dataToSave.name = formData.name
+        if (formData.email !== (editingUser.email || '')) dataToSave.email = formData.email
+        if (formData.phone !== (editingUser.phone || '')) dataToSave.phone = formData.phone
+        if (formData.role !== (editingUser.role || '')) dataToSave.role = formData.role
+      } else {
+        dataToSave.name = formData.name
+        dataToSave.email = formData.email
+        dataToSave.phone = formData.phone
+        dataToSave.role = formData.role
       }
 
       if (formData.password && formData.password.trim() !== '') {
@@ -148,7 +155,10 @@ export default function GestorUsuarios() {
       }
 
       if (editingUser) {
-        await adminUpdateUser(editingUser.id, dataToSave)
+        // Submit only if fields actually changed
+        if (Object.keys(dataToSave).length > 0) {
+          await adminUpdateUser(editingUser.id, dataToSave)
+        }
         toast({
           title: 'Sucesso',
           description: 'Usuário atualizado com sucesso.',
