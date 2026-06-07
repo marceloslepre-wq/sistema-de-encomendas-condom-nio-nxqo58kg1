@@ -19,7 +19,7 @@ routerAdd(
       // avoiding lexicographical issues with 'T' in ISO dates.
       const records = $app.findRecordsByFilter(
         'whatsapp_verifications',
-        'phone = {:phone} && used = false && expires_at > @now',
+        'phone = {:phone} && verified = false && expires > @now',
         '-created',
         1,
         0,
@@ -33,19 +33,18 @@ routerAdd(
       const verifRecord = records[0]
 
       if (verifRecord.getInt('attempts') >= 5) {
-        return e.badRequestError('Límite de tentativas excedido. Solicite um novo código.')
+        return e.badRequestError('Limite de tentativas excedido. Solicite um novo código.')
       }
 
       const storedCode = verifRecord.getString('code')
 
-      // Strict exact match comparison: case-sensitive and spacing-sensitive
       if (storedCode !== code.trim()) {
         verifRecord.set('attempts', verifRecord.getInt('attempts') + 1)
         $app.save(verifRecord)
-        return e.badRequestError('Código inválido. Tente novamente.')
+        return e.badRequestError('Código inválido ou expirado. Tente novamente.')
       }
 
-      verifRecord.set('used', true)
+      verifRecord.set('verified', true)
       $app.save(verifRecord)
 
       return e.json(200, { success: true })

@@ -14,15 +14,25 @@ routerAdd(
   (e) => {
     try {
       const body = e.requestInfo().body || {}
-      const { phone, message, codigo } = body
+      const { phone } = body
+      let message = body.message
+      let codigo = body.codigo
 
       console.log(`Hook recebido: ${JSON.stringify({ phone, message })}`)
 
-      if (!phone || !message || !codigo) {
+      if (!phone) {
         return e.json(200, {
           success: false,
-          message: 'Parâmetros phone, message e codigo são obrigatórios.',
+          message: 'O parâmetro phone é obrigatório.',
         })
+      }
+
+      if (!codigo) {
+        codigo = Math.floor(100000 + Math.random() * 900000).toString()
+      }
+
+      if (!message) {
+        message = `Seu código de validação: ${codigo}`
       }
 
       const apiUrl = $secrets.get('EVOLUTION_API_URL')
@@ -64,8 +74,8 @@ routerAdd(
 
         const expires = new Date()
         expires.setMinutes(expires.getMinutes() + 15)
-        verifRecord.set('expires_at', expires.toISOString().replace('T', ' '))
-        verifRecord.set('used', false)
+        verifRecord.set('expires', expires.toISOString())
+        verifRecord.set('verified', false)
         verifRecord.set('attempts', 0)
 
         $app.save(verifRecord)

@@ -250,7 +250,11 @@ export default function PortariaRegistro() {
             morador: moradorNome,
             volume: tickets[i],
             transportadora: carrier,
-            status: 'ENTRADA_PORTARIA',
+            status: isCodeVerified
+              ? 'Validado'
+              : bypassValidation
+                ? 'Aprovação Manual'
+                : 'ENTRADA_PORTARIA',
             unidade_id: group.unitId,
             morador_id: userId || '',
             entregador_nome: courierName,
@@ -300,19 +304,21 @@ export default function PortariaRegistro() {
 
             if (!messageSent) {
               const message = `Sua encomenda (${totalVols} volume${totalVols > 1 ? 's' : ''}) chegou na portaria`
-              const phone_morador = payload.celular_validacao
+              const phone_morador = resident.telefone
 
               console.log('Enviando notificação para morador:', { phone_morador, message })
 
-              try {
-                const resposta = await pb.send('/backend/v1/enviar-notificacao-morador', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ phone: phone_morador, message }),
-                })
-                console.log('Resposta notificação:', resposta)
-              } catch (erro) {
-                console.log('ERRO notificação:', erro)
+              if (phone_morador) {
+                try {
+                  const resposta = await pb.send('/backend/v1/enviar-notificacao-morador', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: phone_morador, message }),
+                  })
+                  console.log('Resposta notificação:', resposta)
+                } catch (erro) {
+                  console.log('ERRO notificação:', erro)
+                }
               }
               messageSent = true
             }
@@ -393,20 +399,13 @@ export default function PortariaRegistro() {
 
     setIsSendingCode(true)
 
-    const generatedCode = Math.floor(100000 + Math.random() * 900000).toString()
-    const message = `Seu código de validação: ${generatedCode}`
-
-    console.log('Enviando para entregador:', {
-      phone: digits,
-      message,
-      codigo: generatedCode,
-    })
+    console.log('Enviando para entregador:', { phone: digits })
 
     try {
       const responseBody = await pb.send('/backend/v1/enviar-codigo-whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: digits, message, codigo: generatedCode }),
+        body: JSON.stringify({ phone: digits }),
       })
 
       console.log('Resposta hook:', responseBody)
@@ -417,7 +416,7 @@ export default function PortariaRegistro() {
           description:
             responseBody.message ||
             responseBody.error ||
-            'Falha ao comunicar com a API do WhatsApp.',
+            'Falha ao enviar WhatsApp. Verifique a conexão ou o número.',
           variant: 'destructive',
         })
         setIsCodeSent(false)
@@ -466,7 +465,7 @@ export default function PortariaRegistro() {
       setIsCodeVerified(true)
 
       toast({
-        title: 'Código Verificado',
+        title: 'Código validado com sucesso!',
         description: 'A autorização foi confirmada com sucesso.',
         className: 'bg-success text-white',
       })
@@ -474,7 +473,7 @@ export default function PortariaRegistro() {
       console.error('Verify API Failure Logging:', err)
       toast({
         title: 'Erro na Verificação',
-        description: 'Código inválido. Tente novamente.',
+        description: 'Código inválido ou expirado',
         variant: 'destructive',
       })
       setIsVerifyingCode(false)
