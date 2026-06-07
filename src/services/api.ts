@@ -77,11 +77,6 @@ export const createCarrier = (data: any) => pb.collection('carriers').create(dat
 export const updateCarrier = (id: string, data: any) => pb.collection('carriers').update(id, data)
 export const deleteCarrier = (id: string) => pb.collection('carriers').delete(id)
 
-export const getLinks = () =>
-  pb.collection('invitation_links').getFullList({ expand: 'unit_id', sort: '-created' })
-
-export const createLink = (data: any) => pb.collection('invitation_links').create(data)
-
 export const getParcels = () =>
   pb
     .collection('recebimentos_auditoria')
@@ -147,12 +142,6 @@ export type Carrier = RecordModel & {
   name: string
   phone?: string
 }
-
-export const getInvitationLinkByToken = (token: string) =>
-  pb.collection('invitation_links').getFirstListItem(`token="${token}"`, { expand: 'unit_id' })
-
-export const updateInvitationLink = (id: string, data: any) =>
-  pb.collection('invitation_links').update(id, data)
 
 export const getUnitParcels = (unitId: string, page = 1, filter = '') =>
   pb.collection('recebimentos_auditoria').getList<any>(page, 20, {

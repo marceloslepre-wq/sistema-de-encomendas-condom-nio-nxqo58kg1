@@ -2,7 +2,6 @@ import { Link, useLocation } from 'react-router-dom'
 import {
   Package,
   Users,
-  Link as LinkIcon,
   BarChart3,
   Settings,
   QrCode,
@@ -39,7 +38,6 @@ export function AppSidebar() {
           { title: 'Unidades', url: '/gestor/unidades', icon: Home },
           { title: 'Moradores', url: '/gestor/moradores', icon: Users },
           { title: 'Transportadoras', url: '/gestor/transportadoras', icon: Truck },
-          { title: 'Gerar Links', url: '/gestor/links', icon: LinkIcon },
           { title: 'Relatórios', url: '/gestor/relatorios', icon: FileText },
           { title: 'Logística', url: '/gestor/logistica', icon: Box },
           { title: 'Permissões', url: '/gestor/permissoes', icon: Shield },
@@ -64,6 +62,7 @@ export function AppSidebar() {
   }
 
   const links = getLinks()
+  console.log("Aba 'Gerar Links' deletada")
 
   return (
     <Sidebar>

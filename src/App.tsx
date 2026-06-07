@@ -8,14 +8,12 @@ import Layout from './components/Layout'
 import Index from './pages/Index'
 import NotFound from './pages/NotFound'
 import Cadastro from './pages/Cadastro'
-import CadastroMorador from './pages/CadastroMorador'
 
 // Gestor Pages
 import GestorDashboard from './pages/gestor/Dashboard'
 import GestorUsuarios from './pages/gestor/Usuarios'
 import GestorMoradores from './pages/gestor/Moradores'
 import GestorUnidades from './pages/gestor/Unidades'
-import GestorLinks from './pages/gestor/Links'
 import GestorRelatorios from './pages/gestor/Relatorios'
 import GestorConfiguracoes from './pages/gestor/Configuracoes'
 import GestorPermissoes from './pages/gestor/Permissoes'
@@ -80,7 +78,6 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/cadastro" element={<Cadastro />} />
-          <Route path="/cadastro-morador" element={<CadastroMorador />} />
 
           <Route element={<Layout />}>
             <Route
@@ -120,14 +117,6 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="gestor">
                   <GestorMoradores />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/gestor/links"
-              element={
-                <ProtectedRoute requiredRole="gestor">
-                  <GestorLinks />
                 </ProtectedRoute>
               }
             />
