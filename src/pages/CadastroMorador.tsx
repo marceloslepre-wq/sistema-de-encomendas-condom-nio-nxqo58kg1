@@ -65,11 +65,11 @@ export default function CadastroMorador() {
     const cleanCpf = formData.cpf.replace(/\D/g, '')
     const cleanPhone = formData.telefone.replace(/\D/g, '')
 
-    console.log('Validando campos:', {
-      email: formData.email,
-      cpf: cleanCpf,
-      senha_length: formData.senha.length,
-    })
+    const email = formData.email
+    const cpf = cleanCpf
+    const senha_length = formData.senha.length
+
+    console.log('Validando campos:', { email, cpf, senha_length })
 
     const errors: Record<string, string> = {}
     if (!formData.email.includes('@')) {
@@ -92,7 +92,7 @@ export default function CadastroMorador() {
     }
 
     console.log('Enviando cadastro:', {
-      email: formData.email,
+      email,
       torre: torreParam,
       unidade: unidadeParam,
     })
@@ -100,6 +100,7 @@ export default function CadastroMorador() {
     setSubmitting(true)
     try {
       // Create auth user
+      // The server hook on_user_after_create_morador will handle the sync with moradores
       await pb.collection('users').create({
         name: formData.nome,
         phone: cleanPhone,
@@ -112,20 +113,9 @@ export default function CadastroMorador() {
         cpf: cleanCpf,
       })
 
-      // Authenticate user to get permissions to create morador record
+      // Authenticate user
       await pb.collection('users').authWithPassword(formData.email, formData.senha)
 
-      // Create morador record (now authenticated as 'morador')
-      await pb.collection('moradores').create({
-        nome: formData.nome,
-        email: formData.email,
-        cpf: cleanCpf,
-        telefone: cleanPhone,
-        torre: torreParam,
-        apartamento: unidadeParam,
-      })
-
-      const email = formData.email
       const torre = torreParam
       const unidade = unidadeParam
       console.log('Morador cadastrado:', { email, torre, unidade })
@@ -136,12 +126,12 @@ export default function CadastroMorador() {
       })
 
       navigate('/morador/dashboard')
-    } catch (erro: any) {
-      console.log('ERRO ao cadastrar:', erro)
-      const apiErrors = extractFieldErrors(erro)
+    } catch (error: any) {
+      console.log('ERRO ao cadastrar:', error)
+      const apiErrors = extractFieldErrors(error)
       const msg =
         Object.values(apiErrors).join(', ') ||
-        erro.message ||
+        error.message ||
         'Verifique os dados informados, o CPF ou Email podem já estar em uso.'
       toast({
         title: 'Erro no cadastro',
@@ -152,22 +142,6 @@ export default function CadastroMorador() {
       setSubmitting(false)
     }
   }
-
-  if (error)
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-neutralBg">
-        <Card className="w-full max-w-lg">
-          <CardContent className="pt-6 flex flex-col items-center text-center space-y-4">
-            <AlertCircle className="w-12 h-12 text-destructive" />
-            <h2 className="text-xl font-bold">Acesso Negado</h2>
-            <p className="text-muted-foreground">{error}</p>
-            <Button asChild>
-              <Link to="/">Voltar ao Início</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-neutralBg">
@@ -182,6 +156,12 @@ export default function CadastroMorador() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {error && (
+            <div className="mb-4 p-4 rounded-md bg-destructive/10 text-destructive flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              <span>{error}</span>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4 opacity-70">
               <div className="space-y-2">
