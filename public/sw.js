@@ -29,6 +29,7 @@ self.addEventListener('fetch', (event) => {
   if (
     event.request.url.includes('/api/') ||
     event.request.url.includes('/backend/v1/') ||
+    event.request.url.includes('/backend/v1/enviar-codigo-whatsapp') ||
     event.request.url.includes('goskip.dev')
   ) {
     return

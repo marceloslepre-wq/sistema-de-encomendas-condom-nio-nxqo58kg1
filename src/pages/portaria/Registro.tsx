@@ -415,18 +415,31 @@ export default function PortariaRegistro() {
       if (!responseBody.success) {
         let errorMsg = responseBody.message || responseBody.error || 'Falha ao enviar WhatsApp.'
 
-        if (responseBody.status === 401 || responseBody.status === 403) {
+        if (
+          responseBody.code === 401 ||
+          responseBody.code === 403 ||
+          responseBody.status === 401 ||
+          responseBody.status === 403
+        ) {
           errorMsg = 'Acesso não autorizado na API Evolution. Verifique as credenciais.'
         } else if (
           errorMsg.toLowerCase().includes('not connected') ||
           errorMsg.toLowerCase().includes('disconnect')
         ) {
-          errorMsg = 'Instância desconectada.'
+          errorMsg = 'Instância desconectada do WhatsApp.'
+        }
+
+        let detailStr = ''
+        if (responseBody.details) {
+          detailStr =
+            typeof responseBody.details === 'object'
+              ? JSON.stringify(responseBody.details)
+              : String(responseBody.details)
         }
 
         toast({
-          title: 'Erro na API WhatsApp',
-          description: `Erro na API: ${errorMsg}`,
+          title: 'Erro no Envio via WhatsApp',
+          description: detailStr ? `${errorMsg} (Detalhes: ${detailStr})` : errorMsg,
           variant: 'destructive',
         })
         setIsCodeSent(false)

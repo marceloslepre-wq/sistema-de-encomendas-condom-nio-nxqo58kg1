@@ -24,6 +24,8 @@ routerAdd(
         return e.json(200, {
           success: false,
           message: 'O parâmetro phone é obrigatório.',
+          details: null,
+          code: 400,
         })
       }
 
@@ -44,6 +46,8 @@ routerAdd(
         return e.json(200, {
           success: false,
           message: 'Serviço de WhatsApp não configurado corretamente.',
+          details: { missingSecrets: true },
+          code: 500,
         })
       }
 
@@ -86,13 +90,10 @@ routerAdd(
         return e.json(200, {
           success: false,
           message: 'Falha ao salvar código de verificação internamente.',
+          details: String(err),
+          code: 500,
         })
       }
-
-      const logCol = $app.findCollectionByNameOrId('whatsapp_logs')
-      const logRecord = new Record(logCol)
-      logRecord.set('phone', exactPhone)
-      logRecord.set('message', message)
 
       let isSuccess = false
       let parsedJson = null
@@ -106,6 +107,8 @@ routerAdd(
           text: message,
         })
 
+        $app.logger().info('Evolution API Request', 'url', url, 'payload', payloadStr)
+
         const res = $http.send({
           url: url,
           method: 'POST',
@@ -118,6 +121,10 @@ routerAdd(
         isSuccess = statusCode >= 200 && statusCode < 300
         parsedJson = res.json || {}
 
+        $app
+          .logger()
+          .info('Evolution API Response', 'status', statusCode, 'body', JSON.stringify(parsedJson))
+
         console.log(`Resposta Evolution: ${JSON.stringify(parsedJson)}`)
 
         if (!isSuccess) {
@@ -126,15 +133,21 @@ routerAdd(
           )
         }
       } catch (err) {
+        $app.logger().error('Evolution API Failure', 'error', err.message || String(err))
         console.log(`ERRO Evolution: ${err.message || String(err)}`)
         parsedJson = { error: err.message || String(err) }
         statusCode = 500
       }
 
-      logRecord.set('status_code', statusCode)
-      logRecord.set('success', isSuccess)
-      logRecord.set('response_body', isSuccess ? { ...parsedJson, successUrl: url } : parsedJson)
       try {
+        const logCol = $app.findCollectionByNameOrId('whatsapp_logs')
+        const logRecord = new Record(logCol)
+        logRecord.set('phone', exactPhone)
+        logRecord.set('message', message)
+        logRecord.set('status_code', statusCode)
+        logRecord.set('success', isSuccess)
+        logRecord.set('response_body', isSuccess ? { ...parsedJson, successUrl: url } : parsedJson)
+
         $app.save(logRecord)
       } catch (err) {
         $app.logger().error('Failed to save whatsapp_logs', 'error', err.message || String(err))
@@ -191,12 +204,22 @@ routerAdd(
         }
       }
 
-      return e.json(200, { success: false, message: errorMsg, status: statusCode })
+      return e.json(200, {
+        success: false,
+        message: errorMsg,
+        details: parsedJson,
+        code: statusCode,
+      })
     } catch (err) {
       $app
         .logger()
         .error('Unexpected error in enviar-codigo-whatsapp', 'error', err.message || String(err))
-      return e.json(200, { success: false, message: 'Erro interno ao processar a solicitação.' })
+      return e.json(200, {
+        success: false,
+        message: err.message || 'Erro interno ao processar a solicitação.',
+        details: String(err),
+        code: 500,
+      })
     }
   },
   $apis.requireAuth(),
