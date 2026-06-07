@@ -15,7 +15,6 @@ export default function CadastroMorador() {
   const torreParam = searchParams.get('torre') || ''
   const unidadeParam = searchParams.get('unidade') || ''
   const token = searchParams.get('token') || ''
-  const condoId = searchParams.get('condo') || ''
 
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -86,15 +85,11 @@ export default function CadastroMorador() {
       // Create auth user
       await pb.collection('users').create({
         name: formData.nome,
-        cpf: cleanCpf,
         phone: cleanPhone,
         email: formData.email,
         password: formData.senha,
         passwordConfirm: formData.confirmarSenha,
         role: 'morador',
-        status: 'Ativo',
-        unit_id: linkData.unit_id,
-        token: token,
       })
 
       // Create morador record
@@ -117,6 +112,11 @@ export default function CadastroMorador() {
         email: formData.email,
         torre: torreParam,
         unidade: unidadeParam,
+      })
+
+      toast({
+        title: 'Cadastro realizado!',
+        description: 'Seu cadastro foi concluído com sucesso.',
       })
 
       navigate('/morador/dashboard')

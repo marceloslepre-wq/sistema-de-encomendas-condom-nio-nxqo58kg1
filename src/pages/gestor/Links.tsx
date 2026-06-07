@@ -18,34 +18,21 @@ import { format, isValid } from 'date-fns'
 
 export default function GestorLinks() {
   const { toast } = useToast()
-  const [condos, setCondos] = useState<any[]>([])
   const [units, setUnits] = useState<any[]>([])
   const [links, setLinks] = useState<any[]>([])
-  const [selectedCondo, setSelectedCondo] = useState('')
-  const [selectedRole, setSelectedRole] = useState('')
   const [selectedTower, setSelectedTower] = useState('')
   const [selectedUnitId, setSelectedUnitId] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
 
-  const roles = [
-    { value: 'gestor', label: 'Gestor' },
-    { value: 'porteiro', label: 'Porteiro' },
-    { value: 'portaria', label: 'Portaria' },
-    { value: 'triagem', label: 'Triagem' },
-    { value: 'morador', label: 'Morador' },
-  ]
-
   useEffect(() => {
     Promise.all([
-      pb.collection('condos').getFullList(),
-      pb.collection('units').getFullList({ sort: 'tower,apartment' }),
+      pb.collection('units').getFullList({ sort: 'tower,apartment', expand: 'condo_id' }),
       pb
         .collection('invitation_links')
         .getFullList({ expand: 'condo_id,unit_id', sort: '-created' }),
     ])
-      .then(([c, u, l]) => {
-        setCondos(c)
+      .then(([u, l]) => {
         setUnits(u)
         setLinks(l)
         setLoading(false)
@@ -58,35 +45,35 @@ export default function GestorLinks() {
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedCondo || !selectedRole) return
-    if (selectedRole === 'morador' && (!selectedTower || !selectedUnitId)) return
+    if (!selectedTower || !selectedUnitId) return
+
+    const unit = units.find((u) => u.id === selectedUnitId)
+    if (!unit) return
 
     const token = Math.random().toString(36).substring(2, 10).toUpperCase()
 
     try {
       const newLink = await pb.collection('invitation_links').create({
-        condo_id: selectedCondo,
-        role: selectedRole,
+        condo_id: unit.condo_id,
+        role: 'morador',
         token,
         used: false,
-        unit_id: selectedRole === 'morador' ? selectedUnitId : null,
+        unit_id: selectedUnitId,
       })
-      const condo = condos.find((c) => c.id === selectedCondo)
-      const unit = units.find((u) => u.id === selectedUnitId)
 
-      const linkWithCondo = { ...newLink, expand: { condo_id: condo, unit_id: unit } }
+      const linkWithCondo = {
+        ...newLink,
+        expand: {
+          condo_id: unit.expand?.condo_id,
+          unit_id: unit,
+        },
+      }
       setLinks([linkWithCondo, ...links])
       toast({ title: 'Link gerado com sucesso!', description: 'O link está pronto para uso.' })
 
-      if (selectedRole === 'morador' && unit) {
-        const linkUrl = `${window.location.origin}/cadastro-morador?torre=${unit.tower}&unidade=${unit.apartment}&token=${token}&condo=${selectedCondo}`
-        console.log('Link gerado:', { torre: unit.tower, unidade: unit.apartment, link: linkUrl })
-      } else {
-        const linkUrl = `${window.location.origin}/cadastro?token=${token}`
-        console.log('Link gerado:', { role: selectedRole, link: linkUrl })
-      }
+      const linkUrl = `${window.location.origin}/cadastro-morador?torre=${unit.tower}&unidade=${unit.apartment}&token=${token}`
+      console.log('Link gerado:', { torre: unit.tower, unidade: unit.apartment, link: linkUrl })
 
-      setSelectedRole('')
       setSelectedTower('')
       setSelectedUnitId('')
     } catch (err: any) {
@@ -98,7 +85,7 @@ export default function GestorLinks() {
   const getLinkUrl = (l: any) => {
     if (l.role === 'morador' && l.expand?.unit_id) {
       const unit = l.expand.unit_id
-      return `${window.location.origin}/cadastro-morador?torre=${unit.tower}&unidade=${unit.apartment}&token=${l.token}&condo=${l.condo_id}`
+      return `${window.location.origin}/cadastro-morador?torre=${unit.tower}&unidade=${unit.apartment}&token=${l.token}`
     }
     return `${window.location.origin}/cadastro?token=${l.token}`
   }
@@ -118,9 +105,8 @@ export default function GestorLinks() {
     }
   }
 
-  const filteredUnits = units.filter((u) => u.condo_id === selectedCondo)
-  const availableTowers = Array.from(new Set(filteredUnits.map((u) => u.tower))).sort()
-  const availableApartments = filteredUnits
+  const availableTowers = Array.from(new Set(units.map((u) => u.tower))).sort()
+  const availableApartments = units
     .filter((u) => u.tower === selectedTower)
     .sort((a, b) => a.apartment.localeCompare(b.apartment))
 
@@ -153,7 +139,7 @@ export default function GestorLinks() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-primary">Geração de Links</h2>
         <p className="text-muted-foreground">
-          Crie links de convite para cadastrar novos usuários e moradores.
+          Crie links de convite para cadastrar novos moradores.
         </p>
       </div>
 
@@ -161,110 +147,63 @@ export default function GestorLinks() {
         <Card>
           <CardHeader>
             <CardTitle>Novo Convite</CardTitle>
-            <CardDescription>Gere um link seguro de uso único.</CardDescription>
+            <CardDescription>Gere um link seguro de uso único para moradores.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleGenerate} className="space-y-4">
               <div className="space-y-2">
-                <Label>Condomínio</Label>
-                <Select value={selectedCondo} onValueChange={setSelectedCondo}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o Condomínio" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {condos.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Perfil de Acesso</Label>
+                <Label>Torre</Label>
                 <Select
-                  value={selectedRole}
+                  value={selectedTower}
                   onValueChange={(val) => {
-                    setSelectedRole(val)
-                    setSelectedTower('')
+                    setSelectedTower(val)
                     setSelectedUnitId('')
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o Perfil" />
+                    <SelectValue placeholder="Selecione a Torre" />
                   </SelectTrigger>
                   <SelectContent>
-                    {roles.map((r) => (
-                      <SelectItem key={r.value} value={r.value}>
-                        {r.label}
+                    {availableTowers.map((tower: string) => (
+                      <SelectItem key={tower} value={tower}>
+                        {tower}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {selectedRole === 'morador' && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Torre</Label>
-                    <Select
-                      value={selectedTower}
-                      onValueChange={(val) => {
-                        setSelectedTower(val)
-                        setSelectedUnitId('')
-                      }}
-                      disabled={!selectedCondo}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a Torre" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableTowers.map((tower: string) => (
-                          <SelectItem key={tower} value={tower}>
-                            {tower}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <div className="space-y-2">
+                <Label>Unidade</Label>
+                <Select
+                  value={selectedUnitId}
+                  onValueChange={setSelectedUnitId}
+                  disabled={!selectedTower}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a Unidade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableApartments.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.apartment}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  <div className="space-y-2">
-                    <Label>Unidade</Label>
-                    <Select
-                      value={selectedUnitId}
-                      onValueChange={setSelectedUnitId}
-                      disabled={!selectedTower}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a Unidade" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableApartments.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.apartment}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {selectedTower && selectedUnitId && (
-                    <p className="text-sm font-medium text-primary mt-2">
-                      Torre: {selectedTower} | Unidade:{' '}
-                      {units.find((u) => u.id === selectedUnitId)?.apartment}
-                    </p>
-                  )}
-                </>
+              {selectedTower && selectedUnitId && (
+                <p className="text-sm font-medium text-primary mt-2">
+                  Torre: {selectedTower} | Unidade:{' '}
+                  {units.find((u) => u.id === selectedUnitId)?.apartment}
+                </p>
               )}
 
               <Button
                 type="submit"
                 className="w-full mt-4"
-                disabled={
-                  !selectedCondo ||
-                  !selectedRole ||
-                  (selectedRole === 'morador' && (!selectedTower || !selectedUnitId))
-                }
+                disabled={!selectedTower || !selectedUnitId}
               >
                 <Link2 className="mr-2 h-4 w-4" /> Gerar Link
               </Button>
