@@ -28,7 +28,7 @@ self.addEventListener('fetch', (event) => {
   // Do not intercept API requests to PocketBase to prevent caching stale dynamic data
   if (
     event.request.url.includes('/api/') ||
-    event.request.url.includes('/backend/') ||
+    event.request.url.includes('/backend/v1/') ||
     event.request.url.includes('goskip.dev')
   ) {
     return

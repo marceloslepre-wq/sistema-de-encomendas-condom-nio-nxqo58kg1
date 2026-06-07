@@ -211,12 +211,14 @@ export default function PortariaRegistro() {
         }
 
         let userId = ''
+        let userPhone = ''
         try {
           const userRecord = await pb
             .collection('users')
             .getFirstListItem(`email="${resident.email}"`)
           if (userRecord && userRecord.id) {
             userId = userRecord.id
+            userPhone = userRecord.phone || ''
           }
         } catch (e) {
           console.log('Morador não possui cadastro de usuário ainda.')
@@ -304,7 +306,7 @@ export default function PortariaRegistro() {
 
             if (!messageSent) {
               const message = `Sua encomenda (${totalVols} volume${totalVols > 1 ? 's' : ''}) chegou na portaria`
-              const phone_morador = resident.telefone
+              const phone_morador = userPhone || resident.telefone
 
               console.log('Enviando notificação para morador:', { phone_morador, message })
 
@@ -411,10 +413,20 @@ export default function PortariaRegistro() {
       console.log('Resposta hook:', responseBody)
 
       if (!responseBody.success) {
-        const errorMsg = responseBody.message || responseBody.error || 'Falha ao enviar WhatsApp.'
+        let errorMsg = responseBody.message || responseBody.error || 'Falha ao enviar WhatsApp.'
+
+        if (responseBody.status === 401 || responseBody.status === 403) {
+          errorMsg = 'Acesso não autorizado na API Evolution. Verifique as credenciais.'
+        } else if (
+          errorMsg.toLowerCase().includes('not connected') ||
+          errorMsg.toLowerCase().includes('disconnect')
+        ) {
+          errorMsg = 'Instância desconectada.'
+        }
+
         toast({
           title: 'Erro na API WhatsApp',
-          description: `Falha ao processar o envio. ${errorMsg}`,
+          description: `Erro na API: ${errorMsg}`,
           variant: 'destructive',
         })
         setIsCodeSent(false)
@@ -425,11 +437,21 @@ export default function PortariaRegistro() {
       setIsCodeVerified(false)
       setBypassValidation(false)
       setValidationCode('')
+
+      toast({
+        title: 'Código enviado!',
+        description: 'O código de validação foi enviado via WhatsApp para o entregador.',
+        className: 'bg-success text-white',
+      })
     } catch (err: any) {
       console.log('ERRO hook:', err)
+
+      const detail =
+        err.response?.message || err.message || 'Erro interno ao processar a solicitação.'
+
       toast({
         title: 'Erro de Conexão',
-        description: 'Não foi possível conectar à API de WhatsApp.',
+        description: `Não foi possível conectar à API de WhatsApp. Detalhe: ${detail}`,
         variant: 'destructive',
       })
       setIsCodeSent(false)

@@ -131,9 +131,14 @@ routerAdd(
         statusCode = 500
       }
 
-      logRecord.set('status', isSuccess ? 'success' : 'error')
-      logRecord.set('response', isSuccess ? { ...parsedJson, successUrl: url } : parsedJson)
-      $app.save(logRecord)
+      logRecord.set('status_code', statusCode)
+      logRecord.set('success', isSuccess)
+      logRecord.set('response_body', isSuccess ? { ...parsedJson, successUrl: url } : parsedJson)
+      try {
+        $app.save(logRecord)
+      } catch (err) {
+        $app.logger().error('Failed to save whatsapp_logs', 'error', err.message || String(err))
+      }
 
       try {
         const notifCol = $app.findCollectionByNameOrId('notificacoes_enviadas')
