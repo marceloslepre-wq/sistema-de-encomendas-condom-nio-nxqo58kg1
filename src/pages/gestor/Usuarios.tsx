@@ -33,7 +33,7 @@ import { useRealtime } from '@/hooks/use-realtime'
 import {
   getUsers,
   createUser,
-  updateUser,
+  adminUpdateUser,
   deleteUser,
   getUnits,
   AppUser,
@@ -190,7 +190,7 @@ export default function GestorUsuarios() {
       }
 
       if (editingUser) {
-        await updateUser(editingUser.id, dataToSave)
+        await adminUpdateUser(editingUser.id, dataToSave)
         toast({
           title: 'Sucesso',
           description: 'Usuário atualizado com sucesso.',

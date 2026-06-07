@@ -31,16 +31,20 @@ import {
   RecebimentoAuditoria,
   getVolumeTypes,
   getShelfLocations,
-  updateParcelWithFormData,
+  updateRecebimentoAuditoria,
 } from '@/services/api'
 import useRealtime from '@/hooks/use-realtime'
 import { format } from 'date-fns'
 import pb from '@/lib/pocketbase/client'
 
+type ExpandedVolume = RecebimentoAuditoria & {
+  _matchedMorador?: any
+}
+
 export default function SalaTriagem() {
   const { toast } = useToast()
-  const [recebimentos, setRecebimentos] = useState<RecebimentoAuditoria[]>([])
-  const [selectedVolume, setSelectedVolume] = useState<RecebimentoAuditoria | null>(null)
+  const [recebimentos, setRecebimentos] = useState<ExpandedVolume[]>([])
+  const [selectedVolume, setSelectedVolume] = useState<ExpandedVolume | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
 
   const [trackingCode, setTrackingCode] = useState('')
@@ -50,16 +54,34 @@ export default function SalaTriagem() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+
   const [volumeTypes, setVolumeTypes] = useState<any[]>([])
   const [shelfLocations, setShelfLocations] = useState<any[]>([])
 
   const loadData = async () => {
     try {
+      console.log('Carregando triagem...')
       const data = await pb.collection('recebimentos_auditoria').getFullList<RecebimentoAuditoria>({
         filter: `status='ENTRADA_PORTARIA' || status='EM_TRIAGEM'`,
         sort: 'created',
       })
-      setRecebimentos(data)
+      const moradoresData = await pb.collection('moradores').getFullList<any>()
+
+      const enhancedData = data.map((parcel) => {
+        const morador = moradoresData.find((m) => {
+          if (!parcel.unidade) return false
+          const aptMatch = parcel.unidade.includes(m.apartamento)
+          const torreMatch = m.torre ? parcel.unidade.includes(m.torre) : true
+          return aptMatch && torreMatch
+        })
+
+        return {
+          ...parcel,
+          _matchedMorador: morador,
+        }
+      })
+
+      setRecebimentos(enhancedData)
       const [vTypes, sLocs] = await Promise.all([getVolumeTypes(), getShelfLocations()])
       setVolumeTypes(vTypes)
       setShelfLocations(sLocs)
@@ -74,17 +96,14 @@ export default function SalaTriagem() {
 
   useRealtime('recebimentos_auditoria', () => loadData())
 
-  const handleStatusChange = async (vol: RecebimentoAuditoria) => {
+  const handleStatusChange = async (vol: ExpandedVolume) => {
     try {
-      await pb.collection('recebimentos_auditoria').update(vol.id, { status: 'EM_TRIAGEM' })
-      await pb.collection('historico_andamento').create({
-        recebimento_id: vol.id,
-        status: 'Em sala de encomendas',
-        observacoes: `Volume ${vol.volume || '1'} recebido na sala de encomendas`,
+      await updateRecebimentoAuditoria(vol.id, {
+        status: 'EM_TRIAGEM',
       })
       toast({
         title: 'Status Atualizado',
-        description: `Volume atualizado para Em sala de encomendas.`,
+        description: `Volume ${vol.volume} atualizado para Em sala de encomendas.`,
       })
       loadData()
     } catch (error) {
@@ -96,20 +115,15 @@ export default function SalaTriagem() {
     }
   }
 
-  const handleStartTriage = async (vol: RecebimentoAuditoria) => {
+  const handleStartTriage = async (vol: ExpandedVolume) => {
     try {
       let updatedVol = { ...vol }
 
       if (vol.status === 'ENTRADA_PORTARIA') {
-        const updated = await pb
-          .collection('recebimentos_auditoria')
-          .update(vol.id, { status: 'EM_TRIAGEM' })
-        await pb.collection('historico_andamento').create({
-          recebimento_id: vol.id,
-          status: 'Em sala de encomendas',
-          observacoes: `Volume ${vol.volume || '1'} recebido na sala de encomendas`,
+        const updated = await updateRecebimentoAuditoria(vol.id, {
+          status: 'EM_TRIAGEM',
         })
-        updatedVol = { ...updatedVol, ...updated }
+        updatedVol = { ...updatedVol, ...updated, status: 'EM_TRIAGEM' }
       }
 
       setSelectedVolume(updatedVol)
@@ -128,35 +142,35 @@ export default function SalaTriagem() {
     if (!selectedVolume) return
     setIsSubmitting(true)
     try {
-      console.log(
-        `Processando ticket: { volume_numero: '${selectedVolume.volume || '1'}', rastreio_local: '${trackingCode}', tipo_volume: '${volumeType}' }`,
-      )
+      console.log('Processando ticket:', {
+        volume_numero: selectedVolume.volume,
+        rastreio_local: trackingCode,
+        tipo_volume: volumeType,
+      })
 
-      const code = Math.floor(100000 + Math.random() * 900000).toString()
+      const formData = new FormData()
+      formData.append('status', 'LIBERADO_RETIRADA')
 
-      const formDataUpdate = new FormData()
-      formDataUpdate.append('status', 'LIBERADO_RETIRADA')
-      formDataUpdate.append('codigo_validacao', code)
-      if (trackingCode) formDataUpdate.append('codigo_rastreio', trackingCode)
-      if (photo) formDataUpdate.append('photo', photo)
+      const codigo_retirada = Math.floor(100000 + Math.random() * 900000).toString()
+      formData.append('codigo_retirada', codigo_retirada)
 
-      const currentObs = selectedVolume.observacoes || ''
-      formDataUpdate.append(
-        'observacoes',
-        `${currentObs} | Tipo: ${volumeType} | Local: ${shelfLocation}`,
-      )
+      if (trackingCode) formData.append('codigo_rastreio', trackingCode)
+      if (volumeType) formData.append('volume_type', volumeType)
+      if (shelfLocation) formData.append('shelf_location', shelfLocation)
+      if (photo) formData.append('photo', photo)
 
-      await updateParcelWithFormData(selectedVolume.id, formDataUpdate)
+      await pb.collection('recebimentos_auditoria').update(selectedVolume.id, formData)
 
       await pb.collection('historico_andamento').create({
         recebimento_id: selectedVolume.id,
-        status: 'Liberado para retirada',
-        observacoes: `Processado na triagem (Tipo: ${volumeType}, Local: ${shelfLocation})`,
+        status: 'LIBERADO_RETIRADA',
+        observacoes: `Código gerado: ${codigo_retirada}`,
       })
 
-      console.log(
-        `Ticket salvo e movido para Validar Retirada: { volume_numero: '${selectedVolume.volume || '1'}' }`,
-      )
+      console.log('Código de retirada gerado:', {
+        volume_numero: selectedVolume.volume,
+        codigo_retirada,
+      })
 
       toast({ title: 'Sucesso', description: 'Volume liberado para retirada.' })
       setDialogOpen(false)
@@ -207,7 +221,9 @@ export default function SalaTriagem() {
               {recebimentos.map((vol) => (
                 <TableRow key={vol.id}>
                   <TableCell className="pl-6 font-medium">{vol.unidade || 'N/D'}</TableCell>
-                  <TableCell>{vol.morador || 'N/D'}</TableCell>
+                  <TableCell>
+                    {vol._matchedMorador?.nome || vol.morador || vol.entregador_nome || 'N/D'}
+                  </TableCell>
                   <TableCell className="font-mono text-muted-foreground whitespace-nowrap">
                     {vol.volume || '1'}
                   </TableCell>
@@ -219,9 +235,7 @@ export default function SalaTriagem() {
                           <SelectValue placeholder="Pendente" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Recebido sala de encomendas">
-                            Recebido sala de encomendas
-                          </SelectItem>
+                          <SelectItem value="EM_TRIAGEM">Recebido sala de encomendas</SelectItem>
                         </SelectContent>
                       </Select>
                     ) : (
@@ -232,7 +246,8 @@ export default function SalaTriagem() {
                   </TableCell>
                   <TableCell className="pr-6">
                     <Button size="sm" variant="outline" onClick={() => handleStartTriage(vol)}>
-                      <Settings className="w-4 h-4 mr-2" /> Processar
+                      <Settings className="w-4 h-4 mr-2" />
+                      Processar
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -253,8 +268,7 @@ export default function SalaTriagem() {
         <DialogContent className="max-w-2xl print:hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-primary" /> Processar Volume{' '}
-              {selectedVolume?.volume || '1'}
+              <Package className="h-5 w-5 text-primary" /> Processar Volume {selectedVolume?.volume}
             </DialogTitle>
             <DialogDescription>
               Unidade: {selectedVolume?.unidade} | Morador: {selectedVolume?.morador || 'N/D'}
@@ -329,8 +343,8 @@ export default function SalaTriagem() {
                   <Printer className="w-4 h-4 mr-2" /> Imprimir Etiqueta
                 </Button>
                 <p className="text-xs text-muted-foreground mt-3 text-center">
-                  A etiqueta será gerada especificamente para o volume{' '}
-                  {selectedVolume?.volume || '1'}.
+                  A etiqueta será gerada especificamente para este volume ({selectedVolume?.volume}
+                  ).
                 </p>
               </div>
 
@@ -360,7 +374,7 @@ export default function SalaTriagem() {
               {selectedVolume.morador || 'Morador'}
             </p>
             <p className="text-xs font-bold uppercase mt-2 text-black">
-              LOC: {shelfLocation} | VOL: {selectedVolume.volume || '1'}
+              LOC: {shelfLocation} | VOL: {selectedVolume.volume}
             </p>
             <p className="text-[10px] text-gray-600 font-medium">{volumeType}</p>
             <p className="text-[10px] text-gray-500 mt-2">

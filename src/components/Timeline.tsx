@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 import { useEffect } from 'react'
 
 export function VerticalTimeline({ currentStep }: { currentStep: number }) {
-  const steps = ['Entrada', 'Em sala de encomendas', 'Liberado para retirada', 'Retirado']
+  const steps = ['Entrada', 'Em sala de encomendas', 'Liberado para retirada', 'Entregue']
 
   useEffect(() => {
     console.log('Timeline atualizada:', { timeline: steps })
@@ -51,7 +51,7 @@ export function VerticalTimeline({ currentStep }: { currentStep: number }) {
 }
 
 export function HorizontalTimeline({ currentStep }: { currentStep: number }) {
-  const steps = ['Entrada', 'Em sala de encomendas', 'Liberado para retirada', 'Retirado']
+  const steps = ['Entrada', 'Em sala de encomendas', 'Liberado para retirada', 'Entregue']
 
   useEffect(() => {
     console.log('Timeline atualizada:', { timeline: steps })

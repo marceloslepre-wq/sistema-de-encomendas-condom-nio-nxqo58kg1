@@ -33,6 +33,11 @@ export const getUsers = () =>
   pb.collection('users').getFullList({ expand: 'unit_id', sort: '-created' })
 
 export const updateUser = (id: string, data: any) => pb.collection('users').update(id, data)
+export const adminUpdateUser = (id: string, data: any) =>
+  pb.send(`/backend/v1/admin/users/${id}`, {
+    method: 'PATCH',
+    body: data,
+  })
 export const createUser = (data: any) => pb.collection('users').create(data)
 export const deleteUser = (id: string) => pb.collection('users').delete(id)
 
@@ -99,6 +104,7 @@ export type Parcel = RecordModel & {
 
   shelf_location?: string
   volume_type?: string
+  codigo_retirada?: string
 }
 
 export type Unit = RecordModel & {
@@ -143,6 +149,7 @@ export type RecebimentoAuditoria = RecordModel & {
   unidade_id?: string
   morador_id?: string
   recebido_por?: string
+  codigo_retirada?: string
 }
 
 export type AppUser = RecordModel & {

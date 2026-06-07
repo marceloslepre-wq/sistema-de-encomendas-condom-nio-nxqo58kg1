@@ -181,6 +181,7 @@ export function RecebimentosTable({ refreshTrigger = 0 }: { refreshTrigger?: num
                               'Recebido',
                               'ENTRADA_PORTARIA',
                               'LIBERADO_RETIRADA',
+                              'ENTREGUE',
                             ].includes(r.status)
                               ? 'bg-primary/10 text-primary'
                               : r.status === 'EM_TRIAGEM'

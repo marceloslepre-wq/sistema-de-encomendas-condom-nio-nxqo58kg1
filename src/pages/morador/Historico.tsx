@@ -84,7 +84,11 @@ export default function MoradorHistorico() {
                   </div>
                   <div className="flex items-center justify-between md:flex-col md:items-end gap-2">
                     <Badge
-                      variant={pkg.status === 'RETIRADO' ? 'outline' : 'default'}
+                      variant={
+                        pkg.status === 'RETIRADO' || pkg.status === 'ENTREGUE'
+                          ? 'outline'
+                          : 'default'
+                      }
                       className="uppercase text-xs"
                     >
                       {pkg.status.replace(/_/g, ' ')}

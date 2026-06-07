@@ -14,6 +14,7 @@ export default function SalaRetirada() {
   const [parcels, setParcels] = useState<any[]>([])
   const [search, setSearch] = useState('')
   const [selectedParcel, setSelectedParcel] = useState<any | null>(null)
+  const [enteredCode, setEnteredCode] = useState('')
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -42,29 +43,46 @@ export default function SalaRetirada() {
 
   const handleSelect = (p: any) => {
     setSelectedParcel(p)
+    setEnteredCode('')
   }
 
   const handleValidate = async () => {
     if (!selectedParcel) return
+
+    if (selectedParcel.codigo_retirada) {
+      console.log('Validando código:', {
+        codigo_inserido: enteredCode,
+        codigo_esperado: selectedParcel.codigo_retirada,
+      })
+      if (enteredCode !== selectedParcel.codigo_retirada) {
+        console.log('ERRO: Código inválido')
+        toast({ title: 'Erro', description: 'Código inválido.', variant: 'destructive' })
+        return
+      }
+    }
+
     setIsSubmitting(true)
     try {
       await pb.collection('recebimentos_auditoria').update(selectedParcel.id, {
-        status: 'RETIRADO',
+        status: 'ENTREGUE',
       })
 
       await pb.collection('historico_andamento').create({
         recebimento_id: selectedParcel.id,
-        status: 'Retirado',
+        status: 'ENTREGUE',
         observacoes: 'Entregue ao morador',
       })
 
+      console.log('Código validado, status = Entregue:', { volume_numero: selectedParcel.volume })
+
       toast({
         title: 'Sucesso',
-        description: 'Encomenda retirada com sucesso!',
+        description: 'Encomenda entregue com sucesso!',
         className: 'bg-success text-white',
       })
       setSelectedParcel(null)
       setSearch('')
+      setEnteredCode('')
       loadData()
     } catch (err) {
       toast({ title: 'Erro', description: 'Falha ao processar retirada.', variant: 'destructive' })
@@ -155,6 +173,21 @@ export default function SalaRetirada() {
                       {selectedParcel.volume || 1}
                     </span>
                   </div>
+
+                  {selectedParcel.codigo_retirada && (
+                    <div className="mt-6 w-full text-left space-y-2">
+                      <label className="text-sm font-semibold text-muted-foreground ml-1">
+                        Código de Retirada
+                      </label>
+                      <Input
+                        placeholder="Digite o código de 6 dígitos"
+                        value={enteredCode}
+                        onChange={(e) => setEnteredCode(e.target.value)}
+                        className="text-center text-xl tracking-widest font-mono h-12"
+                        maxLength={6}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <Button

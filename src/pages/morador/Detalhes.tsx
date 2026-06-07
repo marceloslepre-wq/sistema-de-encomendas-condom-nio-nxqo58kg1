@@ -37,7 +37,7 @@ export default function MoradorDetalhes() {
 
   if (!pkg) return <div className="p-8 text-center">Carregando...</div>
 
-  const withdrawalToken = pkg.id.substring(0, 6).toUpperCase()
+  const withdrawalToken = pkg.codigo_retirada || pkg.id.substring(0, 6).toUpperCase()
 
   const copyToken = () => {
     navigator.clipboard.writeText(withdrawalToken)
@@ -61,24 +61,25 @@ export default function MoradorDetalhes() {
         <h2 className="text-2xl font-bold tracking-tight">Detalhes do Pacote</h2>
       </div>
 
-      {pkg.status === 'DISPONIVEL_RETIRADA' && (
-        <Card className="border-primary shadow-md overflow-hidden relative">
-          <div className="bg-primary p-6 text-center text-primary-foreground relative z-10">
-            <p className="text-sm opacity-80 mb-2">CÓDIGO DE RETIRADA</p>
-            <div className="text-5xl font-black tracking-widest font-mono mb-4">
-              {withdrawalToken}
+      {(pkg.status === 'DISPONIVEL_RETIRADA' || pkg.status === 'LIBERADO_RETIRADA') &&
+        pkg.codigo_retirada && (
+          <Card className="border-primary shadow-md overflow-hidden relative">
+            <div className="bg-primary p-6 text-center text-primary-foreground relative z-10">
+              <p className="text-sm opacity-80 mb-2">CÓDIGO DE RETIRADA</p>
+              <div className="text-5xl font-black tracking-widest font-mono mb-4">
+                {withdrawalToken}
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={copyToken}
+                className="font-semibold text-primary"
+              >
+                <Copy className="h-4 w-4 mr-2" /> Copiar Código
+              </Button>
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={copyToken}
-              className="font-semibold text-primary"
-            >
-              <Copy className="h-4 w-4 mr-2" /> Copiar Código
-            </Button>
-          </div>
-        </Card>
-      )}
+          </Card>
+        )}
 
       {pkg.photo && (
         <Card className="overflow-hidden shadow-sm">

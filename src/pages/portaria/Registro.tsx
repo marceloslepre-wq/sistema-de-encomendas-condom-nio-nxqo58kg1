@@ -230,21 +230,25 @@ export default function PortariaRegistro() {
           throw new Error('Código de validação está ausente.')
         }
 
-        const totalVolumes = group.volumes
-        const groupId = crypto.randomUUID()
-        const tickets = Array.from({ length: totalVolumes }).map(
-          (_, i) => `${i + 1}/${totalVolumes}`,
-        )
-        console.log(
-          `Criando tickets: { entrada_id: '${groupId}', total_volumes: ${totalVolumes}, tickets: [${tickets.map((t) => `'${t}'`).join(', ')}] }`,
-        )
+        const totalVols = group.volumes
+        const tickets =
+          totalVols > 1
+            ? Array.from({ length: totalVols }).map((_, i) => `${i + 1}/${totalVols}`)
+            : ['1']
 
-        for (let i = 0; i < totalVolumes; i++) {
-          const volumeLabel = `${i + 1}/${totalVolumes}`
+        console.log('Criando tickets:', {
+          entrada_id: 'gerado-na-criacao',
+          total_volumes: totalVols,
+          tickets,
+        })
+
+        let messageSent = false
+
+        for (let i = 0; i < totalVols; i++) {
           const payload: Record<string, any> = {
             unidade: unidadeStr,
             morador: moradorNome,
-            volume: volumeLabel,
+            volume: tickets[i],
             transportadora: carrier,
             status: 'ENTRADA_PORTARIA',
             unidade_id: group.unitId,
@@ -261,33 +265,56 @@ export default function PortariaRegistro() {
             payload.recebido_por = pb.authStore.record.id
           }
 
+          console.log(
+            'Database Submission Logging:',
+            JSON.stringify(
+              {
+                unidade: payload.unidade,
+                morador: payload.morador,
+                volume: payload.volume,
+                fullPayload: payload,
+              },
+              null,
+              2,
+            ),
+          )
+
           try {
             const record = await pb.collection('recebimentos_auditoria').create(payload)
+            console.log(
+              'Database Confirmation Logging:',
+              JSON.stringify(
+                {
+                  id: record.id,
+                  timestamp: new Date().toISOString(),
+                },
+                null,
+                2,
+              ),
+            )
 
-            await pb.collection('historico_andamento').create({
-              recebimento_id: record.id,
-              status: 'Entrada',
-              observacoes: 'Registrado na portaria',
-            })
+            const unidade = payload.unidade
+            const morador = payload.morador
+            const volume = payload.volume
+            console.log('Entrada registrada:', { unidade, morador, volume })
 
-            console.log('Entrada registrada:', {
-              unidade: payload.unidade,
-              morador: payload.morador,
-              volume: payload.volume,
-            })
-
-            if (i === 0) {
-              const message = `Sua encomenda chegou na portaria (Total: ${totalVolumes} volumes)`
+            if (!messageSent) {
+              const message = `Sua encomenda (${totalVols} volume${totalVols > 1 ? 's' : ''}) chegou na portaria`
               const phone_morador = payload.celular_validacao
+
+              console.log('Enviando notificação para morador:', { phone_morador, message })
+
               try {
-                await pb.send('/backend/v1/enviar-notificacao-morador', {
+                const resposta = await pb.send('/backend/v1/enviar-notificacao-morador', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ phone: phone_morador, message }),
                 })
+                console.log('Resposta notificação:', resposta)
               } catch (erro) {
                 console.log('ERRO notificação:', erro)
               }
+              messageSent = true
             }
           } catch (dbErr: any) {
             console.error('Database Failure Logging:', dbErr)
