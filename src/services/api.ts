@@ -33,11 +33,25 @@ export const getUsers = () =>
   pb.collection('users').getFullList({ expand: 'unit_id', sort: '-created' })
 
 export const updateUser = (id: string, data: any) => pb.collection('users').update(id, data)
-export const adminUpdateUser = (id: string, data: any) =>
-  pb.send(`/backend/v1/admin/users/${id}`, {
+export const adminUpdateUser = (id: string, data: any) => {
+  const payload: any = {
+    name: data.name,
+    email: data.email,
+    phone: data.phone,
+    role: data.role,
+  }
+
+  if (data.password) {
+    payload.password = data.password
+    payload.passwordConfirm = data.passwordConfirm || data.password
+  }
+
+  return pb.send(`/backend/v1/admin/users/${id}`, {
     method: 'PATCH',
-    body: data,
+    body: JSON.stringify(payload),
+    headers: { 'Content-Type': 'application/json' },
   })
+}
 export const createUser = (data: any) => pb.collection('users').create(data)
 export const deleteUser = (id: string) => pb.collection('users').delete(id)
 

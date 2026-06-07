@@ -174,19 +174,13 @@ export default function GestorUsuarios() {
       const dataToSave: any = {
         name: formData.name,
         email: formData.email,
-        cpf: formData.cpf,
         phone: formData.phone,
         role: formData.role,
-        status: formData.status,
-        unit_id: formData.role === 'morador' ? formData.unit_id : null,
       }
 
       if (formData.password && formData.password.trim() !== '') {
         dataToSave.password = formData.password
         dataToSave.passwordConfirm = formData.password
-      } else {
-        delete dataToSave.password
-        delete dataToSave.passwordConfirm
       }
 
       if (editingUser) {
