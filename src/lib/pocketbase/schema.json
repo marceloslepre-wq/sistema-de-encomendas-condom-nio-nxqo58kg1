@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-07T17:28:12.374Z",
+  "generatedAt": "2026-06-07T17:39:45.352Z",
   "collections": [
     {
       "name": "users",
@@ -706,6 +706,52 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "generated_links",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.role = 'gestor' || @request.auth.role = 'admin'",
+        "view": "@request.auth.role = 'gestor' || @request.auth.role = 'admin'",
+        "create": "@request.auth.role = 'gestor' || @request.auth.role = 'admin'",
+        "update": "@request.auth.role = 'gestor' || @request.auth.role = 'admin'",
+        "delete": "@request.auth.role = 'gestor' || @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "torre",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "unidade",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "link",
+          "type": "text",
+          "required": true,
+          "system": false
         },
         {
           "name": "created",
