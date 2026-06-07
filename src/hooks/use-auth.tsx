@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import pb from '@/lib/pocketbase/client'
 import { AppUser } from '@/services/api'
 
-export type UserRole = 'gestor' | 'portaria' | 'triagem' | 'morador' | null
+export type UserRole = 'gestor' | 'portaria' | 'porteiro' | 'triagem' | 'morador' | null
 
 interface AuthContextType {
   user: AppUser | null

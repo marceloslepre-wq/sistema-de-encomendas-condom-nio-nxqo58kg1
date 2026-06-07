@@ -52,14 +52,18 @@ const ProtectedRoute = ({
   if (!isAuthenticated || !user) return <Navigate to="/" replace />
 
   if (requiredRole && role !== requiredRole) {
+    const isPortariaGroup = ['portaria', 'triagem', 'porteiro']
     if (
-      (requiredRole === 'portaria' || requiredRole === 'triagem') &&
-      (role === 'portaria' || role === 'triagem')
+      requiredRole &&
+      isPortariaGroup.includes(requiredRole) &&
+      role &&
+      isPortariaGroup.includes(role)
     ) {
       // allow interchangeable access based on layout needs
     } else {
       if (role === 'gestor') return <Navigate to="/gestor/dashboard" replace />
-      if (role === 'portaria') return <Navigate to="/portaria/registro" replace />
+      if (role === 'portaria' || role === 'porteiro')
+        return <Navigate to="/portaria/registro" replace />
       if (role === 'triagem') return <Navigate to="/sala/triagem" replace />
       if (role === 'morador') return <Navigate to="/morador/dashboard" replace />
       return <Navigate to="/" replace />

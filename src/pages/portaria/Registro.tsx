@@ -245,6 +245,22 @@ export default function PortariaRegistro() {
         })
 
         let messageSent = false
+        const status = isCodeVerified
+          ? 'Validado'
+          : bypassValidation
+            ? 'Aprovação Manual'
+            : 'ENTRADA_PORTARIA'
+        const observacaoAuditoria = isCodeVerified
+          ? `Validação: ${codValidado} | Celular Entregador: ${courierPhone.replace(/\D/g, '')}`
+          : bypassValidation
+            ? `Aprovação Manual | Celular Entregador: ${courierPhone.replace(/\D/g, '')}`
+            : `Entrada registrada na portaria | Celular Entregador: ${courierPhone.replace(/\D/g, '')}`
+
+        const observacaoHistorico = isCodeVerified
+          ? 'Validado via WhatsApp'
+          : bypassValidation
+            ? 'Aprovação Manual sem validação via WhatsApp'
+            : 'Entrada registrada na portaria'
 
         for (let i = 0; i < totalVols; i++) {
           const payload: Record<string, any> = {
@@ -252,17 +268,13 @@ export default function PortariaRegistro() {
             morador: moradorNome,
             volume: tickets[i],
             transportadora: carrier,
-            status: isCodeVerified
-              ? 'Validado'
-              : bypassValidation
-                ? 'Aprovação Manual'
-                : 'ENTRADA_PORTARIA',
+            status: status,
             unidade_id: group.unitId,
             morador_id: userId || '',
             entregador_nome: courierName,
             entregador_cpf: courierCpf.replace(/\D/g, ''),
             codigo_rastreio: '',
-            observacoes: `Validação: ${codValidado} | Celular Entregador: ${courierPhone.replace(/\D/g, '')}`,
+            observacoes: observacaoAuditoria,
             celular_validacao: courierPhone.replace(/\D/g, ''),
             codigo_validacao: codValidado,
           }
@@ -298,6 +310,12 @@ export default function PortariaRegistro() {
                 2,
               ),
             )
+
+            await pb.collection('historico_andamento').create({
+              recebimento_id: record.id,
+              status: status,
+              observacoes: observacaoHistorico,
+            })
 
             const unidade = payload.unidade
             const morador = payload.morador

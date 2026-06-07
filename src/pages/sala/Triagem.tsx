@@ -62,7 +62,7 @@ export default function SalaTriagem() {
     try {
       console.log('Carregando triagem...')
       const data = await pb.collection('recebimentos_auditoria').getFullList<RecebimentoAuditoria>({
-        filter: `status='ENTRADA_PORTARIA' || status='EM_TRIAGEM'`,
+        filter: `status='ENTRADA_PORTARIA' || status='EM_TRIAGEM' || status='Validado' || status='Aprovação Manual'`,
         sort: 'created',
       })
       const moradoresData = await pb.collection('moradores').getFullList<any>()
@@ -101,6 +101,11 @@ export default function SalaTriagem() {
       await updateRecebimentoAuditoria(vol.id, {
         status: 'EM_TRIAGEM',
       })
+      await pb.collection('historico_andamento').create({
+        recebimento_id: vol.id,
+        status: 'EM_TRIAGEM',
+        observacoes: 'Recebido na sala de encomendas para triagem',
+      })
       toast({
         title: 'Status Atualizado',
         description: `Volume ${vol.volume} atualizado para Em sala de encomendas.`,
@@ -119,9 +124,14 @@ export default function SalaTriagem() {
     try {
       let updatedVol = { ...vol }
 
-      if (vol.status === 'ENTRADA_PORTARIA') {
+      if (['ENTRADA_PORTARIA', 'Validado', 'Aprovação Manual'].includes(vol.status || '')) {
         const updated = await updateRecebimentoAuditoria(vol.id, {
           status: 'EM_TRIAGEM',
+        })
+        await pb.collection('historico_andamento').create({
+          recebimento_id: vol.id,
+          status: 'EM_TRIAGEM',
+          observacoes: 'Iniciada triagem e etiquetagem do volume',
         })
         updatedVol = { ...updatedVol, ...updated, status: 'EM_TRIAGEM' }
       }
@@ -229,10 +239,20 @@ export default function SalaTriagem() {
                   </TableCell>
                   <TableCell>{vol.transportadora || 'N/D'}</TableCell>
                   <TableCell>
-                    {vol.status === 'ENTRADA_PORTARIA' ? (
+                    {['ENTRADA_PORTARIA', 'Validado', 'Aprovação Manual'].includes(
+                      vol.status || '',
+                    ) ? (
                       <Select onValueChange={() => handleStatusChange(vol)}>
                         <SelectTrigger className="w-[260px] h-8 bg-background">
-                          <SelectValue placeholder="Pendente" />
+                          <SelectValue
+                            placeholder={
+                              vol.status === 'Validado'
+                                ? 'Validado'
+                                : vol.status === 'Aprovação Manual'
+                                  ? 'Aprovação Manual'
+                                  : 'Pendente'
+                            }
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="EM_TRIAGEM">Recebido sala de encomendas</SelectItem>

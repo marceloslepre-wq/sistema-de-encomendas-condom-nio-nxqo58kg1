@@ -178,6 +178,7 @@ export function RecebimentosTable({ refreshTrigger = 0 }: { refreshTrigger?: num
                           className={`text-xs px-2 py-1 rounded-md ${
                             [
                               'Validado',
+                              'Aprovação Manual',
                               'Recebido',
                               'ENTRADA_PORTARIA',
                               'LIBERADO_RETIRADA',
