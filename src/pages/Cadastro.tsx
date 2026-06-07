@@ -1,114 +1,135 @@
-import { useState, useEffect } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { Package, AlertCircle } from 'lucide-react'
-import { getInvitationLinkByToken, updateInvitationLink } from '@/services/api'
-import { ResidentForm } from '@/components/ResidentForm'
-import pb from '@/lib/pocketbase/client'
 import { useToast } from '@/hooks/use-toast'
+import { Package } from 'lucide-react'
+import { createUser } from '@/services/api'
 
 export default function Cadastro() {
-  const [searchParams] = useSearchParams()
-  const token = searchParams.get('token')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [loading, setLoading] = useState(false)
+
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [linkData, setLinkData] = useState<any>(null)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
 
-  const [submitting, setSubmitting] = useState(false)
-
-  useEffect(() => {
-    if (!token) {
-      setError('Token de convite não encontrado na URL.')
-      setLoading(false)
-      return
-    }
-
-    getInvitationLinkByToken(token)
-      .then((res) => {
-        if (res.used) setError('Este convite já foi utilizado.')
-        else if (new Date(res.expires_at) < new Date()) setError('Este convite expirou.')
-        else setLinkData(res)
-      })
-      .catch(() => setError('Convite inválido ou não encontrado.'))
-      .finally(() => setLoading(false))
-  }, [token])
-
-  const handleSubmit = async (data: any) => {
-    setSubmitting(true)
     try {
-      await pb.collection('users').create({
-        name: data.name,
-        cpf: data.cpf,
-        phone: data.phone,
-        email: data.email,
-        password: data.password,
-        passwordConfirm: data.confirm,
+      await createUser({
+        email,
+        password,
+        passwordConfirm: password,
+        name,
+        phone,
         role: 'morador',
-        status: 'Ativo',
-        unit_id: data.unit_id,
-        token: token,
       })
-      await pb.collection('users').authWithPassword(data.email, data.password)
-      await updateInvitationLink(linkData.id, { used: true })
-      navigate('/morador/dashboard')
-    } catch (err: any) {
+
       toast({
-        title: 'Erro no cadastro',
-        description: err.message || 'Verifique os dados informados, o CPF pode já estar em uso.',
+        title: 'Cadastro realizado',
+        description: 'Sua conta foi criada com sucesso. Você já pode fazer login.',
+      })
+
+      navigate('/')
+    } catch (error: any) {
+      toast({
         variant: 'destructive',
+        title: 'Erro no cadastro',
+        description: error.message || 'Ocorreu um erro ao tentar realizar o cadastro.',
       })
     } finally {
-      setSubmitting(false)
+      setLoading(false)
     }
   }
 
-  if (loading)
-    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>
-
-  if (error)
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-neutralBg">
-        <Card className="w-full max-w-lg">
-          <CardContent className="pt-6 flex flex-col items-center text-center space-y-4">
-            <AlertCircle className="w-12 h-12 text-destructive" />
-            <h2 className="text-xl font-bold">Acesso Negado</h2>
-            <p className="text-muted-foreground">{error}</p>
-            <Button asChild>
-              <Link to="/">Voltar ao Início</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-
-  const unit = linkData?.expand?.unit_id
-
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-neutralBg">
-      <Card className="w-full max-w-lg animate-slide-up">
-        <CardHeader className="text-center">
-          <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center mx-auto mb-2 text-white">
-            <Package className="h-6 w-6" />
+    <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-2 text-center">
+          <div className="flex justify-center mb-2">
+            <div className="bg-primary p-3 rounded-full">
+              <Package className="h-6 w-6 text-primary-foreground" />
+            </div>
           </div>
-          <CardTitle className="text-xl font-bold">Completar Cadastro</CardTitle>
-          <CardDescription>
-            Você foi convidado para a Torre {unit?.tower}, Apto {unit?.apartment}
-          </CardDescription>
+          <CardTitle className="text-2xl">Criar Conta</CardTitle>
+          <CardDescription>Preencha seus dados para criar sua conta no CondoPack.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <ResidentForm
-            fixedUnit={unit}
-            units={[]}
-            onSubmit={handleSubmit}
-            submitting={submitting}
-          />
-        </CardContent>
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome completo</Label>
+              <Input
+                id="name"
+                placeholder="João da Silva"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="joao@exemplo.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Telefone</Label>
+              <Input
+                id="phone"
+                placeholder="(11) 99999-9999"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+              />
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Cadastrando...' : 'Cadastrar'}
+            </Button>
+            <div className="text-sm text-center text-muted-foreground">
+              Já tem uma conta?{' '}
+              <Button
+                type="button"
+                variant="link"
+                className="p-0 h-auto font-normal"
+                onClick={() => navigate('/')}
+              >
+                Faça login
+              </Button>
+            </div>
+          </CardFooter>
+        </form>
       </Card>
     </div>
   )
