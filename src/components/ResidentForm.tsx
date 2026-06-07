@@ -1,7 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import pb from '@/lib/pocketbase/client'
+import { useRealtime } from '@/hooks/use-realtime'
 
 interface ResidentFormProps {
   initialData?: any
@@ -26,6 +35,34 @@ export function ResidentForm({
     apartamento: initialData?.apartamento || '',
     telefone: initialData?.telefone || '',
   })
+  const [units, setUnits] = useState<any[]>([])
+
+  const fetchUnits = async () => {
+    try {
+      const records = await pb.collection('units').getFullList()
+      setUnits(records)
+    } catch (err) {
+      console.error('Failed to fetch units:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchUnits()
+  }, [])
+
+  useRealtime('units', () => {
+    fetchUnits()
+  })
+
+  const towers = Array.from(new Set(units.map((u) => u.tower))).sort()
+  const apartments = units
+    .filter((u) => u.tower === formData.torre)
+    .map((u) => u.apartment)
+    .sort()
+
+  const handleTorreChange = (val: string) => {
+    setFormData((prev) => ({ ...prev, torre: val, apartamento: '' }))
+  }
 
   const maskCPF = (value: string) => {
     return value
@@ -108,22 +145,39 @@ export function ResidentForm({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Torre</Label>
-          <Input
-            required
-            value={formData.torre}
-            onChange={(e) => setFormData({ ...formData, torre: e.target.value })}
-            placeholder="A"
-          />
+          <Select value={formData.torre || undefined} onValueChange={handleTorreChange} required>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              {towers.map((tower) => (
+                <SelectItem key={tower} value={tower}>
+                  {tower}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {fieldErrors.torre && <p className="text-xs text-destructive">{fieldErrors.torre}</p>}
         </div>
         <div className="space-y-2">
           <Label>Apartamento</Label>
-          <Input
+          <Select
+            value={formData.apartamento || undefined}
+            onValueChange={(val) => setFormData({ ...formData, apartamento: val })}
+            disabled={!formData.torre}
             required
-            value={formData.apartamento}
-            onChange={(e) => setFormData({ ...formData, apartamento: e.target.value })}
-            placeholder="101"
-          />
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              {apartments.map((apt) => (
+                <SelectItem key={apt} value={apt}>
+                  {apt}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {fieldErrors.apartamento && (
             <p className="text-xs text-destructive">{fieldErrors.apartamento}</p>
           )}
@@ -136,7 +190,11 @@ export function ResidentForm({
             Cancelar
           </Button>
         )}
-        <Button type="submit" disabled={submitting} className={!onCancel ? 'w-full' : ''}>
+        <Button
+          type="submit"
+          disabled={submitting || !formData.torre || !formData.apartamento}
+          className={!onCancel ? 'w-full' : ''}
+        >
           {submitting ? 'Salvando...' : 'Salvar'}
         </Button>
       </div>
