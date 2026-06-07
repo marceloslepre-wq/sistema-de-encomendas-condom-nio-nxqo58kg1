@@ -1,41 +1,22 @@
 onRecordAfterCreateSuccess((e) => {
-  if (e.record.getString('role') !== 'morador') {
-    return e.next()
-  }
+  if (e.record.getString('role') !== 'morador') return e.next()
 
+  const moradores = $app.findCollectionByNameOrId('moradores')
+
+  let record
   try {
-    const cpf = e.record.getString('cpf')
-    let morador
-    try {
-      if (cpf) {
-        morador = $app.findFirstRecordByData('moradores', 'cpf', cpf)
-      } else {
-        throw new Error('No CPF')
-      }
-    } catch (_) {
-      const moradores = $app.findCollectionByNameOrId('moradores')
-      morador = new Record(moradores)
-    }
-
-    morador.set('nome', e.record.getString('name'))
-    morador.set('email', e.record.getString('email'))
-    morador.set('cpf', cpf)
-    morador.set('torre', e.record.getString('torre'))
-    morador.set('apartamento', e.record.getString('unidade'))
-    morador.set('telefone', e.record.getString('phone'))
-
-    $app.save(morador)
-  } catch (err) {
-    $app
-      .logger()
-      .error(
-        'Erro ao sincronizar morador após criação',
-        'error',
-        err.message,
-        'user_id',
-        e.record.id,
-      )
+    record = $app.findFirstRecordByData('moradores', 'email', e.record.getString('email'))
+  } catch (_) {
+    record = new Record(moradores)
   }
 
+  record.set('nome', e.record.getString('name'))
+  record.set('email', e.record.getString('email'))
+  record.set('telefone', e.record.getString('phone'))
+  record.set('cpf', e.record.getString('cpf'))
+  record.set('torre', e.record.getString('torre'))
+  record.set('apartamento', e.record.getString('unidade'))
+
+  $app.save(record)
   return e.next()
 }, 'users')
