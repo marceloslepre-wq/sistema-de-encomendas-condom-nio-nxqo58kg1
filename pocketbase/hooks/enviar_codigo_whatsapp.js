@@ -166,11 +166,27 @@ routerAdd(
         })
       }
 
-      const errorMsg =
-        parsedJson?.message ||
-        parsedJson?.error ||
-        'Falha de comunicação com o WhatsApp. O serviço pode estar indisponível.'
-      return e.json(200, { success: false, message: errorMsg })
+      let errorMsg = 'Falha de comunicação com o WhatsApp. O serviço pode estar indisponível.'
+
+      if (parsedJson) {
+        if (typeof parsedJson === 'string') {
+          errorMsg = parsedJson
+        } else if (parsedJson.message && typeof parsedJson.message === 'string') {
+          errorMsg = parsedJson.message
+        } else if (parsedJson.error && typeof parsedJson.error === 'string') {
+          errorMsg = parsedJson.error
+        } else if (Array.isArray(parsedJson.message)) {
+          errorMsg = parsedJson.message.join(', ')
+        } else if (parsedJson.response && typeof parsedJson.response === 'string') {
+          errorMsg = parsedJson.response
+        } else if (parsedJson.response && parsedJson.response.message) {
+          errorMsg = parsedJson.response.message
+        } else if (Object.keys(parsedJson).length > 0) {
+          errorMsg = JSON.stringify(parsedJson)
+        }
+      }
+
+      return e.json(200, { success: false, message: errorMsg, status: statusCode })
     } catch (err) {
       $app
         .logger()

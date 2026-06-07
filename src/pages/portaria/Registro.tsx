@@ -411,12 +411,10 @@ export default function PortariaRegistro() {
       console.log('Resposta hook:', responseBody)
 
       if (!responseBody.success) {
+        const errorMsg = responseBody.message || responseBody.error || 'Falha ao enviar WhatsApp.'
         toast({
-          title: 'Erro no Envio',
-          description:
-            responseBody.message ||
-            responseBody.error ||
-            'Falha ao enviar WhatsApp. Verifique a conexão ou o número.',
+          title: 'Erro na API WhatsApp',
+          description: `Falha ao processar o envio. ${errorMsg}`,
           variant: 'destructive',
         })
         setIsCodeSent(false)
@@ -471,9 +469,10 @@ export default function PortariaRegistro() {
       })
     } catch (err: any) {
       console.error('Verify API Failure Logging:', err)
+      const detail = err.response?.message || err.message || 'Código inválido ou expirado'
       toast({
         title: 'Erro na Verificação',
-        description: 'Código inválido ou expirado',
+        description: detail,
         variant: 'destructive',
       })
       setIsVerifyingCode(false)

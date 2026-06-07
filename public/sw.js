@@ -26,7 +26,17 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
 
   // Do not intercept API requests to PocketBase to prevent caching stale dynamic data
-  if (event.request.url.includes('/api/') || event.request.url.includes('/backend/')) return
+  if (
+    event.request.url.includes('/api/') ||
+    event.request.url.includes('/backend/') ||
+    event.request.url.includes('goskip.dev')
+  ) {
+    return
+  }
+
+  const url = new URL(event.request.url)
+  // Skip cross-origin requests
+  if (url.origin !== self.location.origin) return
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
