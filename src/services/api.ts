@@ -32,15 +32,33 @@ export const deleteMorador = (id: string) => pb.collection('moradores').delete(i
 export const getUsers = () =>
   pb.collection('users').getFullList({ expand: 'unit_id', sort: '-created' })
 
-export const updateUser = (id: string, data: any) => pb.collection('users').update(id, data)
-export const adminUpdateUser = (id: string, data: any) => {
-  const payload: any = { ...data }
+export const updateUser = (id: string, data: any) => {
+  const payload: any = {}
 
-  if (!payload.password || String(payload.password).trim() === '') {
-    delete payload.password
-    delete payload.passwordConfirm
-  } else {
-    payload.passwordConfirm = payload.passwordConfirm || payload.password
+  if (data.name !== undefined) payload.name = data.name
+  if (data.email !== undefined) payload.email = data.email
+  if (data.phone && String(data.phone).trim() !== '') payload.phone = data.phone
+  if (data.role !== undefined) payload.role = data.role
+
+  if (data.password && String(data.password).trim() !== '') {
+    payload.password = data.password
+    payload.passwordConfirm = data.passwordConfirm || data.password
+  }
+
+  return pb.collection('users').update(id, payload)
+}
+
+export const adminUpdateUser = (id: string, data: any) => {
+  const payload: any = {}
+
+  if (data.name !== undefined) payload.name = data.name
+  if (data.email !== undefined) payload.email = data.email
+  if (data.phone && String(data.phone).trim() !== '') payload.phone = data.phone
+  if (data.role !== undefined) payload.role = data.role
+
+  if (data.password && String(data.password).trim() !== '') {
+    payload.password = data.password
+    payload.passwordConfirm = data.passwordConfirm || data.password
   }
 
   return pb.send(`/backend/v1/admin/users/${id}`, {
@@ -49,7 +67,22 @@ export const adminUpdateUser = (id: string, data: any) => {
     headers: { 'Content-Type': 'application/json' },
   })
 }
-export const createUser = (data: any) => pb.collection('users').create(data)
+
+export const createUser = (data: any) => {
+  const payload: any = {}
+
+  if (data.name !== undefined) payload.name = data.name
+  if (data.email !== undefined) payload.email = data.email
+  if (data.phone && String(data.phone).trim() !== '') payload.phone = data.phone
+  if (data.role !== undefined) payload.role = data.role
+
+  if (data.password && String(data.password).trim() !== '') {
+    payload.password = data.password
+    payload.passwordConfirm = data.passwordConfirm || data.password
+  }
+
+  return pb.collection('users').create(payload)
+}
 export const deleteUser = (id: string) => pb.collection('users').delete(id)
 
 export const getCarriers = () => pb.collection('carriers').getFullList({ sort: 'name' })

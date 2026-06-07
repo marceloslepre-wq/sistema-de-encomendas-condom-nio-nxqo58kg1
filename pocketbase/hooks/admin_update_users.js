@@ -30,29 +30,12 @@ routerAdd(
       }
     }
 
-    if (body.cpf !== undefined && body.cpf !== record.getString('cpf') && body.cpf !== '') {
-      try {
-        const existing = $app.findFirstRecordByData('users', 'cpf', body.cpf)
-        if (existing && existing.id !== record.id) {
-          throw new BadRequestError('CPF já cadastrado.', {
-            cpf: new ValidationError('validation_not_unique', 'Este CPF já está em uso.'),
-          })
-        }
-      } catch (err) {
-        if (err instanceof BadRequestError) throw err
-      }
-    }
-
-    const allowedFields = ['name', 'cpf', 'phone', 'role', 'status', 'autoriza_retirada_terceiros']
+    const allowedFields = ['name', 'phone', 'role']
 
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
         record.set(field, body[field])
       }
-    }
-
-    if (body.unit_id !== undefined) {
-      record.set('unit_id', body.unit_id || null)
     }
 
     if (body.email !== undefined) {
