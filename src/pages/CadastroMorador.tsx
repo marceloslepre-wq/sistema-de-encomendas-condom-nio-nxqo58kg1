@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Package, AlertCircle } from 'lucide-react'
-import { getInvitationLinkByToken, updateInvitationLink } from '@/services/api'
 import pb from '@/lib/pocketbase/client'
 import { useToast } from '@/hooks/use-toast'
 import { extractFieldErrors } from '@/lib/pocketbase/errors'
@@ -14,14 +13,11 @@ export default function CadastroMorador() {
   const [searchParams] = useSearchParams()
   const torreParam = searchParams.get('torre') || ''
   const unidadeParam = searchParams.get('unidade') || ''
-  const token = searchParams.get('token') || ''
 
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [linkData, setLinkData] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const [formData, setFormData] = useState({
@@ -34,24 +30,13 @@ export default function CadastroMorador() {
   })
 
   useEffect(() => {
-    if (!token || !torreParam || !unidadeParam) {
-      setError('Parâmetros de convite não encontrados na URL.')
-      setLoading(false)
+    if (!torreParam || !unidadeParam) {
+      setError('Parâmetros de torre e unidade não encontrados na URL.')
       return
     }
 
-    console.log('Perfil carregado:', { torre: torreParam, unidade: unidadeParam })
-
-    getInvitationLinkByToken(token)
-      .then((res) => {
-        if (res.used) setError('Este convite já foi utilizado.')
-        else if (res.expires_at && new Date(res.expires_at) < new Date())
-          setError('Este convite expirou.')
-        else setLinkData(res)
-      })
-      .catch(() => setError('Convite inválido ou não encontrado.'))
-      .finally(() => setLoading(false))
-  }, [token, torreParam, unidadeParam])
+    console.log('Formulário carregado:', { torre: torreParam, unidade: unidadeParam })
+  }, [torreParam, unidadeParam])
 
   const maskCPF = (value: string) => {
     return value
@@ -105,9 +90,6 @@ export default function CadastroMorador() {
       // Authenticate user
       await pb.collection('users').authWithPassword(formData.email, formData.senha)
 
-      // Update link to used
-      await updateInvitationLink(linkData.id, { used: true })
-
       console.log('Morador cadastrado:', {
         email: formData.email,
         torre: torreParam,
@@ -136,9 +118,6 @@ export default function CadastroMorador() {
       setSubmitting(false)
     }
   }
-
-  if (loading)
-    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>
 
   if (error)
     return (
