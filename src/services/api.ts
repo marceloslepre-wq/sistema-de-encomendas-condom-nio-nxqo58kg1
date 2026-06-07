@@ -50,28 +50,7 @@ export const updateUser = (id: string, data: any) => {
   return pb.collection('users').update(id, payload)
 }
 
-export const adminUpdateUser = (id: string, data: any) => {
-  const payload: any = {}
-
-  const allowedFields = ['name', 'email', 'phone', 'role']
-
-  allowedFields.forEach((field) => {
-    if (field in data) {
-      payload[field] = data[field]
-    }
-  })
-
-  if (data.password && String(data.password).trim() !== '') {
-    payload.password = data.password
-    payload.passwordConfirm = data.passwordConfirm || data.password
-  }
-
-  return pb.send(`/backend/v1/admin/users/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(payload),
-    headers: { 'Content-Type': 'application/json' },
-  })
-}
+export const adminUpdateUser = updateUser
 
 export const createUser = (data: any) => {
   const payload: any = {}
