@@ -35,7 +35,9 @@ export default function CadastroMorador() {
       return
     }
 
-    console.log('Formulário carregado:', { torre: torreParam, unidade: unidadeParam })
+    const torre = torreParam
+    const unidade = unidadeParam
+    console.log('Formulário carregado:', { torre, unidade })
   }, [torreParam, unidadeParam])
 
   const maskCPF = (value: string) => {
@@ -75,9 +77,15 @@ export default function CadastroMorador() {
         password: formData.senha,
         passwordConfirm: formData.confirmarSenha,
         role: 'morador',
+        torre: torreParam,
+        unidade: unidadeParam,
+        cpf: cleanCpf,
       })
 
-      // Create morador record
+      // Authenticate user to get permissions to create morador record
+      await pb.collection('users').authWithPassword(formData.email, formData.senha)
+
+      // Create morador record (now authenticated as 'morador')
       await pb.collection('moradores').create({
         nome: formData.nome,
         email: formData.email,
@@ -87,14 +95,10 @@ export default function CadastroMorador() {
         apartamento: unidadeParam,
       })
 
-      // Authenticate user
-      await pb.collection('users').authWithPassword(formData.email, formData.senha)
-
-      console.log('Morador cadastrado:', {
-        email: formData.email,
-        torre: torreParam,
-        unidade: unidadeParam,
-      })
+      const email = formData.email
+      const torre = torreParam
+      const unidade = unidadeParam
+      console.log('Morador cadastrado:', { email, torre, unidade })
 
       toast({
         title: 'Cadastro realizado!',
