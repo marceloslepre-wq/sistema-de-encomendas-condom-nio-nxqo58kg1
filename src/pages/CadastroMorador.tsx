@@ -41,7 +41,7 @@ export default function CadastroMorador() {
       return
     }
 
-    console.log('Formulário carregado:', { torre: torreParam, unidade: unidadeParam })
+    console.log('Perfil carregado:', { torre: torreParam, unidade: unidadeParam })
 
     getInvitationLinkByToken(token)
       .then((res) => {
@@ -214,16 +214,6 @@ export default function CadastroMorador() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>CPF</Label>
-                <Input
-                  required
-                  value={formData.cpf}
-                  onChange={(e) => setFormData({ ...formData, cpf: maskCPF(e.target.value) })}
-                  placeholder="000.000.000-00"
-                  maxLength={14}
-                />
-              </div>
-              <div className="space-y-2">
                 <Label>Telefone</Label>
                 <Input
                   required
@@ -233,6 +223,16 @@ export default function CadastroMorador() {
                   }
                   placeholder="(00) 00000-0000"
                   maxLength={15}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>CPF</Label>
+                <Input
+                  required
+                  value={formData.cpf}
+                  onChange={(e) => setFormData({ ...formData, cpf: maskCPF(e.target.value) })}
+                  placeholder="000.000.000-00"
+                  maxLength={14}
                 />
               </div>
             </div>
