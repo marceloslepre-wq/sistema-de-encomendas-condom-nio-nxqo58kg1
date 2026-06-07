@@ -129,6 +129,15 @@ export default function CadastroMorador() {
     } catch (error: any) {
       console.log('ERRO ao cadastrar:', error)
       const apiErrors = extractFieldErrors(error)
+
+      const mappedErrors: Record<string, string> = { ...apiErrors }
+      if (apiErrors.password) mappedErrors.senha = apiErrors.password
+      if (apiErrors.passwordConfirm) mappedErrors.confirmarSenha = apiErrors.passwordConfirm
+      if (apiErrors.name) mappedErrors.nome = apiErrors.name
+      if (apiErrors.phone) mappedErrors.telefone = apiErrors.phone
+
+      setFieldErrors(mappedErrors)
+
       const msg =
         Object.values(apiErrors).join(', ') ||
         error.message ||
@@ -191,7 +200,9 @@ export default function CadastroMorador() {
                 value={formData.nome}
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 placeholder="Seu nome completo"
+                className={fieldErrors.nome ? 'border-destructive' : ''}
               />
+              {fieldErrors.nome && <p className="text-sm text-destructive">{fieldErrors.nome}</p>}
             </div>
 
             <div className="space-y-2">
@@ -218,7 +229,11 @@ export default function CadastroMorador() {
                   }
                   placeholder="(00) 00000-0000"
                   maxLength={15}
+                  className={fieldErrors.telefone ? 'border-destructive' : ''}
                 />
+                {fieldErrors.telefone && (
+                  <p className="text-sm text-destructive">{fieldErrors.telefone}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>CPF</Label>
