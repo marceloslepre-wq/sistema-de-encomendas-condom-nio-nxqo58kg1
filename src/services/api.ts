@@ -29,15 +29,14 @@ export const createMorador = (data: any) => pb.collection('moradores').create(da
 export const updateMorador = (id: string, data: any) => pb.collection('moradores').update(id, data)
 export const deleteMorador = (id: string) => pb.collection('moradores').delete(id)
 
-export const getUsers = () =>
-  pb.collection('users').getFullList({ expand: 'unit_id', sort: '-created' })
+export const getUsers = () => pb.collection('users').getFullList({ sort: '-created' })
 
 export const updateUser = (id: string, data: any) => {
   const payload: any = {}
 
   if (data.name !== undefined) payload.name = data.name
   if (data.email !== undefined) payload.email = data.email
-  if (data.phone && String(data.phone).trim() !== '') payload.phone = data.phone
+  if (data.phone !== undefined) payload.phone = data.phone
   if (data.role !== undefined) payload.role = data.role
 
   if (data.password && String(data.password).trim() !== '') {
@@ -53,7 +52,7 @@ export const adminUpdateUser = (id: string, data: any) => {
 
   if (data.name !== undefined) payload.name = data.name
   if (data.email !== undefined) payload.email = data.email
-  if (data.phone && String(data.phone).trim() !== '') payload.phone = data.phone
+  if (data.phone !== undefined) payload.phone = data.phone
   if (data.role !== undefined) payload.role = data.role
 
   if (data.password && String(data.password).trim() !== '') {
@@ -73,7 +72,7 @@ export const createUser = (data: any) => {
 
   if (data.name !== undefined) payload.name = data.name
   if (data.email !== undefined) payload.email = data.email
-  if (data.phone && String(data.phone).trim() !== '') payload.phone = data.phone
+  if (data.phone !== undefined) payload.phone = data.phone
   if (data.role !== undefined) payload.role = data.role
 
   if (data.password && String(data.password).trim() !== '') {
@@ -199,9 +198,6 @@ export type RecebimentoAuditoria = RecordModel & {
 export type AppUser = RecordModel & {
   name: string
   email: string
-  cpf: string
   phone: string
   role: string
-  status: string
-  unit_id: string
 }

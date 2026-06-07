@@ -30,25 +30,8 @@ import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { Plus, Search, Edit, Trash2, Loader2, ShieldAlert } from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
-import {
-  getUsers,
-  createUser,
-  adminUpdateUser,
-  deleteUser,
-  getUnits,
-  AppUser,
-  Unit,
-} from '@/services/api'
-import pb from '@/lib/pocketbase/client'
+import { getUsers, createUser, adminUpdateUser, deleteUser, AppUser } from '@/services/api'
 import { extractFieldErrors } from '@/lib/pocketbase/errors'
-
-const formatCpf = (value: string) => {
-  const v = value.replace(/\D/g, '').substring(0, 11)
-  return v
-    .replace(/(\d{3})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
-}
 
 const formatPhone = (value: string) => {
   const v = value.replace(/\D/g, '').substring(0, 11)
@@ -61,7 +44,6 @@ const formatPhone = (value: string) => {
 export default function GestorUsuarios() {
   const { toast } = useToast()
   const [users, setUsers] = useState<AppUser[]>([])
-  const [units, setUnits] = useState<Unit[]>([])
 
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('todos')
@@ -75,11 +57,8 @@ export default function GestorUsuarios() {
     name: '',
     email: '',
     password: '',
-    cpf: '',
     phone: '',
     role: 'morador',
-    status: 'Ativo',
-    unit_id: '',
   })
 
   useEffect(() => {
@@ -88,9 +67,8 @@ export default function GestorUsuarios() {
 
   const loadData = async () => {
     try {
-      const [usersData, unitsData] = await Promise.all([getUsers(), getUnits()])
+      const usersData = await getUsers()
       setUsers(usersData)
-      setUnits(unitsData)
     } catch (err) {
       toast({ title: 'Erro', description: 'Falha ao carregar dados.', variant: 'destructive' })
     }
@@ -103,7 +81,8 @@ export default function GestorUsuarios() {
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
       const matchSearch =
-        u.name?.toLowerCase().includes(search.toLowerCase()) || u.cpf?.includes(search)
+        u.name?.toLowerCase().includes(search.toLowerCase()) ||
+        u.email?.toLowerCase().includes(search.toLowerCase())
       const matchRole = roleFilter === 'todos' || u.role === roleFilter
       return matchSearch && matchRole
     })
@@ -117,11 +96,8 @@ export default function GestorUsuarios() {
         name: user.name || '',
         email: user.email || '',
         password: '',
-        cpf: user.cpf || '',
         phone: user.phone || '',
         role: user.role || 'morador',
-        status: user.status || 'Ativo',
-        unit_id: user.unit_id || '',
       })
     } else {
       setEditingUser(null)
@@ -129,11 +105,8 @@ export default function GestorUsuarios() {
         name: '',
         email: '',
         password: '',
-        cpf: '',
         phone: '',
         role: 'morador',
-        status: 'Ativo',
-        unit_id: '',
       })
     }
     setIsDialogOpen(true)
@@ -158,15 +131,6 @@ export default function GestorUsuarios() {
       return
     }
 
-    if (formData.role === 'morador' && !formData.unit_id) {
-      toast({
-        title: 'Atenção',
-        description: 'Selecione uma unidade para o morador.',
-        variant: 'destructive',
-      })
-      return
-    }
-
     setIsSubmitting(true)
     setFieldErrors({})
 
@@ -176,11 +140,11 @@ export default function GestorUsuarios() {
         email: formData.email,
         phone: formData.phone,
         role: formData.role,
-        cpf: formData.cpf,
-        status: formData.status,
-        unit_id: formData.unit_id,
-        password: formData.password,
-        passwordConfirm: formData.password,
+      }
+
+      if (formData.password && formData.password.trim() !== '') {
+        dataToSave.password = formData.password
+        dataToSave.passwordConfirm = formData.password
       }
 
       if (editingUser) {
@@ -228,6 +192,7 @@ export default function GestorUsuarios() {
     switch (role) {
       case 'gestor':
         return <Badge className="bg-purple-500 hover:bg-purple-600">Gestor</Badge>
+      case 'porteiro':
       case 'portaria':
         return <Badge className="bg-blue-500 hover:bg-blue-600">Portaria</Badge>
       case 'triagem':
@@ -236,31 +201,6 @@ export default function GestorUsuarios() {
         return <Badge className="bg-green-500 hover:bg-green-600">Morador</Badge>
       default:
         return <Badge variant="outline">{role}</Badge>
-    }
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'Ativo':
-        return (
-          <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-200">
-            Ativo
-          </Badge>
-        )
-      case 'Bloqueado':
-        return (
-          <Badge variant="secondary" className="bg-red-100 text-red-800 hover:bg-red-200">
-            Bloqueado
-          </Badge>
-        )
-      case 'Pendente':
-        return (
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200">
-            Pendente
-          </Badge>
-        )
-      default:
-        return <Badge variant="outline">{status}</Badge>
     }
   }
 
@@ -284,7 +224,7 @@ export default function GestorUsuarios() {
             <div className="relative w-full sm:max-w-xs">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nome ou CPF..."
+                placeholder="Buscar por nome ou e-mail..."
                 className="pl-9"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -298,6 +238,7 @@ export default function GestorUsuarios() {
                 <SelectContent>
                   <SelectItem value="todos">Todos os Perfis</SelectItem>
                   <SelectItem value="gestor">Gestor</SelectItem>
+                  <SelectItem value="porteiro">Porteiro</SelectItem>
                   <SelectItem value="portaria">Portaria</SelectItem>
                   <SelectItem value="triagem">Triagem</SelectItem>
                   <SelectItem value="morador">Morador</SelectItem>
@@ -312,16 +253,15 @@ export default function GestorUsuarios() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome e Contato</TableHead>
-                  <TableHead>CPF</TableHead>
+                  <TableHead>Telefone</TableHead>
                   <TableHead>Perfil</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                    <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
                       Nenhum usuário encontrado com os filtros atuais.
                     </TableCell>
                   </TableRow>
@@ -332,9 +272,8 @@ export default function GestorUsuarios() {
                         <div className="font-medium">{u.name || 'Sem Nome'}</div>
                         <div className="text-sm text-muted-foreground">{u.email}</div>
                       </TableCell>
-                      <TableCell>{u.cpf || '-'}</TableCell>
+                      <TableCell>{u.phone || '-'}</TableCell>
                       <TableCell>{getRoleBadge(u.role)}</TableCell>
-                      <TableCell>{getStatusBadge(u.status)}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(u)}>
                           <Edit className="w-4 h-4" />
@@ -414,17 +353,6 @@ export default function GestorUsuarios() {
             </div>
 
             <div className="space-y-2">
-              <Label>CPF</Label>
-              <Input
-                value={formData.cpf}
-                onChange={(e) => setFormData({ ...formData, cpf: formatCpf(e.target.value) })}
-                placeholder="000.000.000-00"
-                maxLength={14}
-              />
-              {fieldErrors.cpf && <p className="text-xs text-destructive">{fieldErrors.cpf}</p>}
-            </div>
-
-            <div className="space-y-2">
               <Label>Celular</Label>
               <Input
                 value={formData.phone}
@@ -448,52 +376,14 @@ export default function GestorUsuarios() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="gestor">Gestor</SelectItem>
+                  <SelectItem value="porteiro">Porteiro</SelectItem>
                   <SelectItem value="portaria">Portaria</SelectItem>
                   <SelectItem value="triagem">Triagem</SelectItem>
                   <SelectItem value="morador">Morador</SelectItem>
                 </SelectContent>
               </Select>
+              {fieldErrors.role && <p className="text-xs text-destructive">{fieldErrors.role}</p>}
             </div>
-
-            <div className="space-y-2">
-              <Label>Status da Conta</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(v) => setFormData({ ...formData, status: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Ativo">Ativo</SelectItem>
-                  <SelectItem value="Bloqueado">Bloqueado</SelectItem>
-                  <SelectItem value="Pendente">Pendente</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {formData.role === 'morador' && (
-              <div className="space-y-2 md:col-span-2">
-                <Label>
-                  Unidade Vinculada <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={formData.unit_id}
-                  onValueChange={(v) => setFormData({ ...formData, unit_id: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a unidade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.tower} - {u.apartment}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
 
             {formData.role === 'triagem' && (
               <div className="col-span-1 md:col-span-2 mt-2">
