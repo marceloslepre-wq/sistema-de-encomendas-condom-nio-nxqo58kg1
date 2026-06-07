@@ -34,16 +34,13 @@ export const getUsers = () =>
 
 export const updateUser = (id: string, data: any) => pb.collection('users').update(id, data)
 export const adminUpdateUser = (id: string, data: any) => {
-  const payload: any = {
-    name: data.name,
-    email: data.email,
-    phone: data.phone,
-    role: data.role,
-  }
+  const payload: any = { ...data }
 
-  if (data.password) {
-    payload.password = data.password
-    payload.passwordConfirm = data.passwordConfirm || data.password
+  if (!payload.password || String(payload.password).trim() === '') {
+    delete payload.password
+    delete payload.passwordConfirm
+  } else {
+    payload.passwordConfirm = payload.passwordConfirm || payload.password
   }
 
   return pb.send(`/backend/v1/admin/users/${id}`, {

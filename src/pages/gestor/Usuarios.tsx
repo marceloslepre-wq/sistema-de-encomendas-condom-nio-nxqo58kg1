@@ -176,11 +176,11 @@ export default function GestorUsuarios() {
         email: formData.email,
         phone: formData.phone,
         role: formData.role,
-      }
-
-      if (formData.password && formData.password.trim() !== '') {
-        dataToSave.password = formData.password
-        dataToSave.passwordConfirm = formData.password
+        cpf: formData.cpf,
+        status: formData.status,
+        unit_id: formData.unit_id,
+        password: formData.password,
+        passwordConfirm: formData.password,
       }
 
       if (editingUser) {
@@ -204,7 +204,8 @@ export default function GestorUsuarios() {
     } catch (err: any) {
       const errors = extractFieldErrors(err)
       setFieldErrors(errors)
-      const errorMsg = Object.values(errors)[0] || 'Falha ao salvar usuário. Verifique os dados.'
+      const errorMsg =
+        Object.values(errors)[0] || err?.message || 'Falha ao salvar usuário. Verifique os dados.'
       toast({ title: 'Erro', description: errorMsg, variant: 'destructive' })
     } finally {
       setIsSubmitting(false)
