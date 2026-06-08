@@ -38,8 +38,8 @@ export function useRealtime<TRecord extends RecordModel = RecordModel>(
           unsubscribeFn = fn
         }
       })
-      .catch((erro) => {
-        console.log('ERRO realtime:', { erro, detalhes: 'Falha ao estabelecer conexão SSE' })
+      .catch((err) => {
+        console.error('ERRO realtime:', { erro: err.message || err, detalhes: err })
       })
 
     return () => {

@@ -34,6 +34,7 @@ export function ResidentForm({
     torre: initialData?.torre || '',
     apartamento: initialData?.apartamento || '',
     telefone: initialData?.telefone || '',
+    password: '',
   })
   const [units, setUnits] = useState<any[]>([])
 
@@ -103,16 +104,38 @@ export function ResidentForm({
         {fieldErrors.nome && <p className="text-xs text-destructive">{fieldErrors.nome}</p>}
       </div>
 
-      <div className="space-y-2">
-        <Label>Email</Label>
-        <Input
-          required
-          type="email"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          placeholder="joao@email.com"
-        />
-        {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Email</Label>
+          <Input
+            required
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            placeholder="joao@email.com"
+          />
+          {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
+        </div>
+        <div className="space-y-2">
+          <Label>
+            Senha{' '}
+            {initialData && (
+              <span className="text-muted-foreground text-xs font-normal">
+                (Opcional para alterar)
+              </span>
+            )}
+          </Label>
+          <Input
+            type="password"
+            required={!initialData}
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            placeholder="***"
+          />
+          {fieldErrors.password && (
+            <p className="text-xs text-destructive">{fieldErrors.password}</p>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

@@ -286,47 +286,13 @@ export default function MoradorDashboard() {
                           <Clock className="w-4 h-4" />
                           Acompanhamento
                         </h4>
-                        <div className="px-4">
-                          <HorizontalTimeline currentStep={getCurrentStep(pkg, pkgHistory)} />
+                        <div className="px-2 sm:px-4">
+                          <HorizontalTimeline
+                            currentStep={getCurrentStep(pkg, pkgHistory)}
+                            pkg={pkg}
+                            history={pkgHistory}
+                          />
                         </div>
-                        {pkgHistory.length > 0 && (
-                          <div className="mt-8 flex flex-col space-y-4 relative ml-2">
-                            <div className="absolute left-[7px] top-2 bottom-2 w-[2px] bg-border" />
-                            {pkgHistory.map((hist, idx) => {
-                              const isLast = idx === pkgHistory.length - 1
-                              return (
-                                <div key={hist.id} className="flex items-start gap-4 relative z-10">
-                                  <div
-                                    className={cn(
-                                      'w-4 h-4 rounded-full mt-1 shrink-0 ring-4 ring-background',
-                                      isLast ? 'bg-primary' : 'bg-muted-foreground',
-                                    )}
-                                  />
-                                  <div>
-                                    <p
-                                      className={cn(
-                                        'text-sm font-medium',
-                                        isLast ? 'text-foreground' : 'text-muted-foreground',
-                                      )}
-                                    >
-                                      {hist.status.replace(/_/g, ' ')}
-                                    </p>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                      <span className="text-xs text-muted-foreground">
-                                        {format(new Date(hist.created), "dd/MM/yyyy 'às' HH:mm")}
-                                      </span>
-                                      {hist.observacoes && (
-                                        <span className="text-xs text-muted-foreground">
-                                          - {hist.observacoes}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -394,45 +360,12 @@ export default function MoradorDashboard() {
           </DialogHeader>
           {selectedHistoryPkg && (
             <div className="mt-4">
-              <div className="mb-8">
-                <VerticalTimeline currentStep={5} />
-              </div>
-
-              <div className="space-y-4 relative ml-2">
-                <div className="absolute left-[7px] top-2 bottom-2 w-[2px] bg-border" />
-                {getPackageHistory(selectedHistoryPkg.id).map((hist, idx, arr) => {
-                  const isLast = idx === arr.length - 1
-                  return (
-                    <div key={hist.id} className="flex items-start gap-4 relative z-10">
-                      <div
-                        className={cn(
-                          'w-4 h-4 rounded-full mt-1 shrink-0 ring-4 ring-background',
-                          isLast ? 'bg-primary' : 'bg-muted-foreground',
-                        )}
-                      />
-                      <div>
-                        <p
-                          className={cn(
-                            'text-sm font-medium',
-                            isLast ? 'text-foreground' : 'text-muted-foreground',
-                          )}
-                        >
-                          {hist.status.replace(/_/g, ' ')}
-                        </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(hist.created), "dd/MM/yyyy 'às' HH:mm")}
-                          </span>
-                          {hist.observacoes && (
-                            <span className="text-xs text-muted-foreground">
-                              - {hist.observacoes}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
+              <div className="mb-4">
+                <VerticalTimeline
+                  currentStep={5}
+                  pkg={selectedHistoryPkg}
+                  history={getPackageHistory(selectedHistoryPkg.id)}
+                />
               </div>
             </div>
           )}

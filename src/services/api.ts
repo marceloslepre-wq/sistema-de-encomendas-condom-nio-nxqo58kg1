@@ -25,8 +25,54 @@ export type Morador = RecordModel & {
 }
 
 export const getMoradores = () => pb.collection('moradores').getFullList({ sort: '-created' })
-export const createMorador = (data: any) => pb.collection('moradores').create(data)
-export const updateMorador = (id: string, data: any) => pb.collection('moradores').update(id, data)
+export const createMorador = async (data: any) => {
+  const userPayload = {
+    name: data.nome,
+    email: data.email,
+    password: data.password,
+    passwordConfirm: data.password,
+    cpf: data.cpf,
+    phone: data.telefone,
+    torre: data.torre,
+    unidade: data.apartamento,
+    role: 'morador',
+  }
+  let user
+  try {
+    user = await pb.collection('users').create(userPayload)
+  } catch (e: any) {
+    throw e
+  }
+
+  const { password, ...moradorData } = data
+  return pb.collection('moradores').create({ ...moradorData, email: user.email })
+}
+
+export const updateMorador = async (id: string, data: any) => {
+  const { password, ...moradorData } = data
+  const morador = await pb.collection('moradores').update(id, moradorData)
+
+  try {
+    const user = await pb
+      .collection('users')
+      .getFirstListItem(`cpf="${morador.cpf}" || email="${morador.email}"`)
+    const userPayload: any = {
+      name: morador.nome,
+      cpf: morador.cpf,
+      phone: morador.telefone,
+      torre: morador.torre,
+      unidade: morador.apartamento,
+    }
+    if (password && password.trim() !== '') {
+      userPayload.password = password
+      userPayload.passwordConfirm = password
+    }
+    await pb.collection('users').update(user.id, userPayload)
+  } catch (e) {
+    console.error('User associated with morador not found or update failed', e)
+  }
+  return morador
+}
 export const deleteMorador = (id: string) => pb.collection('moradores').delete(id)
 
 export const getUsers = () => pb.collection('users').getFullList({ sort: '-created' })
