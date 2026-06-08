@@ -2,8 +2,9 @@ import { ClientResponseError } from 'pocketbase'
 
 export type FieldErrors = Record<string, string>
 
-export function extractFieldErrors(error: any): FieldErrors {
-  const data = error?.response?.data
+export function extractFieldErrors(error: unknown): FieldErrors {
+  if (!(error instanceof ClientResponseError)) return {}
+  const data = error.response?.data
   if (!data || typeof data !== 'object') return {}
   const errors: FieldErrors = {}
   for (const [field, detail] of Object.entries(data)) {
@@ -19,9 +20,8 @@ export function extractFieldErrors(error: any): FieldErrors {
   return errors
 }
 
-export function getErrorMessage(error: any): string {
-  const data = error?.response?.data
-  if (!data || typeof data !== 'object') {
+export function getErrorMessage(error: unknown): string {
+  if (!(error instanceof ClientResponseError)) {
     return error instanceof Error ? error.message : 'An unexpected error occurred.'
   }
   const msgs = Object.values(extractFieldErrors(error))

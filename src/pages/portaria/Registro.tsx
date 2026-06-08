@@ -83,6 +83,7 @@ export default function PortariaRegistro() {
   const [courierCpf, setCourierCpf] = useState('')
   const [courierPhone, setCourierPhone] = useState('')
   const [validationCode, setValidationCode] = useState('')
+  const [photo, setPhoto] = useState<File | null>(null)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSendingCode, setIsSendingCode] = useState(false)
@@ -285,20 +286,52 @@ export default function PortariaRegistro() {
         }
 
         const moradorVinculado = await ensureMoradorVinculado(unit, group, residentCandidate)
-        const moradorId = moradorVinculado.id
 
+        let userId = ''
         let userPhone = ''
-        if (moradorVinculado.email) {
-          try {
-            const safeEmail = moradorVinculado.email.replace(/"/g, '\\"')
-            const userRecord = await pb.collection('users').getFirstListItem(`email="${safeEmail}"`)
+        try {
+          const safeEmail = moradorVinculado.email
+            ? moradorVinculado.email.replace(/'/g, "\\'")
+            : ''
+          const safeCpf = moradorVinculado.cpf ? moradorVinculado.cpf.replace(/\D/g, '') : ''
+
+          const filters = []
+          if (safeEmail && !safeEmail.includes('@sem-email.local'))
+            filters.push(`email='${safeEmail}'`)
+          if (safeCpf && safeCpf !== '00000000000') filters.push(`cpf='${safeCpf}'`)
+
+          if (filters.length > 0) {
+            const userRecord = await pb.collection('users').getFirstListItem(filters.join(' || '))
             if (userRecord && userRecord.id) {
+              userId = userRecord.id
               userPhone = userRecord.phone || ''
             }
-          } catch (_e) {
-            console.log('Morador não possui cadastro de usuário ainda.')
+          }
+        } catch (_e) {
+          console.log('Morador não possui cadastro de usuário ainda.')
+        }
+
+        if (!userId) {
+          try {
+            const userRecord = await pb.collection('users').create({
+              email: moradorVinculado.email,
+              name: moradorVinculado.nome,
+              cpf: moradorVinculado.cpf,
+              phone: moradorVinculado.telefone,
+              torre: moradorVinculado.torre,
+              unidade: moradorVinculado.apartamento,
+              role: 'morador',
+              password: 'Skip@Password123',
+              passwordConfirm: 'Skip@Password123',
+            })
+            userId = userRecord.id
+            userPhone = userRecord.phone || ''
+          } catch (err) {
+            console.error('Failed to create stub user', err)
           }
         }
+
+        const moradorId = userId || ''
 
         const unidadeStr = `${unit.tower} - ${unit.apartment}`
         const moradorNome = moradorVinculado.nome
@@ -339,42 +372,42 @@ export default function PortariaRegistro() {
             : 'Entrada registrada na portaria'
 
         for (let i = 0; i < totalVols; i++) {
-          const payload: Record<string, any> = {
+          const formData = new FormData()
+          formData.append('unidade', unidadeStr)
+          formData.append('morador', moradorNome)
+          formData.append('volume', tickets[i])
+          formData.append('transportadora', carrier)
+          formData.append('status', status)
+          formData.append('unidade_id', group.unitId)
+
+          if (moradorId) {
+            formData.append('morador_id', moradorId)
+          }
+
+          formData.append('entregador_nome', courierName)
+          formData.append('entregador_cpf', courierCpf.replace(/\D/g, ''))
+          formData.append('codigo_rastreio', '')
+          formData.append('observacoes', observacaoAuditoria)
+          formData.append('celular_validacao', courierPhone.replace(/\D/g, ''))
+          formData.append('codigo_validacao', codValidado)
+
+          if (pb.authStore.record?.id) {
+            formData.append('recebido_por', pb.authStore.record.id)
+          }
+
+          if (photo) {
+            formData.append('photo', photo)
+          }
+
+          console.log('Database Submission Logging:', {
             unidade: unidadeStr,
             morador: moradorNome,
             volume: tickets[i],
-            transportadora: carrier,
-            status: status,
-            unidade_id: group.unitId,
-            morador_id: moradorId,
-            entregador_nome: courierName,
-            entregador_cpf: courierCpf.replace(/\D/g, ''),
-            codigo_rastreio: '',
-            observacoes: observacaoAuditoria,
-            celular_validacao: courierPhone.replace(/\D/g, ''),
-            codigo_validacao: codValidado,
-          }
-
-          if (pb.authStore.record?.id) {
-            payload.recebido_por = pb.authStore.record.id
-          }
-
-          console.log(
-            'Database Submission Logging:',
-            JSON.stringify(
-              {
-                unidade: payload.unidade,
-                morador: payload.morador,
-                volume: payload.volume,
-                fullPayload: payload,
-              },
-              null,
-              2,
-            ),
-          )
+            hasPhoto: !!photo,
+          })
 
           try {
-            const record = await pb.collection('recebimentos_auditoria').create(payload)
+            const record = await pb.collection('recebimentos_auditoria').create(formData)
             console.log(
               'Database Confirmation Logging:',
               JSON.stringify(
@@ -438,14 +471,24 @@ export default function PortariaRegistro() {
       let detailedMsg = err.message || getErrorMessage(err)
 
       if (Object.keys(fieldErrors).length > 0) {
+        const fieldNamesMap: Record<string, string> = {
+          unidade_id: 'Unidade',
+          morador_id: 'Morador',
+          transportadora: 'Transportadora',
+          entregador_nome: 'Nome do Entregador',
+          entregador_cpf: 'CPF do Entregador',
+          photo: 'Foto',
+          codigo_rastreio: 'Código de Rastreio',
+        }
+
         const fields = Object.entries(fieldErrors)
-          .map(([key, val]) => `${key}: ${val}`)
+          .map(([key, val]) => `- ${fieldNamesMap[key] || key}: ${val}`)
           .join('\n')
-        detailedMsg = `Erros de validação:\n${fields}`
+        detailedMsg = `Verifique os seguintes campos e tente novamente:\n${fields}`
       }
 
       toast({
-        title: 'Falha ao salvar',
+        title: 'Falha ao registrar encomenda',
         description: detailedMsg,
         variant: 'destructive',
         className: 'whitespace-pre-wrap',
@@ -474,6 +517,7 @@ export default function PortariaRegistro() {
     setCourierCpf('')
     setCourierPhone('')
     setValidationCode('')
+    setPhoto(null)
     setIsCodeSent(false)
     setIsCodeVerified(false)
     setIsVerifyingCode(false)
@@ -882,6 +926,25 @@ export default function PortariaRegistro() {
                       maxLength={15}
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2 pt-4 border-t mt-2">
+                  <Label>
+                    Foto da Encomenda/Nota Fiscal{' '}
+                    <span className="text-muted-foreground text-sm font-normal">(Opcional)</span>
+                  </Label>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files.length > 0) {
+                        setPhoto(e.target.files[0])
+                      } else {
+                        setPhoto(null)
+                      }
+                    }}
+                    className="cursor-pointer"
+                  />
                 </div>
 
                 <div className="space-y-2 md:col-span-2 pt-4 border-t mt-2">
