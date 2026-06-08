@@ -38,9 +38,7 @@ export function useRealtime<TRecord extends RecordModel = RecordModel>(
           unsubscribeFn = fn
         }
       })
-      .catch((err) => {
-        console.error('ERRO realtime:', { erro: err.message || err, detalhes: err })
-      })
+      .catch(() => {})
 
     return () => {
       cancelled = true

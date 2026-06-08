@@ -81,6 +81,20 @@ export default function GestorMoradores() {
     } catch (e: any) {
       console.error('Failed to save morador:', e)
       const errors = extractFieldErrors(e)
+
+      if (errors.name) {
+        errors.nome = errors.name
+        delete errors.name
+      }
+      if (errors.phone) {
+        errors.telefone = errors.phone
+        delete errors.phone
+      }
+      if (errors.unidade) {
+        errors.apartamento = errors.unidade
+        delete errors.unidade
+      }
+
       setFieldErrors(errors)
       toast({
         title: 'Erro ao salvar',

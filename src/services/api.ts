@@ -37,36 +37,56 @@ export const createMorador = async (data: any) => {
     unidade: data.apartamento,
     role: 'morador',
   }
-  const user = await pb.collection('users').create(userPayload)
 
-  const { password, ...moradorData } = data
-  return pb.collection('moradores').create({ ...moradorData, email: user.email })
+  console.log('Payload sent to users API:', userPayload)
+
+  try {
+    const user = await pb.collection('users').create(userPayload)
+
+    const { password, ...moradorData } = data
+    console.log('Payload sent to moradores API:', moradorData)
+    return await pb.collection('moradores').create({ ...moradorData, email: user.email })
+  } catch (error: any) {
+    console.error('API Error during resident creation:', error.response?.data || error)
+    throw error
+  }
 }
 
 export const updateMorador = async (id: string, data: any) => {
   const { password, ...moradorData } = data
-  const morador = await pb.collection('moradores').update(id, moradorData)
+  console.log('Payload sent to update moradores API:', moradorData)
 
   try {
-    const user = await pb
-      .collection('users')
-      .getFirstListItem(`cpf="${morador.cpf}" || email="${morador.email}"`)
-    const userPayload: any = {
-      name: morador.nome,
-      cpf: morador.cpf,
-      phone: morador.telefone,
-      torre: morador.torre,
-      unidade: morador.apartamento,
+    const morador = await pb.collection('moradores').update(id, moradorData)
+
+    try {
+      const user = await pb
+        .collection('users')
+        .getFirstListItem(`cpf="${morador.cpf}" || email="${morador.email}"`)
+      const userPayload: any = {
+        name: morador.nome,
+        cpf: morador.cpf,
+        phone: morador.telefone,
+        torre: morador.torre,
+        unidade: morador.apartamento,
+      }
+      if (password && password.trim() !== '') {
+        userPayload.password = password
+        userPayload.passwordConfirm = password
+      }
+      console.log('Payload sent to update users API:', userPayload)
+      await pb.collection('users').update(user.id, userPayload)
+    } catch (e: any) {
+      console.error(
+        'User associated with morador not found or update failed',
+        e.response?.data || e,
+      )
     }
-    if (password && password.trim() !== '') {
-      userPayload.password = password
-      userPayload.passwordConfirm = password
-    }
-    await pb.collection('users').update(user.id, userPayload)
-  } catch (e) {
-    console.error('User associated with morador not found or update failed', e)
+    return morador
+  } catch (error: any) {
+    console.error('API Error during resident update:', error.response?.data || error)
+    throw error
   }
-  return morador
 }
 export const deleteMorador = (id: string) => pb.collection('moradores').delete(id)
 
