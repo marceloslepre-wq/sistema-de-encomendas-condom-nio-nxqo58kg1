@@ -26,55 +26,25 @@ export function useRealtime<TRecord extends RecordModel = RecordModel>(
 
     let unsubscribeFn: (() => Promise<void>) | undefined
     let cancelled = false
-    let retryTimeout: ReturnType<typeof setTimeout>
 
-    const connect = () => {
-      if (cancelled) return
-      pb.collection<TRecord>(collectionName)
-        .subscribe('*', (e) => {
-          callbackRef.current(e)
-        })
-        .then((fn) => {
-          if (cancelled) {
-            fn().catch(() => {})
-          } else {
-            unsubscribeFn = fn
-          }
-        })
-        .catch((err) => {
-          if (!cancelled) {
-            console.warn(`SSE subscription error for ${collectionName}, retrying in 3s...`, err)
-            retryTimeout = setTimeout(connect, 3000)
-          }
-        })
-    }
-
-    connect()
-
-    const handleReconnect = () => {
-      if (cancelled) return
-      if (unsubscribeFn) {
-        unsubscribeFn().catch(() => {})
-        unsubscribeFn = undefined
-      }
-      clearTimeout(retryTimeout)
-      connect()
-    }
-
-    window.addEventListener('online', handleReconnect)
-    const visibilityHandler = () => {
-      if (document.visibilityState === 'visible') handleReconnect()
-    }
-    document.addEventListener('visibilitychange', visibilityHandler)
+    pb.collection<TRecord>(collectionName)
+      .subscribe('*', (e) => {
+        callbackRef.current(e)
+      })
+      .then((fn) => {
+        if (cancelled) {
+          fn().catch(() => {})
+        } else {
+          unsubscribeFn = fn
+        }
+      })
+      .catch(() => {})
 
     return () => {
       cancelled = true
-      clearTimeout(retryTimeout)
       if (unsubscribeFn) {
         unsubscribeFn().catch(() => {})
       }
-      window.removeEventListener('online', handleReconnect)
-      document.removeEventListener('visibilitychange', visibilityHandler)
     }
   }, [collectionName, enabled])
 }

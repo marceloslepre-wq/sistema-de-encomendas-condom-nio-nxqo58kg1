@@ -343,7 +343,7 @@ export default function PortariaRegistro() {
               messageSent = true
             }
           } catch (dbErr: any) {
-            console.error('Database Failure Logging:', dbErr)
+            console.error('Database Failure Logging:', dbErr, JSON.stringify(dbErr))
             throw dbErr
           }
         }
@@ -357,9 +357,8 @@ export default function PortariaRegistro() {
       })
       setRefreshTrigger((prev) => prev + 1)
     } catch (err: any) {
-      console.error('ERRO ao gravar:', err)
-      const fieldErrors = extractFieldErrors(err)
-      let detailedMsg = err.message || getErrorMessage(err)
+      console.error('ERRO ao gravar:', err, JSON.stringify(err))
+      const fieldErrors = extractFieldErrors(err)      let detailedMsg = err.message || getErrorMessage(err)
 
       if (Object.keys(fieldErrors).length > 0) {
         const fields = Object.entries(fieldErrors)
@@ -521,7 +520,7 @@ export default function PortariaRegistro() {
         className: 'bg-success text-white',
       })
     } catch (err: any) {
-      console.error('Verify API Failure Logging:', err)
+      console.error('Verify API Failure Logging:', err, JSON.stringify(err))
       const detail = err.response?.message || err.message || 'Código inválido ou expirado'
       toast({
         title: 'Erro na Verificação',

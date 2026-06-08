@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-07T22:56:44.522Z",
+  "generatedAt": "2026-06-08T11:58:06.972Z",
   "collections": [
     {
       "name": "users",
@@ -178,8 +178,8 @@
       "name": "recebimentos_auditoria",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem' || @request.auth.role = 'morador')",
-        "view": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem' || @request.auth.role = 'morador')",
+        "list": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem' || (@request.auth.role = 'morador' && morador_id = @request.auth.id))",
+        "view": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem' || (@request.auth.role = 'morador' && morador_id = @request.auth.id))",
         "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
         "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
         "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"

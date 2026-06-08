@@ -47,6 +47,33 @@ routerAdd(
       verifRecord.set('verified', true)
       $app.save(verifRecord)
 
+      try {
+        const pendingRecebimentos = $app.findRecordsByFilter(
+          'recebimentos_auditoria',
+          'celular_validacao = {:phone} && status = "ENTRADA_PORTARIA"',
+          '-created',
+          100,
+          0,
+          { phone: exactPhone },
+        )
+        for (const rec of pendingRecebimentos) {
+          rec.set('status', 'Validado')
+          $app.save(rec)
+
+          try {
+            const hist = new Record($app.findCollectionByNameOrId('historico_andamento'))
+            hist.set('recebimento_id', rec.id)
+            hist.set('status', 'Validado')
+            hist.set('observacoes', 'Validado automaticamente via WhatsApp')
+            $app.save(hist)
+          } catch (histErr) {
+            console.log('Failed to create historico_andamento', histErr)
+          }
+        }
+      } catch (err) {
+        // no pending records found, proceed
+      }
+
       return e.json(200, { success: true })
     } catch (err) {
       return e.badRequestError('Código inválido. Tente novamente.')
