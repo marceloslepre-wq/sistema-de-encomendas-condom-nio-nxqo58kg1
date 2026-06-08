@@ -40,14 +40,26 @@ export const createMorador = async (data: any) => {
 
   console.log('Payload sent to users API:', userPayload)
 
+  let user: any
   try {
-    const user = await pb.collection('users').create(userPayload)
+    user = await pb.collection('users').create(userPayload)
+  } catch (error: any) {
+    console.error('API Error during user creation:', error.response?.data || error)
+    throw error
+  }
 
+  try {
     const { password, ...moradorData } = data
     console.log('Payload sent to moradores API:', moradorData)
     return await pb.collection('moradores').create({ ...moradorData, email: user.email })
   } catch (error: any) {
-    console.error('API Error during resident creation:', error.response?.data || error)
+    console.error('API Error during morador creation:', error.response?.data || error)
+    if (user && user.id) {
+      await pb
+        .collection('users')
+        .delete(user.id)
+        .catch(() => {})
+    }
     throw error
   }
 }

@@ -80,11 +80,12 @@ export default function GestorMoradores() {
       loadData()
     } catch (e: any) {
       console.error('Failed to save morador:', e)
-      console.log('Erro ao criar morador:', e.response?.data || e)
+      console.log('Erro ao salvar morador:', e?.response?.data || e)
 
       const errors = extractFieldErrors(e)
+      const responseData = e?.response?.data || {}
 
-      if (e.response?.data?.email?.code === 'validation_not_unique') {
+      if (responseData.email?.code === 'validation_not_unique') {
         errors.email = 'Este e-mail já está cadastrado'
       }
 
@@ -99,6 +100,13 @@ export default function GestorMoradores() {
       if (errors.unidade) {
         errors.apartamento = errors.unidade
         delete errors.unidade
+      }
+      if (errors.passwordConfirm) {
+        if (!errors.password) errors.password = errors.passwordConfirm
+        delete errors.passwordConfirm
+      }
+      if (errors.password && errors.password.includes('length')) {
+        errors.password = 'A senha deve ter pelo menos 8 caracteres.'
       }
 
       setFieldErrors(errors)

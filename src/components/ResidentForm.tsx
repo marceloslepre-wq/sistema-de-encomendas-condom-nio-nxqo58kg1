@@ -130,9 +130,10 @@ export function ResidentForm({
           <Input
             type="password"
             required={!initialData}
+            minLength={8}
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            placeholder="***"
+            placeholder="Mínimo 8 caracteres"
             className={
               fieldErrors.password ? 'border-destructive focus-visible:ring-destructive' : ''
             }
