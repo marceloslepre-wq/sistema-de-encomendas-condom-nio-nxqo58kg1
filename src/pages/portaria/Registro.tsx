@@ -426,10 +426,11 @@ export default function PortariaRegistro() {
               observacoes: observacaoHistorico,
             })
 
-            const unidade = payload.unidade
-            const morador = payload.morador
-            const volume = payload.volume
-            console.log('Entrada registrada:', { unidade, morador, volume })
+            console.log('Entrada registrada:', {
+              unidade: unidadeStr,
+              morador: moradorNome,
+              volume: tickets[i],
+            })
 
             if (!messageSent) {
               const message = `Sua encomenda (${totalVols} volume${totalVols > 1 ? 's' : ''}) chegou na portaria`
