@@ -80,7 +80,13 @@ export default function GestorMoradores() {
       loadData()
     } catch (e: any) {
       console.error('Failed to save morador:', e)
+      console.log('Erro ao criar morador:', e.response?.data || e)
+
       const errors = extractFieldErrors(e)
+
+      if (e.response?.data?.email?.code === 'validation_not_unique') {
+        errors.email = 'Este e-mail já está cadastrado'
+      }
 
       if (errors.name) {
         errors.nome = errors.name

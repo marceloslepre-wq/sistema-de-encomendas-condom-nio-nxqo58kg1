@@ -100,6 +100,7 @@ export function ResidentForm({
           value={formData.nome}
           onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
           placeholder="Ex: João"
+          className={fieldErrors.nome ? 'border-destructive focus-visible:ring-destructive' : ''}
         />
         {fieldErrors.nome && <p className="text-xs text-destructive">{fieldErrors.nome}</p>}
       </div>
@@ -113,6 +114,7 @@ export function ResidentForm({
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             placeholder="joao@email.com"
+            className={fieldErrors.email ? 'border-destructive focus-visible:ring-destructive' : ''}
           />
           {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
         </div>
@@ -131,6 +133,9 @@ export function ResidentForm({
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             placeholder="***"
+            className={
+              fieldErrors.password ? 'border-destructive focus-visible:ring-destructive' : ''
+            }
           />
           {fieldErrors.password && (
             <p className="text-xs text-destructive">{fieldErrors.password}</p>
@@ -147,6 +152,7 @@ export function ResidentForm({
             onChange={(e) => setFormData({ ...formData, cpf: maskCPF(e.target.value) })}
             placeholder="000.000.000-00"
             maxLength={14}
+            className={fieldErrors.cpf ? 'border-destructive focus-visible:ring-destructive' : ''}
           />
           {fieldErrors.cpf && <p className="text-xs text-destructive">{fieldErrors.cpf}</p>}
         </div>
@@ -158,6 +164,9 @@ export function ResidentForm({
             onChange={(e) => setFormData({ ...formData, telefone: maskPhone(e.target.value) })}
             placeholder="(00) 00000-0000"
             maxLength={15}
+            className={
+              fieldErrors.telefone ? 'border-destructive focus-visible:ring-destructive' : ''
+            }
           />
           {fieldErrors.telefone && (
             <p className="text-xs text-destructive">{fieldErrors.telefone}</p>
@@ -169,7 +178,11 @@ export function ResidentForm({
         <div className="space-y-2">
           <Label>Torre</Label>
           <Select value={formData.torre || undefined} onValueChange={handleTorreChange} required>
-            <SelectTrigger>
+            <SelectTrigger
+              className={
+                fieldErrors.torre ? 'border-destructive focus-visible:ring-destructive' : ''
+              }
+            >
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
             <SelectContent>
@@ -190,7 +203,11 @@ export function ResidentForm({
             disabled={!formData.torre}
             required
           >
-            <SelectTrigger>
+            <SelectTrigger
+              className={
+                fieldErrors.apartamento ? 'border-destructive focus-visible:ring-destructive' : ''
+              }
+            >
               <SelectValue placeholder="Selecione" />
             </SelectTrigger>
             <SelectContent>
