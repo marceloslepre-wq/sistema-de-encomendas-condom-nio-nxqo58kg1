@@ -37,12 +37,7 @@ export const createMorador = async (data: any) => {
     unidade: data.apartamento,
     role: 'morador',
   }
-  let user
-  try {
-    user = await pb.collection('users').create(userPayload)
-  } catch (e: any) {
-    throw e
-  }
+  const user = await pb.collection('users').create(userPayload)
 
   const { password, ...moradorData } = data
   return pb.collection('moradores').create({ ...moradorData, email: user.email })
