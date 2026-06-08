@@ -36,49 +36,47 @@ export default function MoradorDashboard() {
   const [selectedHistoryPkg, setSelectedHistoryPkg] = useState<RecebimentoAuditoria | null>(null)
 
   const loadData = async () => {
-    if (!user?.email) return
+    if (!user?.id) return
 
     try {
-      const conditions = [`morador_id = "${user.id}"`, `morador_id.email = "${user.email}"`]
-
-      const moradorRecord = await pb
-        .collection('moradores')
-        .getFirstListItem(`email="${user.email}"`)
-        .catch(() => null)
-
-      if (moradorRecord) {
-        const unitFilter = []
-        if (moradorRecord.torre) unitFilter.push(`unidade ~ "${moradorRecord.torre}"`)
-        if (moradorRecord.apartamento) unitFilter.push(`unidade ~ "${moradorRecord.apartamento}"`)
-
-        if (unitFilter.length > 0) {
-          conditions.push(`(${unitFilter.join(' && ')})`)
-        }
+      let unitId = ''
+      if (user.torre && user.unidade) {
+        const unit = await pb
+          .collection('units')
+          .getFirstListItem(`tower="${user.torre}" && apartment="${user.unidade}"`)
+          .catch(() => null)
+        unitId = unit?.id || ''
       }
+
+      console.log('Dashboard carregando:', { morador_id: user.id, unidade_id: unitId })
+
+      const filterAtivos = `morador_id = "${user.id}" && unidade_id = "${unitId}" && status != 'RETIRADO' && status != 'ENTREGUE'`
 
       const activeRes = await pb
         .collection('recebimentos_auditoria')
         .getList<RecebimentoAuditoria>(1, 50, {
-          filter: `(${conditions.join(' || ')}) && status != 'RETIRADO' && status != 'ENTREGUE'`,
+          filter: filterAtivos,
           sort: '-created',
         })
 
-      console.log('Encomendas ativas:', {
-        filtro: 'status != Retirado e status != Entregue',
-        total: activeRes.items.length,
+      console.log('Buscando encomendas:', {
+        filtro: filterAtivos,
+        registros_encontrados: activeRes.items.length,
       })
       setRecebimentosAtivos(activeRes.items)
+
+      const filterHistorico = `morador_id = "${user.id}" && unidade_id = "${unitId}" && (status = 'RETIRADO' || status = 'ENTREGUE')`
 
       const historyRes = await pb
         .collection('recebimentos_auditoria')
         .getList<RecebimentoAuditoria>(1, 50, {
-          filter: `(${conditions.join(' || ')}) && (status = 'RETIRADO' || status = 'ENTREGUE')`,
+          filter: filterHistorico,
           sort: '-updated',
         })
 
-      console.log('Encomendas retiradas/entregues:', {
-        filtro: 'status = Retirado ou Entregue',
-        total: historyRes.items.length,
+      console.log('Buscando encomendas:', {
+        filtro: filterHistorico,
+        registros_encontrados: historyRes.items.length,
       })
       setRecebimentosHistorico(historyRes.items)
 
@@ -108,10 +106,12 @@ export default function MoradorDashboard() {
 
   useEffect(() => {
     recebimentosAtivos.forEach((pkg) => {
-      console.log('Dashboard atualizado:', {
-        codigo_rastreio: pkg.codigo_rastreio,
-        codigo_retirada: (pkg as any).codigo_retirada,
-      })
+      if (pkg.status === 'LIBERADO_RETIRADA') {
+        console.log('Código exibido:', {
+          codigo_retirada: (pkg as any).codigo_retirada,
+          status: pkg.status,
+        })
+      }
     })
   }, [recebimentosAtivos])
 
@@ -136,10 +136,17 @@ export default function MoradorDashboard() {
   }
 
   const getCurrentStep = (pkg: RecebimentoAuditoria, history: HistoricoAndamento[]) => {
-    if (pkg.status === 'RETIRADO' || pkg.status === 'ENTREGUE') return 4
-    if (pkg.status === 'LIBERADO_RETIRADA') return 2
-    const hasEmSala = history.some((h) => h.status === 'EM_TRIAGEM')
-    if (pkg.status === 'EM_TRIAGEM' || hasEmSala) return 1
+    if (pkg.status === 'RETIRADO' || pkg.status === 'ENTREGUE') return 5
+    if (pkg.status === 'LIBERADO_RETIRADA') return 3
+    const hasEmSala = history.some(
+      (h) =>
+        h.status === 'EM_SALA' ||
+        h.status === 'SALA_ENCOMENDA' ||
+        h.status === 'EM_SALA_DE_ENCOMENDAS',
+    )
+    if (pkg.status === 'EM_SALA' || pkg.status === 'SALA_ENCOMENDA' || hasEmSala) return 2
+    const hasTriagem = history.some((h) => h.status === 'EM_TRIAGEM')
+    if (pkg.status === 'EM_TRIAGEM' || hasTriagem) return 1
     return 0
   }
 
@@ -222,18 +229,18 @@ export default function MoradorDashboard() {
                               : '-'}
                           </p>
                         </div>
-                        {pkg.status === 'LIBERADO_RETIRADA' && (pkg as any).codigo_retirada ? (
+                        {pkg.status === 'LIBERADO_RETIRADA' ? (
                           <div className="md:border-l md:pl-6">
                             <p className="text-muted-foreground mb-1">Código de Retirada</p>
                             <p className="font-mono font-bold text-lg text-primary tracking-wider">
-                              {(pkg as any).codigo_retirada}
+                              {(pkg as any).codigo_retirada || '-'}
                             </p>
                           </div>
                         ) : (
                           <div className="md:border-l md:pl-6">
-                            <p className="text-muted-foreground mb-1">Código de Validação</p>
-                            <p className="font-mono font-bold text-lg text-primary tracking-wider">
-                              {pkg.codigo_validacao || '-'}
+                            <p className="text-muted-foreground mb-1">Status Atual</p>
+                            <p className="font-mono font-bold text-sm text-muted-foreground tracking-wider">
+                              Aguardando liberação
                             </p>
                           </div>
                         )}
@@ -388,7 +395,7 @@ export default function MoradorDashboard() {
           {selectedHistoryPkg && (
             <div className="mt-4">
               <div className="mb-8">
-                <VerticalTimeline currentStep={4} />
+                <VerticalTimeline currentStep={5} />
               </div>
 
               <div className="space-y-4 relative ml-2">
