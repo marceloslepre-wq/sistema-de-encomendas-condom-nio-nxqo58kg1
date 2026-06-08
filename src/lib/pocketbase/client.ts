@@ -1,7 +1,6 @@
 import PocketBase from 'pocketbase'
 
-const url = import.meta.env.VITE_POCKETBASE_URL
-const pb = new PocketBase(url?.endsWith('/') ? url.slice(0, -1) : url)
+const pb = new PocketBase(import.meta.env.VITE_POCKETBASE_URL)
 pb.autoCancellation(false)
 
 export default pb
