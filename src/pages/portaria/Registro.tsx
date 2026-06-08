@@ -168,6 +168,77 @@ export default function PortariaRegistro() {
     )
   }, [carrier, entries, courierName, courierCpf, isCodeVerified, bypassValidation])
 
+  const escapeFilterValue = (value: string) => String(value || '').replace(/'/g, "\\'")
+
+  const ensureMoradorVinculado = async (
+    unit: Unit,
+    group: TableEntry,
+    residentCandidate?: Morador,
+  ): Promise<Morador> => {
+    let moradorRecord: Morador | null = residentCandidate || null
+
+    if (group.residentId) {
+      try {
+        const byId = await pb.collection('moradores').getOne(group.residentId)
+        moradorRecord = byId as Morador
+      } catch (_err) {
+        // Se o ID selecionado não existir mais, seguimos para busca/criação.
+      }
+    }
+
+    const tower = String(unit.tower || '').trim()
+    const apartment = String(unit.apartment || '').trim()
+    const residentName = String(moradorRecord?.nome || '').trim() || `Morador ${tower}-${apartment}`
+
+    if (!moradorRecord) {
+      try {
+        const byName = await pb.collection('moradores').getFirstListItem(
+          `torre='${escapeFilterValue(tower)}' && apartamento='${escapeFilterValue(apartment)}' && nome='${escapeFilterValue(residentName)}'`,
+        )
+        moradorRecord = byName as Morador
+      } catch (_err) {
+        // Não existe por nome/unidade, tentaremos criar abaixo.
+      }
+    }
+
+    if (!moradorRecord) {
+      const fallbackEmail =
+        String(residentCandidate?.email || '').trim() ||
+        `morador.${tower.toLowerCase()}${apartment.toLowerCase()}.${Date.now()}@sem-email.local`
+      const fallbackTelefone = String(residentCandidate?.telefone || '').replace(/\D/g, '') || '00000000000'
+      const fallbackCpf = String(residentCandidate?.cpf || '').replace(/\D/g, '') || '00000000000'
+
+      try {
+        const created = await pb.collection('moradores').create({
+          nome: residentName,
+          torre: tower,
+          apartamento: apartment,
+          email: fallbackEmail,
+          telefone: fallbackTelefone,
+          cpf: fallbackCpf,
+        })
+        moradorRecord = created as Morador
+      } catch (createErr: any) {
+        const detail = getErrorMessage(createErr)
+        throw new Error(
+          `Não foi possível criar o morador automaticamente para a unidade ${tower}-${apartment}: ${detail}`,
+        )
+      }
+    }
+
+    if (!moradorRecord?.id) {
+      throw new Error('Falha ao vincular morador: morador_id não pôde ser determinado.')
+    }
+
+    console.log('Morador vinculado:', {
+      morador_id: moradorRecord.id,
+      nome: moradorRecord.nome,
+      unidade: `${tower}-${apartment}`,
+    })
+
+    return moradorRecord
+  }
+
   const handleFinish = async () => {
     if (!isFormValid) return
     setIsSubmitting(true)
@@ -196,12 +267,12 @@ export default function PortariaRegistro() {
 
       for (const group of Object.values(groups)) {
         const unit = units.find((u) => u.id === group.unitId)
-        const resident =
+        const residentCandidate =
           group.residents?.find((m) => m.id === group.residentId) ||
           moradores.find((m) => m.id === group.residentId)
 
-        if (!unit || !resident) {
-          throw new Error('Unidade ou morador referenciado não foi encontrado no sistema.')
+        if (!unit) {
+          throw new Error('Unidade referenciada não foi encontrada no sistema.')
         }
 
         if (!group.unitId || !group.residentId) {
@@ -210,22 +281,24 @@ export default function PortariaRegistro() {
           )
         }
 
-        let userId = ''
+        const moradorVinculado = await ensureMoradorVinculado(unit, group, residentCandidate)
+        const moradorId = moradorVinculado.id
+
         let userPhone = ''
-        try {
-          const userRecord = await pb
-            .collection('users')
-            .getFirstListItem(`email="${resident.email}"`)
-          if (userRecord && userRecord.id) {
-            userId = userRecord.id
-            userPhone = userRecord.phone || ''
+        if (moradorVinculado.email) {
+          try {
+            const safeEmail = moradorVinculado.email.replace(/"/g, '\\"')
+            const userRecord = await pb.collection('users').getFirstListItem(`email="${safeEmail}"`)
+            if (userRecord && userRecord.id) {
+              userPhone = userRecord.phone || ''
+            }
+          } catch (_e) {
+            console.log('Morador não possui cadastro de usuário ainda.')
           }
-        } catch (e) {
-          console.log('Morador não possui cadastro de usuário ainda.')
         }
 
         const unidadeStr = `${unit.tower} - ${unit.apartment}`
-        const moradorNome = resident.nome
+        const moradorNome = moradorVinculado.nome
         const codValidado = bypassValidation ? 'MANUAL' : validationCode
 
         if (!codValidado) {
@@ -270,7 +343,7 @@ export default function PortariaRegistro() {
             transportadora: carrier,
             status: status,
             unidade_id: group.unitId,
-            morador_id: userId || '',
+            morador_id: moradorId,
             entregador_nome: courierName,
             entregador_cpf: courierCpf.replace(/\D/g, ''),
             codigo_rastreio: '',
@@ -324,7 +397,7 @@ export default function PortariaRegistro() {
 
             if (!messageSent) {
               const message = `Sua encomenda (${totalVols} volume${totalVols > 1 ? 's' : ''}) chegou na portaria`
-              const phone_morador = userPhone || resident.telefone
+              const phone_morador = userPhone || moradorVinculado.telefone
 
               console.log('Enviando notificação para morador:', { phone_morador, message })
 
