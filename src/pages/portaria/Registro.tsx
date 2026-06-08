@@ -243,20 +243,29 @@ export default function PortariaRegistro() {
     return moradorRecord
   }
 
-  const handleFinish = async () => {
-    if (!isFormValid) return
+  const handleFinish = async (autoSaveCodeVerified = false) => {
+    const isActuallyVerified = isCodeVerified || autoSaveCodeVerified
+    const hasInvalidEntry = entries.some((e) => !e.unitId || !e.residentId || e.volumes < 1)
+    const isValid =
+      entries.length > 0 &&
+      !hasInvalidEntry &&
+      carrier &&
+      courierName &&
+      courierCpf.length === 14 &&
+      (isActuallyVerified || bypassValidation)
+
+    if (!isValid) return
     setIsSubmitting(true)
 
     try {
       if (entries.length === 0) throw new Error('Adicione pelo menos uma encomenda.')
-      const hasInvalid = entries.some((e) => !e.unitId || !e.residentId || e.volumes < 1)
-      if (hasInvalid)
+      if (hasInvalidEntry)
         throw new Error('Existem encomendas com campos obrigatórios ausentes ou inválidos.')
       if (!carrier) throw new Error('Selecione uma transportadora.')
       if (!courierName) throw new Error('Nome do entregador é obrigatório.')
       if (courierCpf.replace(/\D/g, '').length !== 11)
         throw new Error('CPF do entregador inválido.')
-      if (!isCodeVerified && !bypassValidation)
+      if (!isActuallyVerified && !bypassValidation)
         throw new Error('A validação via WhatsApp é obrigatória.')
 
       const groups = entries.reduce(
@@ -354,18 +363,18 @@ export default function PortariaRegistro() {
         })
 
         let messageSent = false
-        const status = isCodeVerified
+        const status = isActuallyVerified
           ? 'Validado'
           : bypassValidation
             ? 'Aprovação Manual'
             : 'ENTRADA_PORTARIA'
-        const observacaoAuditoria = isCodeVerified
+        const observacaoAuditoria = isActuallyVerified
           ? `Validação: ${codValidado} | Celular Entregador: ${courierPhone.replace(/\D/g, '')}`
           : bypassValidation
             ? `Aprovação Manual | Celular Entregador: ${courierPhone.replace(/\D/g, '')}`
             : `Entrada registrada na portaria | Celular Entregador: ${courierPhone.replace(/\D/g, '')}`
 
-        const observacaoHistorico = isCodeVerified
+        const observacaoHistorico = isActuallyVerified
           ? 'Validado via WhatsApp'
           : bypassValidation
             ? 'Aprovação Manual sem validação via WhatsApp'
@@ -636,11 +645,25 @@ export default function PortariaRegistro() {
 
       setIsCodeVerified(true)
 
-      toast({
-        title: 'Código validado com sucesso!',
-        description: 'A autorização foi confirmada com sucesso.',
-        className: 'bg-success text-white',
-      })
+      const hasInvalidEntry = entries.some((e) => !e.unitId || !e.residentId || e.volumes < 1)
+      const isReadyToSave =
+        entries.length > 0 && !hasInvalidEntry && carrier && courierName && courierCpf.length === 14
+
+      if (isReadyToSave) {
+        toast({
+          title: 'Código validado com sucesso!',
+          description: 'A autorização foi confirmada. Salvando encomenda...',
+          className: 'bg-success text-white',
+        })
+        await handleFinish(true)
+      } else {
+        toast({
+          title: 'Código validado com sucesso!',
+          description:
+            'A autorização foi confirmada. Preencha os campos restantes e adicione a encomenda.',
+          className: 'bg-success text-white',
+        })
+      }
     } catch (err: any) {
       console.error('Verify API Failure Logging:', err, JSON.stringify(err))
       const detail = err.response?.message || err.message || 'Código inválido ou expirado'
@@ -1046,7 +1069,7 @@ export default function PortariaRegistro() {
             <Button
               className="w-full bg-success hover:bg-success/90 text-white mt-8 h-12 text-lg"
               size="lg"
-              onClick={handleFinish}
+              onClick={() => handleFinish()}
               disabled={isSubmitting || !isFormValid}
             >
               {isSubmitting ? (
