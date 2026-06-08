@@ -358,7 +358,8 @@ export default function PortariaRegistro() {
       setRefreshTrigger((prev) => prev + 1)
     } catch (err: any) {
       console.error('ERRO ao gravar:', err, JSON.stringify(err))
-      const fieldErrors = extractFieldErrors(err)      let detailedMsg = err.message || getErrorMessage(err)
+      const fieldErrors = extractFieldErrors(err)
+      let detailedMsg = err.message || getErrorMessage(err)
 
       if (Object.keys(fieldErrors).length > 0) {
         const fields = Object.entries(fieldErrors)
