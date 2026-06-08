@@ -192,9 +192,11 @@ export default function PortariaRegistro() {
 
     if (!moradorRecord) {
       try {
-        const byName = await pb.collection('moradores').getFirstListItem(
-          `torre='${escapeFilterValue(tower)}' && apartamento='${escapeFilterValue(apartment)}' && nome='${escapeFilterValue(residentName)}'`,
-        )
+        const byName = await pb
+          .collection('moradores')
+          .getFirstListItem(
+            `torre='${escapeFilterValue(tower)}' && apartamento='${escapeFilterValue(apartment)}' && nome='${escapeFilterValue(residentName)}'`,
+          )
         moradorRecord = byName as Morador
       } catch (_err) {
         // Não existe por nome/unidade, tentaremos criar abaixo.
@@ -205,7 +207,8 @@ export default function PortariaRegistro() {
       const fallbackEmail =
         String(residentCandidate?.email || '').trim() ||
         `morador.${tower.toLowerCase()}${apartment.toLowerCase()}.${Date.now()}@sem-email.local`
-      const fallbackTelefone = String(residentCandidate?.telefone || '').replace(/\D/g, '') || '00000000000'
+      const fallbackTelefone =
+        String(residentCandidate?.telefone || '').replace(/\D/g, '') || '00000000000'
       const fallbackCpf = String(residentCandidate?.cpf || '').replace(/\D/g, '') || '00000000000'
 
       try {
