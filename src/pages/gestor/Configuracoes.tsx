@@ -14,11 +14,12 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Trash2, Plus } from 'lucide-react'
+import { Trash2, Plus, Pencil } from 'lucide-react'
 import { getCondo, updateCondo } from '@/services/condos'
 import {
   getTemplatesNotificacao,
   createTemplateNotificacao,
+  updateTemplateNotificacao,
   deleteTemplateNotificacao,
 } from '@/services/templates_notificacao'
 
@@ -38,6 +39,7 @@ export default function GestorConfiguracoes() {
   const [templates, setTemplates] = useState<any[]>([])
   const [newTemplateStatus, setNewTemplateStatus] = useState('')
   const [newTemplateMensagem, setNewTemplateMensagem] = useState('')
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null)
 
   const { toast } = useToast()
 
@@ -93,18 +95,43 @@ export default function GestorConfiguracoes() {
   const handleAddTemplate = async () => {
     if (!newTemplateStatus || !newTemplateMensagem) return
     try {
-      const res = await createTemplateNotificacao({
-        status: newTemplateStatus,
-        mensagem_template: newTemplateMensagem,
-        ativo: true,
-      })
-      setTemplates([...templates, res])
+      if (editingTemplateId) {
+        const res = await updateTemplateNotificacao(editingTemplateId, {
+          status: newTemplateStatus,
+          mensagem_template: newTemplateMensagem,
+        })
+        setTemplates(templates.map((t) => (t.id === editingTemplateId ? res : t)))
+        setEditingTemplateId(null)
+        toast({ title: 'Template atualizado com sucesso' })
+      } else {
+        const res = await createTemplateNotificacao({
+          status: newTemplateStatus,
+          mensagem_template: newTemplateMensagem,
+          ativo: true,
+        })
+        setTemplates([...templates, res])
+        toast({ title: 'Template adicionado com sucesso' })
+      }
       setNewTemplateStatus('')
       setNewTemplateMensagem('')
-      toast({ title: 'Template adicionado com sucesso' })
     } catch (e) {
-      toast({ title: 'Erro ao adicionar template', variant: 'destructive' })
+      toast({
+        title: editingTemplateId ? 'Erro ao atualizar template' : 'Erro ao adicionar template',
+        variant: 'destructive',
+      })
     }
+  }
+
+  const handleEditTemplate = (t: any) => {
+    setNewTemplateStatus(t.status)
+    setNewTemplateMensagem(t.mensagem_template)
+    setEditingTemplateId(t.id)
+  }
+
+  const handleCancelEdit = () => {
+    setNewTemplateStatus('')
+    setNewTemplateMensagem('')
+    setEditingTemplateId(null)
   }
 
   const handleDeleteTemplate = async (id: string) => {
@@ -225,9 +252,22 @@ export default function GestorConfiguracoes() {
                     onChange={(e) => setNewTemplateMensagem(e.target.value)}
                   />
                 </div>
-                <Button className="mt-auto" onClick={handleAddTemplate}>
-                  <Plus className="w-4 h-4 mr-2" /> Adicionar
-                </Button>
+                <div className="mt-auto flex gap-2">
+                  {editingTemplateId && (
+                    <Button variant="outline" onClick={handleCancelEdit}>
+                      Cancelar
+                    </Button>
+                  )}
+                  <Button onClick={handleAddTemplate}>
+                    {editingTemplateId ? (
+                      'Salvar'
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 mr-2" /> Adicionar
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2 mt-4">
                 {templates.map((t) => (
@@ -241,14 +281,24 @@ export default function GestorConfiguracoes() {
                       </span>
                       <span>{t.mensagem_template}</span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive flex-shrink-0 ml-4"
-                      onClick={() => handleDeleteTemplate(t.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex flex-shrink-0 ml-4">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-primary"
+                        onClick={() => handleEditTemplate(t)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive"
+                        onClick={() => handleDeleteTemplate(t.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
