@@ -18,7 +18,38 @@ routerAdd(
     let body = e.requestInfo().body || {}
     const errors = {}
 
-    if (body.email !== undefined && body.email !== '' && body.email !== record.email()) {
+    const targetRole = body.role !== undefined ? body.role : record.getString('role')
+
+    if (targetRole !== 'morador') {
+      body.cpf = ''
+      body.torre = ''
+      body.unidade = ''
+    } else {
+      const finalCpf = body.cpf !== undefined ? body.cpf : record.getString('cpf')
+      const finalTorre = body.torre !== undefined ? body.torre : record.getString('torre')
+      const finalUnidade = body.unidade !== undefined ? body.unidade : record.getString('unidade')
+
+      if (!finalCpf || String(finalCpf).trim() === '') {
+        errors.cpf = new ValidationError(
+          'validation_required',
+          'O CPF é obrigatório para moradores.',
+        )
+      }
+      if (!finalTorre || String(finalTorre).trim() === '') {
+        errors.torre = new ValidationError(
+          'validation_required',
+          'A Torre é obrigatória para moradores.',
+        )
+      }
+      if (!finalUnidade || String(finalUnidade).trim() === '') {
+        errors.unidade = new ValidationError(
+          'validation_required',
+          'A Unidade é obrigatória para moradores.',
+        )
+      }
+    }
+
+    if (body.email !== undefined && body.email !== '' && body.email !== record.getString('email')) {
       try {
         const existing = $app.findAuthRecordByEmail('users', body.email)
         if (existing && existing.id !== record.id) {
@@ -40,6 +71,20 @@ routerAdd(
       }
     }
 
+    if (body.password !== undefined && String(body.password).trim() !== '') {
+      if (body.passwordConfirm === undefined || String(body.passwordConfirm).trim() === '') {
+        errors.passwordConfirm = new ValidationError(
+          'validation_required',
+          'A confirmação de senha é obrigatória.',
+        )
+      } else if (String(body.password) !== String(body.passwordConfirm)) {
+        errors.passwordConfirm = new ValidationError(
+          'validation_mismatch',
+          'As senhas não coincidem.',
+        )
+      }
+    }
+
     if (Object.keys(errors).length > 0) {
       throw new BadRequestError('Dados inválidos.', errors)
     }
@@ -48,7 +93,7 @@ routerAdd(
 
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
-        record.set(field, body[field])
+        record.set(field, body[field] === null ? '' : String(body[field]))
       }
     }
 
@@ -56,7 +101,11 @@ routerAdd(
       record.setEmail(body.email)
     }
 
-    if (body.password && String(body.password).trim() !== '') {
+    if (
+      body.password &&
+      String(body.password).trim() !== '' &&
+      body.password === body.passwordConfirm
+    ) {
       record.setPassword(String(body.password))
     }
 

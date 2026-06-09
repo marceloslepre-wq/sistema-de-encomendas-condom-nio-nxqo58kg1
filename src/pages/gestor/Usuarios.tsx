@@ -31,7 +31,7 @@ import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { Plus, Search, Edit, Trash2, Loader2, ShieldAlert } from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
-import { getUsers, createUser, adminUpdateUser, deleteUser, AppUser } from '@/services/api'
+import { getUsers, createUser, deleteUser, AppUser } from '@/services/api'
 import { extractFieldErrors } from '@/lib/pocketbase/errors'
 
 const formatPhone = (value: string) => {
@@ -192,9 +192,9 @@ export default function GestorUsuarios() {
           if (formData.unidade !== ((editingUser as any).unidade || ''))
             dataToSave.unidade = formData.unidade
         } else {
-          if ((editingUser as any).cpf) dataToSave.cpf = ''
-          if ((editingUser as any).torre) dataToSave.torre = ''
-          if ((editingUser as any).unidade) dataToSave.unidade = ''
+          dataToSave.cpf = ''
+          dataToSave.torre = ''
+          dataToSave.unidade = ''
         }
       } else {
         dataToSave.name = formData.name
@@ -206,6 +206,10 @@ export default function GestorUsuarios() {
           dataToSave.cpf = formData.cpf
           dataToSave.torre = formData.torre
           dataToSave.unidade = formData.unidade
+        } else {
+          dataToSave.cpf = ''
+          dataToSave.torre = ''
+          dataToSave.unidade = ''
         }
       }
 
@@ -216,7 +220,10 @@ export default function GestorUsuarios() {
 
       if (editingUser) {
         if (Object.keys(dataToSave).length > 0) {
-          await adminUpdateUser(editingUser.id, dataToSave)
+          await pb.send(`/backend/v1/admin/users/${editingUser.id}`, {
+            method: 'PATCH',
+            body: dataToSave,
+          })
         }
         toast({
           title: 'Sucesso',
@@ -450,8 +457,10 @@ export default function GestorUsuarios() {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 placeholder={editingUser ? 'Deixe em branco para manter' : 'Mínimo 8 caracteres'}
               />
-              {fieldErrors.password && (
-                <p className="text-xs text-destructive">{fieldErrors.password}</p>
+              {(fieldErrors.password || fieldErrors.passwordConfirm) && (
+                <p className="text-xs text-destructive">
+                  {fieldErrors.password || fieldErrors.passwordConfirm}
+                </p>
               )}
             </div>
 
