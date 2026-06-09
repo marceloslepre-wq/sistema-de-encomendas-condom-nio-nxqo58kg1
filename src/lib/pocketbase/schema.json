@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-09T19:11:46.912Z",
+  "generatedAt": "2026-06-09T20:21:07.417Z",
   "collections": [
     {
       "name": "users",
@@ -773,6 +773,65 @@
         }
       ],
       "indexes": []
+    },
+    {
+      "name": "invitation_links",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')",
+        "view": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')",
+        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')",
+        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')",
+        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
+      },
+      "fields": [
+        {
+          "name": "role",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["gestor", "porteiro", "portaria", "triagem", "morador"]
+        },
+        {
+          "name": "torre",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "unidade",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "token",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_invitation_token ON invitation_links (token)"]
     }
   ]
 }

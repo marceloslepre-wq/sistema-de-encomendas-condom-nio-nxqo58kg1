@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -29,9 +30,29 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Search, Edit, Trash2, Loader2, ShieldAlert } from 'lucide-react'
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Loader2,
+  ShieldAlert,
+  Link as LinkIcon,
+  Copy,
+  Send,
+  Mail,
+} from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
-import { getUsers, createUser, deleteUser, AppUser } from '@/services/api'
+import {
+  getUsers,
+  createUser,
+  deleteUser,
+  AppUser,
+  getInvitations,
+  createInvitation,
+  deleteInvitation,
+  InvitationLink,
+} from '@/services/api'
 import { extractFieldErrors } from '@/lib/pocketbase/errors'
 
 const formatPhone = (value: string) => {
@@ -45,17 +66,22 @@ const formatPhone = (value: string) => {
 export default function GestorUsuarios() {
   const { toast } = useToast()
   const [users, setUsers] = useState<AppUser[]>([])
+  const [invitations, setInvitations] = useState<InvitationLink[]>([])
   const [units, setUnits] = useState<any[]>([])
   const [torres, setTorres] = useState<string[]>([])
   const [unidadesPorTorre, setUnidadesPorTorre] = useState<string[]>([])
+  const [unidadesPorTorreLink, setUnidadesPorTorreLink] = useState<string[]>([])
 
   const [search, setSearch] = useState('')
+  const [searchLinks, setSearchLinks] = useState('')
   const [roleFilter, setRoleFilter] = useState('todos')
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<AppUser | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [generatedLink, setGeneratedLink] = useState('')
 
   const [formData, setFormData] = useState({
     role: 'morador',
@@ -64,6 +90,12 @@ export default function GestorUsuarios() {
     password: '',
     phone: '',
     cpf: '',
+    torre: '',
+    unidade: '',
+  })
+
+  const [linkFormData, setLinkFormData] = useState({
+    role: 'morador',
     torre: '',
     unidade: '',
   })
@@ -84,12 +116,17 @@ export default function GestorUsuarios() {
     try {
       const usersData = await getUsers()
       setUsers(usersData)
+      const invData = await getInvitations()
+      setInvitations(invData)
     } catch (err) {
       toast({ title: 'Erro', description: 'Falha ao carregar dados.', variant: 'destructive' })
     }
   }
 
   useRealtime('users', () => {
+    loadData()
+  })
+  useRealtime('invitation_links', () => {
     loadData()
   })
 
@@ -102,6 +139,15 @@ export default function GestorUsuarios() {
     }
   }, [formData.torre, units])
 
+  useEffect(() => {
+    if (linkFormData.torre) {
+      const apts = units.filter((u) => u.tower === linkFormData.torre).map((u) => u.apartment)
+      setUnidadesPorTorreLink(Array.from(new Set(apts)) as string[])
+    } else {
+      setUnidadesPorTorreLink([])
+    }
+  }, [linkFormData.torre, units])
+
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
       const matchSearch =
@@ -112,6 +158,18 @@ export default function GestorUsuarios() {
       return matchSearch && matchRole
     })
   }, [users, search, roleFilter])
+
+  const filteredLinks = useMemo(() => {
+    return invitations.filter((inv) => {
+      const searchStr = searchLinks.toLowerCase()
+      const matchSearch =
+        inv.role.toLowerCase().includes(searchStr) ||
+        (inv.torre || '').toLowerCase().includes(searchStr) ||
+        (inv.unidade || '').toLowerCase().includes(searchStr) ||
+        inv.token.toLowerCase().includes(searchStr)
+      return matchSearch
+    })
+  }, [invitations, searchLinks])
 
   const handleOpenDialog = (user?: AppUser) => {
     setFieldErrors({})
@@ -141,6 +199,75 @@ export default function GestorUsuarios() {
       })
     }
     setIsDialogOpen(true)
+  }
+
+  const handleOpenLinkDialog = () => {
+    setLinkFormData({ role: 'morador', torre: '', unidade: '' })
+    setGeneratedLink('')
+    setIsLinkDialogOpen(true)
+  }
+
+  const handleGenerateLinkSubmit = async () => {
+    setIsSubmitting(true)
+    try {
+      const token =
+        Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+      const data = {
+        role: linkFormData.role,
+        torre: linkFormData.role === 'morador' ? linkFormData.torre : '',
+        unidade: linkFormData.role === 'morador' ? linkFormData.unidade : '',
+        token,
+        active: true,
+      }
+      await createInvitation(data)
+      setGeneratedLink(`${window.location.origin}/registrar/${token}`)
+      toast({
+        title: 'Sucesso',
+        description: 'Link gerado com sucesso.',
+        className: 'bg-success text-white',
+      })
+      loadData()
+    } catch (err) {
+      toast({ title: 'Erro', description: 'Falha ao gerar link.', variant: 'destructive' })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(generatedLink)
+    toast({ title: 'Copiado', description: 'Link copiado para a área de transferência.' })
+  }
+
+  const shareWhatsApp = () => {
+    const text = encodeURIComponent(
+      `Olá! Aqui está o seu link para registro no sistema do condomínio:\n\n${generatedLink}`,
+    )
+    window.open(`https://wa.me/?text=${text}`, '_blank')
+  }
+
+  const shareEmail = () => {
+    const subject = encodeURIComponent('Link de Registro - Condomínio')
+    const body = encodeURIComponent(
+      `Olá!\n\nAqui está o seu link para registro no sistema do condomínio:\n\n${generatedLink}`,
+    )
+    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank')
+  }
+
+  const handleDeleteLink = async (id: string) => {
+    if (
+      confirm(
+        'Tem certeza que deseja excluir este link? O usuário não poderá mais se registrar por ele.',
+      )
+    ) {
+      try {
+        await deleteInvitation(id)
+        toast({ title: 'Sucesso', description: 'Link excluído.' })
+        loadData()
+      } catch (err) {
+        toast({ title: 'Erro', description: 'Falha ao excluir link.', variant: 'destructive' })
+      }
+    }
   }
 
   const handleSubmit = async () => {
@@ -295,94 +422,343 @@ export default function GestorUsuarios() {
             Administre contas e permissões de acesso do condomínio.
           </p>
         </div>
-        <Button onClick={() => handleOpenDialog()} className="gap-2 shrink-0">
-          <Plus className="w-4 h-4" /> Novo Usuário
-        </Button>
+        <div className="flex gap-2 shrink-0">
+          <Button variant="outline" onClick={handleOpenLinkDialog} className="gap-2">
+            <LinkIcon className="w-4 h-4" /> Gerar Link
+          </Button>
+          <Button onClick={() => handleOpenDialog()} className="gap-2">
+            <Plus className="w-4 h-4" /> Novo Usuário
+          </Button>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row gap-4 justify-between">
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome, e-mail ou CPF..."
-                className="pl-9"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <div className="w-full sm:w-48">
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filtrar por Perfil" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos os Perfis</SelectItem>
-                  <SelectItem value="gestor">Gestor</SelectItem>
-                  <SelectItem value="porteiro">Porteiro</SelectItem>
-                  <SelectItem value="portaria">Portaria</SelectItem>
-                  <SelectItem value="triagem">Triagem</SelectItem>
-                  <SelectItem value="morador">Morador</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome e Contato</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>Unidade</TableHead>
-                  <TableHead>Perfil</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                      Nenhum usuário encontrado com os filtros atuais.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredUsers.map((u) => (
-                    <TableRow key={u.id}>
-                      <TableCell>
-                        <div className="font-medium">{u.name || 'Sem Nome'}</div>
-                        <div className="text-sm text-muted-foreground">{u.email}</div>
-                      </TableCell>
-                      <TableCell>{u.phone || '-'}</TableCell>
-                      <TableCell>
-                        {u.role === 'morador' && (u as any).torre && (u as any).unidade
-                          ? `${(u as any).torre} - ${(u as any).unidade}`
-                          : '-'}
-                      </TableCell>
-                      <TableCell>{getRoleBadge(u.role)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(u)}>
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive"
-                          onClick={() => handleDelete(u.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
+      <Tabs defaultValue="usuarios" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="usuarios">Usuários</TabsTrigger>
+          <TabsTrigger value="links">Links de Convite</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="usuarios">
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex flex-col sm:flex-row gap-4 justify-between">
+                <div className="relative w-full sm:max-w-xs">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome, e-mail ou CPF..."
+                    className="pl-9"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+                <div className="w-full sm:w-48">
+                  <Select value={roleFilter} onValueChange={setRoleFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filtrar por Perfil" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos os Perfis</SelectItem>
+                      <SelectItem value="gestor">Gestor</SelectItem>
+                      <SelectItem value="porteiro">Porteiro</SelectItem>
+                      <SelectItem value="portaria">Portaria</SelectItem>
+                      <SelectItem value="triagem">Triagem</SelectItem>
+                      <SelectItem value="morador">Morador</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border bg-card">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome e Contato</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead>Unidade</TableHead>
+                      <TableHead>Perfil</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                          Nenhum usuário encontrado com os filtros atuais.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredUsers.map((u) => (
+                        <TableRow key={u.id}>
+                          <TableCell>
+                            <div className="font-medium">{u.name || 'Sem Nome'}</div>
+                            <div className="text-sm text-muted-foreground">{u.email}</div>
+                          </TableCell>
+                          <TableCell>{u.phone || '-'}</TableCell>
+                          <TableCell>
+                            {u.role === 'morador' && (u as any).torre && (u as any).unidade
+                              ? `${(u as any).torre} - ${(u as any).unidade}`
+                              : '-'}
+                          </TableCell>
+                          <TableCell>{getRoleBadge(u.role)}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(u)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive"
+                              onClick={() => handleDelete(u.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="links">
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex flex-col sm:flex-row gap-4 justify-between">
+                <div className="relative w-full sm:max-w-xs">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar link..."
+                    className="pl-9"
+                    value={searchLinks}
+                    onChange={(e) => setSearchLinks(e.target.value)}
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border bg-card">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Perfil</TableHead>
+                      <TableHead>Torre / Unidade</TableHead>
+                      <TableHead>Data de Criação</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredLinks.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                          Nenhum link gerado.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredLinks.map((inv) => (
+                        <TableRow key={inv.id}>
+                          <TableCell>{getRoleBadge(inv.role)}</TableCell>
+                          <TableCell>
+                            {inv.role === 'morador'
+                              ? inv.torre || inv.unidade
+                                ? `${inv.torre || 'Todas'} - ${inv.unidade || 'Todas'}`
+                                : 'Livre'
+                              : '-'}
+                          </TableCell>
+                          <TableCell>{new Date(inv.created).toLocaleDateString('pt-BR')}</TableCell>
+                          <TableCell>
+                            {inv.active ? (
+                              <Badge className="bg-green-500">Ativo</Badge>
+                            ) : (
+                              <Badge variant="secondary">Inativo</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                navigator.clipboard.writeText(
+                                  `${window.location.origin}/registrar/${inv.token}`,
+                                )
+                                toast({ title: 'Copiado', description: 'Link copiado.' })
+                              }}
+                            >
+                              <Copy className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive"
+                              onClick={() => handleDeleteLink(inv.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <Dialog
+        open={isLinkDialogOpen}
+        onOpenChange={(open) => {
+          setIsLinkDialogOpen(open)
+          if (!open) setGeneratedLink('')
+        }}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Gerar Link de Convite</DialogTitle>
+            <DialogDescription>
+              Crie um link para que um usuário possa se registrar sozinho.
+            </DialogDescription>
+          </DialogHeader>
+
+          {generatedLink ? (
+            <div className="py-6 space-y-6">
+              <div className="p-4 bg-muted rounded-md break-all text-center font-medium">
+                {generatedLink}
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <Button
+                  variant="outline"
+                  className="flex flex-col h-auto py-3 gap-2"
+                  onClick={copyToClipboard}
+                >
+                  <Copy className="w-5 h-5" />
+                  Copiar
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex flex-col h-auto py-3 gap-2"
+                  onClick={shareWhatsApp}
+                >
+                  <Send className="w-5 h-5 text-green-600" />
+                  WhatsApp
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex flex-col h-auto py-3 gap-2"
+                  onClick={shareEmail}
+                >
+                  <Mail className="w-5 h-5 text-blue-600" />
+                  E-mail
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label>
+                  Perfil de Acesso <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={linkFormData.role}
+                  onValueChange={(v) => setLinkFormData({ ...linkFormData, role: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gestor">Gestor</SelectItem>
+                    <SelectItem value="porteiro">Porteiro</SelectItem>
+                    <SelectItem value="portaria">Portaria</SelectItem>
+                    <SelectItem value="triagem">Triagem</SelectItem>
+                    <SelectItem value="morador">Morador</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {linkFormData.role === 'morador' && (
+                <>
+                  <div className="bg-muted/50 p-3 rounded-md text-sm text-muted-foreground mb-2">
+                    Deixe em branco para permitir que o morador escolha a torre e unidade, ou
+                    preencha para travar estas opções no formulário.
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Torre (Opcional)</Label>
+                    <Select
+                      value={linkFormData.torre || 'none'}
+                      onValueChange={(v) =>
+                        setLinkFormData({
+                          ...linkFormData,
+                          torre: v === 'none' ? '' : v,
+                          unidade: '',
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Qualquer Torre" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Qualquer Torre</SelectItem>
+                        {torres.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {t}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Unidade (Opcional)</Label>
+                    <Select
+                      value={linkFormData.unidade || 'none'}
+                      onValueChange={(v) =>
+                        setLinkFormData({ ...linkFormData, unidade: v === 'none' ? '' : v })
+                      }
+                      disabled={!linkFormData.torre}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Qualquer Unidade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Qualquer Unidade</SelectItem>
+                        {unidadesPorTorreLink.map((u) => (
+                          <SelectItem key={u} value={u}>
+                            {u}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            {!generatedLink ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsLinkDialogOpen(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+                <Button onClick={handleGenerateLinkSubmit} disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Gerar Link
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => setIsLinkDialogOpen(false)}>Fechar</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">

@@ -8,6 +8,7 @@ import Layout from './components/Layout'
 import Index from './pages/Index'
 import NotFound from './pages/NotFound'
 import Cadastro from './pages/Cadastro'
+import Registrar from './pages/Registrar'
 
 // Gestor Pages
 import GestorDashboard from './pages/gestor/Dashboard'
@@ -81,6 +82,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/cadastro" element={<Cadastro />} />
+          <Route path="/registrar/:token" element={<Registrar />} />
 
           <Route element={<Layout />}>
             <Route

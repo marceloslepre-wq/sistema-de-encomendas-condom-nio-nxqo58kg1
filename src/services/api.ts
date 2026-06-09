@@ -206,6 +206,29 @@ export const createUser = (data: any) => {
 }
 export const deleteUser = (id: string) => pb.collection('users').delete(id)
 
+export type InvitationLink = RecordModel & {
+  role: string
+  torre?: string
+  unidade?: string
+  token: string
+  active: boolean
+}
+
+export const getInvitations = () =>
+  pb.collection('invitation_links').getFullList<InvitationLink>({ sort: '-created' })
+export const createInvitation = (data: any) =>
+  pb.collection('invitation_links').create<InvitationLink>(data)
+export const deleteInvitation = (id: string) => pb.collection('invitation_links').delete(id)
+
+export const getPublicInvitation = (token: string) =>
+  pb.send(`/backend/v1/invitations/${token}`, { method: 'GET' })
+export const registerWithInvitation = (token: string, data: any) =>
+  pb.send(`/backend/v1/invitations/${token}/register`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: { 'Content-Type': 'application/json' },
+  })
+
 export const getCarriers = () => pb.collection('carriers').getFullList({ sort: 'name' })
 export const createCarrier = (data: any) => pb.collection('carriers').create(data)
 export const updateCarrier = (id: string, data: any) => pb.collection('carriers').update(id, data)
