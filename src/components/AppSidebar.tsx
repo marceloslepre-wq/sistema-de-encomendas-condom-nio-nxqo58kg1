@@ -34,9 +34,8 @@ export function AppSidebar() {
       case 'gestor':
         return [
           { title: 'Dashboard', url: '/gestor/dashboard', icon: BarChart3 },
-          { title: 'Usuários', url: '/gestor/usuarios', icon: User },
+          { title: 'Usuários', url: '/gestor/usuarios', icon: Users },
           { title: 'Unidades', url: '/gestor/unidades', icon: Home },
-          { title: 'Moradores', url: '/gestor/moradores', icon: Users },
           { title: 'Transportadoras', url: '/gestor/transportadoras', icon: Truck },
           { title: 'Relatórios', url: '/gestor/relatorios', icon: FileText },
           { title: 'Logística', url: '/gestor/logistica', icon: Box },

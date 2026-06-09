@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import pb from '@/lib/pocketbase/client'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,6 +45,9 @@ const formatPhone = (value: string) => {
 export default function GestorUsuarios() {
   const { toast } = useToast()
   const [users, setUsers] = useState<AppUser[]>([])
+  const [units, setUnits] = useState<any[]>([])
+  const [torres, setTorres] = useState<string[]>([])
+  const [unidadesPorTorre, setUnidadesPorTorre] = useState<string[]>([])
 
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('todos')
@@ -54,15 +58,26 @@ export default function GestorUsuarios() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const [formData, setFormData] = useState({
+    role: 'morador',
     name: '',
     email: '',
     password: '',
     phone: '',
-    role: 'morador',
+    cpf: '',
+    torre: '',
+    unidade: '',
   })
 
   useEffect(() => {
     loadData()
+    pb.collection('units')
+      .getFullList()
+      .then((data) => {
+        setUnits(data)
+        const t = Array.from(new Set(data.map((u) => u.tower)))
+        setTorres(t as string[])
+      })
+      .catch(() => {})
   }, [])
 
   const loadData = async () => {
@@ -78,11 +93,21 @@ export default function GestorUsuarios() {
     loadData()
   })
 
+  useEffect(() => {
+    if (formData.torre) {
+      const apts = units.filter((u) => u.tower === formData.torre).map((u) => u.apartment)
+      setUnidadesPorTorre(Array.from(new Set(apts)) as string[])
+    } else {
+      setUnidadesPorTorre([])
+    }
+  }, [formData.torre, units])
+
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
       const matchSearch =
         u.name?.toLowerCase().includes(search.toLowerCase()) ||
-        u.email?.toLowerCase().includes(search.toLowerCase())
+        u.email?.toLowerCase().includes(search.toLowerCase()) ||
+        (u as any).cpf?.includes(search)
       const matchRole = roleFilter === 'todos' || u.role === roleFilter
       return matchSearch && matchRole
     })
@@ -93,20 +118,26 @@ export default function GestorUsuarios() {
     if (user) {
       setEditingUser(user)
       setFormData({
+        role: user.role || 'morador',
         name: user.name || '',
         email: user.email || '',
         password: '',
         phone: user.phone || '',
-        role: user.role || 'morador',
+        cpf: (user as any).cpf || '',
+        torre: (user as any).torre || '',
+        unidade: (user as any).unidade || '',
       })
     } else {
       setEditingUser(null)
       setFormData({
+        role: 'morador',
         name: '',
         email: '',
         password: '',
         phone: '',
-        role: 'morador',
+        cpf: '',
+        torre: '',
+        unidade: '',
       })
     }
     setIsDialogOpen(true)
@@ -116,7 +147,7 @@ export default function GestorUsuarios() {
     if (!formData.name || !formData.email || !formData.role) {
       toast({
         title: 'Atenção',
-        description: 'Preencha os campos obrigatórios.',
+        description: 'Preencha os campos obrigatórios (Nome, E-mail, Perfil).',
         variant: 'destructive',
       })
       return
@@ -131,6 +162,17 @@ export default function GestorUsuarios() {
       return
     }
 
+    if (formData.role === 'morador') {
+      if (!formData.cpf || !formData.torre || !formData.unidade) {
+        toast({
+          title: 'Atenção',
+          description: 'Preencha CPF, Torre e Unidade para moradores.',
+          variant: 'destructive',
+        })
+        return
+      }
+    }
+
     setIsSubmitting(true)
     setFieldErrors({})
 
@@ -142,11 +184,29 @@ export default function GestorUsuarios() {
         if (formData.email !== (editingUser.email || '')) dataToSave.email = formData.email
         if (formData.phone !== (editingUser.phone || '')) dataToSave.phone = formData.phone
         if (formData.role !== (editingUser.role || '')) dataToSave.role = formData.role
+
+        if (formData.role === 'morador') {
+          if (formData.cpf !== ((editingUser as any).cpf || '')) dataToSave.cpf = formData.cpf
+          if (formData.torre !== ((editingUser as any).torre || ''))
+            dataToSave.torre = formData.torre
+          if (formData.unidade !== ((editingUser as any).unidade || ''))
+            dataToSave.unidade = formData.unidade
+        } else {
+          if ((editingUser as any).cpf) dataToSave.cpf = ''
+          if ((editingUser as any).torre) dataToSave.torre = ''
+          if ((editingUser as any).unidade) dataToSave.unidade = ''
+        }
       } else {
         dataToSave.name = formData.name
         dataToSave.email = formData.email
         dataToSave.phone = formData.phone
         dataToSave.role = formData.role
+
+        if (formData.role === 'morador') {
+          dataToSave.cpf = formData.cpf
+          dataToSave.torre = formData.torre
+          dataToSave.unidade = formData.unidade
+        }
       }
 
       if (formData.password && formData.password.trim() !== '') {
@@ -155,7 +215,6 @@ export default function GestorUsuarios() {
       }
 
       if (editingUser) {
-        // Submit only if fields actually changed
         if (Object.keys(dataToSave).length > 0) {
           await adminUpdateUser(editingUser.id, dataToSave)
         }
@@ -177,6 +236,12 @@ export default function GestorUsuarios() {
       loadData()
     } catch (err: any) {
       const errors = extractFieldErrors(err)
+      if (
+        err?.response?.data?.cpf?.code === 'validation_not_unique' ||
+        errors.cpf === 'Value must be unique.'
+      ) {
+        errors.cpf = 'Este CPF já está cadastrado.'
+      }
       setFieldErrors(errors)
       const errorMsg =
         Object.values(errors)[0] || err?.message || 'Falha ao salvar usuário. Verifique os dados.'
@@ -234,7 +299,7 @@ export default function GestorUsuarios() {
             <div className="relative w-full sm:max-w-xs">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nome ou e-mail..."
+                placeholder="Buscar por nome, e-mail ou CPF..."
                 className="pl-9"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -264,6 +329,7 @@ export default function GestorUsuarios() {
                 <TableRow>
                   <TableHead>Nome e Contato</TableHead>
                   <TableHead>Telefone</TableHead>
+                  <TableHead>Unidade</TableHead>
                   <TableHead>Perfil</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -271,7 +337,7 @@ export default function GestorUsuarios() {
               <TableBody>
                 {filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
                       Nenhum usuário encontrado com os filtros atuais.
                     </TableCell>
                   </TableRow>
@@ -283,6 +349,11 @@ export default function GestorUsuarios() {
                         <div className="text-sm text-muted-foreground">{u.email}</div>
                       </TableCell>
                       <TableCell>{u.phone || '-'}</TableCell>
+                      <TableCell>
+                        {u.role === 'morador' && (u as any).torre && (u as any).unidade
+                          ? `${(u as any).torre} - ${(u as any).unidade}`
+                          : '-'}
+                      </TableCell>
                       <TableCell>{getRoleBadge(u.role)}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(u)}>
@@ -318,6 +389,28 @@ export default function GestorUsuarios() {
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+            <div className="space-y-2 md:col-span-2">
+              <Label>
+                Perfil de Acesso <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={formData.role}
+                onValueChange={(v) => setFormData({ ...formData, role: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gestor">Gestor</SelectItem>
+                  <SelectItem value="porteiro">Porteiro</SelectItem>
+                  <SelectItem value="portaria">Portaria</SelectItem>
+                  <SelectItem value="triagem">Triagem</SelectItem>
+                  <SelectItem value="morador">Morador</SelectItem>
+                </SelectContent>
+              </Select>
+              {fieldErrors.role && <p className="text-xs text-destructive">{fieldErrors.role}</p>}
+            </div>
+
             <div className="space-y-2 md:col-span-2">
               <Label>
                 Nome Completo <span className="text-destructive">*</span>
@@ -362,8 +455,8 @@ export default function GestorUsuarios() {
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label>Celular</Label>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Celular (Opcional)</Label>
               <Input
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
@@ -373,27 +466,80 @@ export default function GestorUsuarios() {
               {fieldErrors.phone && <p className="text-xs text-destructive">{fieldErrors.phone}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label>
-                Perfil de Acesso <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                value={formData.role}
-                onValueChange={(v) => setFormData({ ...formData, role: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="gestor">Gestor</SelectItem>
-                  <SelectItem value="porteiro">Porteiro</SelectItem>
-                  <SelectItem value="portaria">Portaria</SelectItem>
-                  <SelectItem value="triagem">Triagem</SelectItem>
-                  <SelectItem value="morador">Morador</SelectItem>
-                </SelectContent>
-              </Select>
-              {fieldErrors.role && <p className="text-xs text-destructive">{fieldErrors.role}</p>}
-            </div>
+            {formData.role === 'morador' && (
+              <>
+                <div className="space-y-2 md:col-span-2">
+                  <Label>
+                    CPF <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    value={formData.cpf}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/\D/g, '').substring(0, 11)
+                      let formatted = v
+                      if (v.length > 9)
+                        formatted = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+                      else if (v.length > 6)
+                        formatted = v.replace(/(\d{3})(\d{3})(\d{3})/, '$1.$2.$3')
+                      else if (v.length > 3) formatted = v.replace(/(\d{3})(\d{3})/, '$1.$2')
+                      setFormData({ ...formData, cpf: formatted })
+                    }}
+                    placeholder="000.000.000-00"
+                    maxLength={14}
+                  />
+                  {fieldErrors.cpf && <p className="text-xs text-destructive">{fieldErrors.cpf}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    Torre <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={formData.torre}
+                    onValueChange={(v) => setFormData({ ...formData, torre: v, unidade: '' })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a Torre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {torres.map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {t}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {fieldErrors.torre && (
+                    <p className="text-xs text-destructive">{fieldErrors.torre}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    Unidade <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={formData.unidade}
+                    onValueChange={(v) => setFormData({ ...formData, unidade: v })}
+                    disabled={!formData.torre}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a Unidade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {unidadesPorTorre.map((u) => (
+                        <SelectItem key={u} value={u}>
+                          {u}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {fieldErrors.unidade && (
+                    <p className="text-xs text-destructive">{fieldErrors.unidade}</p>
+                  )}
+                </div>
+              </>
+            )}
 
             {formData.role === 'triagem' && (
               <div className="col-span-1 md:col-span-2 mt-2">

@@ -12,7 +12,6 @@ import Cadastro from './pages/Cadastro'
 // Gestor Pages
 import GestorDashboard from './pages/gestor/Dashboard'
 import GestorUsuarios from './pages/gestor/Usuarios'
-import GestorMoradores from './pages/gestor/Moradores'
 import GestorUnidades from './pages/gestor/Unidades'
 import GestorRelatorios from './pages/gestor/Relatorios'
 import GestorConfiguracoes from './pages/gestor/Configuracoes'
@@ -113,14 +112,6 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="gestor">
                   <GestorTransportadoras />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/gestor/moradores"
-              element={
-                <ProtectedRoute requiredRole="gestor">
-                  <GestorMoradores />
                 </ProtectedRoute>
               }
             />
