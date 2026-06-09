@@ -133,7 +133,6 @@ export default function MoradorDados() {
                   Celular
                 </Label>
                 <Input
-                  required
                   value={phone}
                   onChange={(e) => setPhone(maskPhone(e.target.value))}
                   placeholder="(00) 00000-0000"

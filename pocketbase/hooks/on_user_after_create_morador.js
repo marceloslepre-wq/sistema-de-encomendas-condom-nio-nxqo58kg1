@@ -7,7 +7,11 @@ onRecordAfterCreateSuccess((e) => {
   try {
     record = $app.findFirstRecordByData('moradores', 'email', e.record.getString('email'))
   } catch (_) {
-    record = new Record(moradores)
+    try {
+      record = $app.findFirstRecordByData('moradores', 'cpf', e.record.getString('cpf'))
+    } catch (_) {
+      record = new Record(moradores)
+    }
   }
 
   record.set('nome', e.record.getString('name'))

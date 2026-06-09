@@ -7,7 +7,9 @@ routerAdd(
     const code = body.code
 
     if (typeof phone !== 'string' || !phone.trim() || typeof code !== 'string' || !code.trim()) {
-      return e.badRequestError('Phone and code are required')
+      return e.badRequestError(
+        'Phone and code are required. Se o morador não possui celular, utilize validação presencial (ID/Documento).',
+      )
     }
 
     const numericPhone = phone.replace(/\D/g, '')

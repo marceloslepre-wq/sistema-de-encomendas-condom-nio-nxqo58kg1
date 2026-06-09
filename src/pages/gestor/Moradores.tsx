@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { ResidentForm } from '@/components/ResidentForm'
-import { extractFieldErrors } from '@/lib/pocketbase/errors'
+import { extractFieldErrors, getErrorMessage } from '@/lib/pocketbase/errors'
 
 export default function GestorMoradores() {
   const [moradores, setMoradores] = useState<Morador[]>([])
@@ -85,17 +85,36 @@ export default function GestorMoradores() {
       const errors = extractFieldErrors(e)
       const responseData = e?.response?.data || {}
 
-      if (responseData.email?.code === 'validation_not_unique') {
-        errors.email = 'Este e-mail já está cadastrado'
+      if (
+        responseData.email?.code === 'validation_not_unique' ||
+        errors.email === 'Value must be unique.'
+      ) {
+        errors.email = 'Este e-mail já está cadastrado e em uso.'
+      }
+      if (
+        responseData.cpf?.code === 'validation_not_unique' ||
+        errors.cpf === 'Value must be unique.'
+      ) {
+        errors.cpf = 'Este CPF já está cadastrado e em uso.'
+      }
+      if (
+        responseData.telefone?.code === 'validation_not_unique' ||
+        errors.telefone === 'Value must be unique.'
+      ) {
+        errors.telefone = 'Este telefone já está cadastrado e em uso.'
+      }
+      if (
+        responseData.phone?.code === 'validation_not_unique' ||
+        errors.phone === 'Value must be unique.'
+      ) {
+        errors.telefone = 'Este telefone já está cadastrado e em uso.'
+      } else if (errors.phone && !errors.telefone) {
+        errors.telefone = errors.phone
       }
 
       if (errors.name) {
         errors.nome = errors.name
         delete errors.name
-      }
-      if (errors.phone) {
-        errors.telefone = errors.phone
-        delete errors.phone
       }
       if (errors.unidade) {
         errors.apartamento = errors.unidade
@@ -109,10 +128,31 @@ export default function GestorMoradores() {
         errors.password = 'A senha deve ter pelo menos 8 caracteres.'
       }
 
+      delete errors.phone
+
       setFieldErrors(errors)
+
+      const firstError = Object.values(errors)[0]
+      let defaultDesc = 'Verifique os dados informados.'
+
+      if (e && typeof e === 'object' && 'status' in e && e.status === 400) {
+        defaultDesc = 'Dados inválidos. Verifique as informações e tente novamente.'
+      } else if (e instanceof Error) {
+        defaultDesc =
+          e.message === 'Something went wrong.'
+            ? 'Não foi possível salvar as alterações. Verifique os dados.'
+            : e.message
+      } else if (e && typeof e === 'object' && typeof (e as any).message === 'string') {
+        defaultDesc =
+          (e as any).message === 'Something went wrong.'
+            ? 'Não foi possível salvar as alterações. Verifique os dados.'
+            : (e as any).message
+      }
+
       toast({
         title: 'Erro ao salvar',
-        description: Object.values(errors)[0] || 'Verifique os dados informados.',
+        description:
+          firstError && typeof firstError === 'string' ? firstError : String(defaultDesc),
         variant: 'destructive',
       })
     } finally {

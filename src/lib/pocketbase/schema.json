@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T20:10:22.516Z",
+  "generatedAt": "2026-06-08T21:39:20.033Z",
   "collections": [
     {
       "name": "users",
@@ -77,7 +77,8 @@
       ],
       "indexes": [
         "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
-        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
+        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''",
+        "CREATE UNIQUE INDEX `idx_users_cpf` ON `users` (cpf) WHERE cpf != ''"
       ]
     },
     {
@@ -560,7 +561,7 @@
         {
           "name": "telefone",
           "type": "text",
-          "required": true,
+          "required": false,
           "system": false
         },
         {
@@ -583,7 +584,9 @@
           ]
         }
       ],
-      "indexes": []
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_moradores_cpf` ON `moradores` (cpf) WHERE cpf != ''"
+      ]
     },
     {
       "name": "volume_types",

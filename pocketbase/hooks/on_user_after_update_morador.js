@@ -4,13 +4,33 @@ onRecordAfterUpdateSuccess((e) => {
   const moradores = $app.findCollectionByNameOrId('moradores')
 
   let record
+
+  const originalEmail = e.record.original().getString('email')
+  const originalCpf = e.record.original().getString('cpf')
+
   try {
-    record = $app.findFirstRecordByData('moradores', 'email', e.record.getString('email'))
+    if (originalEmail) {
+      record = $app.findFirstRecordByData('moradores', 'email', originalEmail)
+    } else {
+      throw new Error('No original email')
+    }
   } catch (_) {
     try {
-      record = $app.findFirstRecordByData('moradores', 'cpf', e.record.getString('cpf'))
+      if (originalCpf) {
+        record = $app.findFirstRecordByData('moradores', 'cpf', originalCpf)
+      } else {
+        throw new Error('No original cpf')
+      }
     } catch (_) {
-      record = new Record(moradores)
+      try {
+        record = $app.findFirstRecordByData('moradores', 'email', e.record.getString('email'))
+      } catch (_) {
+        try {
+          record = $app.findFirstRecordByData('moradores', 'cpf', e.record.getString('cpf'))
+        } catch (_) {
+          record = new Record(moradores)
+        }
+      }
     }
   }
 

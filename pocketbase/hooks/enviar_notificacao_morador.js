@@ -6,7 +6,8 @@ routerAdd(
     const { phone, message } = body
 
     if (!phone || !message) {
-      return e.badRequestError('Phone and message are required')
+      $app.logger().info('Notification skipped: missing phone or message')
+      return e.badRequestError('Phone and message are required. Unable to send notification.')
     }
 
     let url = $secrets.get('EVOLUTION_API_URL')

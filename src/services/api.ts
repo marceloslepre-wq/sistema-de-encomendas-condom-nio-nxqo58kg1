@@ -38,101 +38,162 @@ export const createMorador = async (data: any) => {
     role: 'morador',
   }
 
-  console.log('Payload sent to users API:', userPayload)
+  // Create user first. Any unique constraint error will be thrown to the caller.
+  await pb.collection('users').create(userPayload)
 
-  let user: any
-  try {
-    user = await pb.collection('users').create(userPayload)
-  } catch (error: any) {
-    console.error('API Error during user creation:', error.response?.data || error)
-    throw error
-  }
-
-  try {
-    const { password, ...moradorData } = data
-    console.log('Payload sent to moradores API:', moradorData)
-    return await pb.collection('moradores').create({ ...moradorData, email: user.email })
-  } catch (error: any) {
-    console.error('API Error during morador creation:', error.response?.data || error)
-    if (user && user.id) {
-      await pb
-        .collection('users')
-        .delete(user.id)
-        .catch(() => {})
-    }
-    throw error
-  }
+  // Create morador with strictly defined payload
+  const { password, ...moradorData } = data
+  return await pb.collection('moradores').create({
+    nome: moradorData.nome,
+    email: moradorData.email,
+    cpf: moradorData.cpf,
+    torre: moradorData.torre,
+    apartamento: moradorData.apartamento,
+    telefone: moradorData.telefone || '',
+  })
 }
 
 export const updateMorador = async (id: string, data: any) => {
   const { password, ...moradorData } = data
-  console.log('Payload sent to update moradores API:', moradorData)
 
+  const originalMorador = await pb.collection('moradores').getOne(id)
+
+  let user: any
   try {
-    const morador = await pb.collection('moradores').update(id, moradorData)
-
-    try {
-      const user = await pb
-        .collection('users')
-        .getFirstListItem(`cpf="${morador.cpf}" || email="${morador.email}"`)
-      const userPayload: any = {
-        name: morador.nome,
-        cpf: morador.cpf,
-        phone: morador.telefone,
-        torre: morador.torre,
-        unidade: morador.apartamento,
-      }
-      if (password && password.trim() !== '') {
-        userPayload.password = password
-        userPayload.passwordConfirm = password
-      }
-      console.log('Payload sent to update users API:', userPayload)
-      await pb.collection('users').update(user.id, userPayload)
-    } catch (e: any) {
-      console.error(
-        'User associated with morador not found or update failed',
-        e.response?.data || e,
-      )
-    }
-    return morador
-  } catch (error: any) {
-    console.error('API Error during resident update:', error.response?.data || error)
-    throw error
+    user = await pb
+      .collection('users')
+      .getFirstListItem(`cpf="${originalMorador.cpf}" || email="${originalMorador.email}"`)
+  } catch {
+    /* intentionally ignored */
   }
+
+  if (user) {
+    const userPayload: any = {}
+
+    if (moradorData.nome && moradorData.nome !== user.name) userPayload.name = moradorData.nome
+    if (moradorData.email && moradorData.email !== user.email) userPayload.email = moradorData.email
+    if (moradorData.cpf && moradorData.cpf !== user.cpf) userPayload.cpf = moradorData.cpf
+    if (moradorData.telefone && moradorData.telefone !== user.phone)
+      userPayload.phone = moradorData.telefone
+    if (moradorData.torre && moradorData.torre !== user.torre) userPayload.torre = moradorData.torre
+    if (moradorData.apartamento && moradorData.apartamento !== user.unidade)
+      userPayload.unidade = moradorData.apartamento
+
+    if (password && password.trim() !== '') {
+      userPayload.password = password
+      userPayload.passwordConfirm = password
+    }
+
+    if (Object.keys(userPayload).length > 0) {
+      if (['gestor', 'admin'].includes(pb.authStore.record?.role || '')) {
+        await adminUpdateUser(user.id, userPayload)
+      } else {
+        await updateUser(user.id, userPayload)
+      }
+    }
+  }
+
+  const updatePayload: any = {}
+  if (moradorData.nome !== undefined && String(moradorData.nome).trim() !== '')
+    updatePayload.nome = moradorData.nome
+  if (moradorData.email !== undefined && String(moradorData.email).trim() !== '')
+    updatePayload.email = moradorData.email
+  if (moradorData.cpf !== undefined && String(moradorData.cpf).trim() !== '')
+    updatePayload.cpf = moradorData.cpf
+  if (moradorData.torre !== undefined && String(moradorData.torre).trim() !== '')
+    updatePayload.torre = moradorData.torre
+  if (moradorData.apartamento !== undefined && String(moradorData.apartamento).trim() !== '')
+    updatePayload.apartamento = moradorData.apartamento
+  if (moradorData.telefone !== undefined) updatePayload.telefone = moradorData.telefone || ''
+
+  if (Object.keys(updatePayload).length > 0) {
+    return await pb.collection('moradores').update(id, updatePayload)
+  }
+
+  return originalMorador
 }
 export const deleteMorador = (id: string) => pb.collection('moradores').delete(id)
 
 export const getUsers = () => pb.collection('users').getFullList({ sort: '-created' })
 
-export const updateUser = (id: string, data: any) => {
+export const updateUser = async (id: string, data: any) => {
+  const existingRecord = await pb.collection('users').getOne(id)
   const payload: any = {}
 
-  const allowedFields = ['name', 'email', 'phone', 'role']
+  const allowedFields = ['name', 'phone', 'role', 'cpf', 'torre', 'unidade']
 
   allowedFields.forEach((field) => {
     if (field in data) {
-      payload[field] = data[field]
+      const newValue = data[field] === null ? '' : data[field]
+      const existingValue =
+        existingRecord[field] === null || existingRecord[field] === undefined
+          ? ''
+          : existingRecord[field]
+      if (newValue !== existingValue) {
+        payload[field] = newValue
+      }
     }
   })
+
+  if (data.email && data.email !== existingRecord.email) {
+    payload.email = data.email
+  }
 
   if (data.password && String(data.password).trim() !== '') {
     payload.password = data.password
     payload.passwordConfirm = data.passwordConfirm || data.password
   }
 
+  if (Object.keys(payload).length === 0) return existingRecord
+
   return pb.collection('users').update(id, payload)
 }
 
-export const adminUpdateUser = updateUser
+export const adminUpdateUser = async (id: string, data: any) => {
+  const existingRecord = await pb.collection('users').getOne(id)
+  const payload: any = {}
+
+  const allowedFields = ['name', 'phone', 'role', 'cpf', 'torre', 'unidade']
+
+  allowedFields.forEach((field) => {
+    if (field in data) {
+      const newValue = data[field] === null ? '' : data[field]
+      const existingValue =
+        existingRecord[field] === null || existingRecord[field] === undefined
+          ? ''
+          : existingRecord[field]
+      if (newValue !== existingValue) {
+        payload[field] = newValue
+      }
+    }
+  })
+
+  if (data.email && data.email !== existingRecord.email) {
+    payload.email = data.email
+  }
+
+  if (data.password && String(data.password).trim() !== '') {
+    payload.password = data.password
+    payload.passwordConfirm = data.passwordConfirm || data.password
+  }
+
+  if (Object.keys(payload).length === 0) return existingRecord
+
+  return pb.send(`/backend/v1/admin/users/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
 
 export const createUser = (data: any) => {
   const payload: any = {}
 
-  const allowedFields = ['name', 'email', 'phone', 'role']
+  const allowedFields = ['name', 'email', 'phone', 'role', 'cpf', 'torre', 'unidade']
 
   allowedFields.forEach((field) => {
     if (field in data) {
-      payload[field] = data[field]
+      payload[field] = data[field] === null ? '' : data[field]
     }
   })
 

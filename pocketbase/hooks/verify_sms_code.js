@@ -4,7 +4,9 @@ routerAdd(
   (e) => {
     const body = e.requestInfo().body
     if (!body.phone || !body.code) {
-      return e.badRequestError('Phone and code are required')
+      return e.badRequestError(
+        'Phone and code are required. Se o morador não possui celular, utilize validação presencial (ID/Documento).',
+      )
     }
 
     const phoneNum = String(body.phone || '').replace(/\D/g, '')

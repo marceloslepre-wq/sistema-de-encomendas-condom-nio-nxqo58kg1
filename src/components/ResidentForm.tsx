@@ -160,7 +160,6 @@ export function ResidentForm({
         <div className="space-y-2">
           <Label>Telefone</Label>
           <Input
-            required
             value={formData.telefone}
             onChange={(e) => setFormData({ ...formData, telefone: maskPhone(e.target.value) })}
             placeholder="(00) 00000-0000"

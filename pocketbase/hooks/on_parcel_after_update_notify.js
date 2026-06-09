@@ -66,6 +66,12 @@ onRecordAfterUpdateSuccess((e) => {
       }
     }
 
+    if (!email && !phone) {
+      $app
+        .logger()
+        .info('Notification skipped: no contact info (email/phone)', 'resident_id', resident.id)
+    }
+
     try {
       const auditCol = $app.findCollectionByNameOrId('audit_logs')
       const audit = new Record(auditCol)
