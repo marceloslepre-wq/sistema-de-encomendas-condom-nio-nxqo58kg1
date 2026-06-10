@@ -50,7 +50,11 @@ export default function MoradorDashboard() {
 
       console.log('Dashboard carregando:', { morador_id: user.id, unidade_id: unitId })
 
-      const filterAtivos = `morador_id = "${user.id}" && unidade_id = "${unitId}" && status != 'RETIRADO' && status != 'ENTREGUE'`
+      const yesterday = new Date()
+      yesterday.setHours(yesterday.getHours() - 24)
+      const yesterdayStr = yesterday.toISOString().replace('T', ' ').substring(0, 19) + 'Z'
+
+      const filterAtivos = `morador_id = "${user.id}" && unidade_id = "${unitId}" && (status != 'RETIRADO' && status != 'ENTREGUE' || ((status = 'RETIRADO' || status = 'ENTREGUE') && updated >= "${yesterdayStr}"))`
 
       const activeRes = await pb
         .collection('recebimentos_auditoria')
@@ -65,7 +69,7 @@ export default function MoradorDashboard() {
       })
       setRecebimentosAtivos(activeRes.items)
 
-      const filterHistorico = `morador_id = "${user.id}" && unidade_id = "${unitId}" && (status = 'RETIRADO' || status = 'ENTREGUE')`
+      const filterHistorico = `morador_id = "${user.id}" && unidade_id = "${unitId}" && (status = 'RETIRADO' || status = 'ENTREGUE') && updated < "${yesterdayStr}"`
 
       const historyRes = await pb
         .collection('recebimentos_auditoria')
@@ -136,18 +140,23 @@ export default function MoradorDashboard() {
   }
 
   const getCurrentStep = (pkg: RecebimentoAuditoria, history: HistoricoAndamento[]) => {
-    if (pkg.status === 'RETIRADO' || pkg.status === 'ENTREGUE') return 5
+    if (pkg.status === 'RETIRADO' || pkg.status === 'ENTREGUE') return 4
     if (pkg.status === 'LIBERADO_RETIRADA') return 3
-    const hasEmSala = history.some(
+    const hasTriagem = history.some(
       (h) =>
+        h.status === 'EM_TRIAGEM' ||
         h.status === 'EM_SALA' ||
         h.status === 'SALA_ENCOMENDA' ||
         h.status === 'EM_SALA_DE_ENCOMENDAS',
     )
-    if (pkg.status === 'EM_SALA' || pkg.status === 'SALA_ENCOMENDA' || hasEmSala) return 2
-    const hasTriagem = history.some((h) => h.status === 'EM_TRIAGEM')
-    if (pkg.status === 'EM_TRIAGEM' || hasTriagem) return 1
-    return 0
+    if (
+      pkg.status === 'EM_TRIAGEM' ||
+      pkg.status === 'EM_SALA' ||
+      pkg.status === 'SALA_ENCOMENDA' ||
+      hasTriagem
+    )
+      return 2
+    return 1
   }
 
   const handleOpenDetails = (pkg: RecebimentoAuditoria) => {
@@ -197,14 +206,24 @@ export default function MoradorDashboard() {
                           </CardTitle>
                         </div>
                         <Badge
-                          variant={pkg.status === 'LIBERADO_RETIRADA' ? 'default' : 'secondary'}
+                          variant={
+                            pkg.status === 'LIBERADO_RETIRADA' ||
+                            pkg.status === 'RETIRADO' ||
+                            pkg.status === 'ENTREGUE'
+                              ? 'default'
+                              : 'secondary'
+                          }
                           className={cn(
                             pkg.status === 'LIBERADO_RETIRADA'
                               ? 'bg-success hover:bg-success text-white'
-                              : '',
+                              : pkg.status === 'RETIRADO' || pkg.status === 'ENTREGUE'
+                                ? 'bg-primary/20 text-primary hover:bg-primary/30'
+                                : '',
                           )}
                         >
-                          {pkg.status?.replace(/_/g, ' ')}
+                          {pkg.status === 'RETIRADO' || pkg.status === 'ENTREGUE'
+                            ? 'Encomenda Retirada'
+                            : pkg.status?.replace(/_/g, ' ')}
                         </Badge>
                       </div>
                     </CardHeader>
@@ -240,7 +259,9 @@ export default function MoradorDashboard() {
                           <div className="md:border-l md:pl-6">
                             <p className="text-muted-foreground mb-1">Status Atual</p>
                             <p className="font-mono font-bold text-sm text-muted-foreground tracking-wider">
-                              Aguardando liberação
+                              {pkg.status === 'RETIRADO' || pkg.status === 'ENTREGUE'
+                                ? 'Retirado com sucesso'
+                                : 'Aguardando liberação'}
                             </p>
                           </div>
                         )}
@@ -362,7 +383,7 @@ export default function MoradorDashboard() {
             <div className="mt-4">
               <div className="mb-4">
                 <VerticalTimeline
-                  currentStep={5}
+                  currentStep={4}
                   pkg={selectedHistoryPkg}
                   history={getPackageHistory(selectedHistoryPkg.id)}
                 />

@@ -330,7 +330,6 @@ export default function PortariaRegistro() {
           tickets,
         })
 
-        let messageSent = false
         const status = isActuallyVerified
           ? 'Validado'
           : bypassValidation
@@ -409,26 +408,7 @@ export default function PortariaRegistro() {
               volume: tickets[i],
             })
 
-            if (!messageSent) {
-              const message = `Sua encomenda (${totalVols} volume${totalVols > 1 ? 's' : ''}) chegou na portaria`
-              const phone_morador = userPhone
-
-              console.log('Enviando notificação para morador:', { phone_morador, message })
-
-              if (phone_morador) {
-                try {
-                  const resposta = await pb.send('/backend/v1/enviar-notificacao-morador', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone: phone_morador, message }),
-                  })
-                  console.log('Resposta notificação:', resposta)
-                } catch (erro) {
-                  console.log('ERRO notificação:', erro)
-                }
-              }
-              messageSent = true
-            }
+            // Backend hook onRecordAfterCreateSuccess now handles the notification sending automatically.
           } catch (dbErr: any) {
             console.error('Database Failure Logging:', dbErr, JSON.stringify(dbErr))
             throw dbErr

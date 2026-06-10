@@ -3,7 +3,12 @@ import { cn } from '@/lib/utils'
 import { useEffect } from 'react'
 import { format } from 'date-fns'
 
-const STEPS = ['Entrada', 'Triagem', 'Sala de Encomenda', 'Liberado para Retirada', 'Retirado']
+const STEPS = [
+  'Entrada na portaria',
+  'Em triagem na sala de encomendas',
+  'Processado e Liberado para Retirada',
+  'Encomenda Retirada',
+]
 
 export function VerticalTimeline({
   currentStep,
@@ -25,23 +30,20 @@ export function VerticalTimeline({
     if (!pkg) return null
     if (idx === 0) return pkg.data_criacao || pkg.created
     if (idx === 1) {
-      const h = history.find((h) => h.status === 'EM_TRIAGEM')
-      return h?.created
-    }
-    if (idx === 2) {
       const h = history.find(
         (h) =>
+          h.status === 'EM_TRIAGEM' ||
           h.status === 'EM_SALA' ||
           h.status === 'SALA_ENCOMENDA' ||
           h.status === 'EM_SALA_DE_ENCOMENDAS',
       )
       return h?.created
     }
-    if (idx === 3) {
+    if (idx === 2) {
       const h = history.find((h) => h.status === 'LIBERADO_RETIRADA')
       return h?.created || (pkg.status === 'LIBERADO_RETIRADA' ? pkg.updated : null)
     }
-    if (idx === 4) {
+    if (idx === 3) {
       const h = history.find((h) => h.status === 'RETIRADO' || h.status === 'ENTREGUE')
       return (
         h?.created || (pkg.status === 'RETIRADO' || pkg.status === 'ENTREGUE' ? pkg.updated : null)
@@ -118,23 +120,20 @@ export function HorizontalTimeline({
     if (!pkg) return null
     if (idx === 0) return pkg.data_criacao || pkg.created
     if (idx === 1) {
-      const h = history.find((h) => h.status === 'EM_TRIAGEM')
-      return h?.created
-    }
-    if (idx === 2) {
       const h = history.find(
         (h) =>
+          h.status === 'EM_TRIAGEM' ||
           h.status === 'EM_SALA' ||
           h.status === 'SALA_ENCOMENDA' ||
           h.status === 'EM_SALA_DE_ENCOMENDAS',
       )
       return h?.created
     }
-    if (idx === 3) {
+    if (idx === 2) {
       const h = history.find((h) => h.status === 'LIBERADO_RETIRADA')
       return h?.created || (pkg.status === 'LIBERADO_RETIRADA' ? pkg.updated : null)
     }
-    if (idx === 4) {
+    if (idx === 3) {
       const h = history.find((h) => h.status === 'RETIRADO' || h.status === 'ENTREGUE')
       return (
         h?.created || (pkg.status === 'RETIRADO' || pkg.status === 'ENTREGUE' ? pkg.updated : null)

@@ -51,11 +51,10 @@ export default function GestorConfiguracoes() {
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null)
 
   const FLOW_STAGES = [
-    { id: 'ENTRADA_PORTARIA', label: 'Entrada na Portaria' },
-    { id: 'EM_TRIAGEM', label: 'Em Triagem' },
-    { id: 'SALA_ENCOMENDA', label: 'Sala de Encomendas' },
-    { id: 'LIBERADO_RETIRADA', label: 'Liberado para Retirada' },
-    { id: 'RETIRADO', label: 'Retirado' },
+    { id: 'Entrada na portaria', label: 'Entrada na portaria' },
+    { id: 'Em triagem na sala de encomendas', label: 'Em triagem na sala de encomendas' },
+    { id: 'Processado e Liberado para Retirada', label: 'Processado e Liberado para Retirada' },
+    { id: 'Encomenda Retirada', label: 'Encomenda Retirada' },
     { id: 'CANCELADO', label: 'Cancelado' },
     { id: 'LEMBRETE', label: 'Lembrete (Retirada)' },
   ]

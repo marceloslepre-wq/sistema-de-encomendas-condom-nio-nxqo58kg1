@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-10T12:10:59.660Z",
+  "generatedAt": "2026-06-10T13:24:18.724Z",
   "collections": [
     {
       "name": "users",
@@ -370,7 +370,11 @@
             "LIBERADO_RETIRADA",
             "RETIRADO",
             "CANCELADO",
-            "LEMBRETE"
+            "LEMBRETE",
+            "Entrada na portaria",
+            "Em triagem na sala de encomendas",
+            "Processado e Liberado para Retirada",
+            "Encomenda Retirada"
           ]
         },
         {

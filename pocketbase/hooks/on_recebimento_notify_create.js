@@ -1,176 +1,133 @@
 onRecordAfterCreateSuccess((e) => {
-  const status = e.record.getString('status')
-  if (!status) return e.next()
-
-  let templates
   try {
-    templates = $app.findRecordsByFilter(
+    const record = e.record
+    const status = record.getString('status')
+    const moradorId = record.getString('morador_id')
+    let phone = ''
+
+    if (moradorId) {
+      try {
+        const morador = $app.findRecordById('users', moradorId)
+        phone = morador.getString('phone')
+      } catch (_) {}
+    }
+
+    if (!phone) return e.next()
+
+    let flowStage = ''
+    if (status === 'ENTRADA_PORTARIA' || status === 'Validado' || status === 'Aprovação Manual') {
+      flowStage = 'Entrada na portaria'
+    } else if (status === 'EM_TRIAGEM') {
+      flowStage = 'Em triagem na sala de encomendas'
+    } else if (status === 'LIBERADO_RETIRADA') {
+      flowStage = 'Processado e Liberado para Retirada'
+    } else if (status === 'RETIRADO' || status === 'ENTREGUE') {
+      flowStage = 'Encomenda Retirada'
+    }
+
+    if (!flowStage) return e.next()
+
+    const templates = $app.findRecordsByFilter(
       'templates_notificacao',
-      'flow_stage = {:status} && ativo = true',
-      '',
+      'flow_stage = {:stage} && ativo = true',
+      '-created',
       1,
       0,
-      { status },
+      { stage: flowStage },
     )
-  } catch (err) {
-    return e.next()
-  }
 
-  if (!templates || templates.length === 0) return e.next()
+    if (templates.length === 0) return e.next()
 
-  const template = templates[0]
-  const templateStr = template.getString('mensagem_template')
-  if (!templateStr) return e.next()
+    const template = templates[0].getString('mensagem_template')
+    let moradorName = record.getString('morador') || ''
+    if (!moradorName && moradorId) {
+      try {
+        moradorName = $app.findRecordById('users', moradorId).getString('name')
+      } catch (_) {}
+    }
+    const tracking = record.getString('codigo_rastreio') || ''
+    const code = record.getString('codigo_retirada') || ''
 
-  const moradorId = e.record.getString('morador_id')
-  let phone = ''
-  let nome = e.record.getString('morador')
-  let unidade = e.record.getString('unidade')
-  let torre = ''
-  let condoName = ''
-
-  try {
-    const condo = $app.findRecordsByFilter('condos', '', '', 1)[0]
-    if (condo) condoName = condo.getString('name')
-  } catch (_) {}
-
-  if (moradorId) {
+    let condoName = ''
     try {
-      const user = $app.findRecordById('users', moradorId)
-      phone = user.getString('phone') || phone
-      nome = user.getString('name') || nome
-      unidade = user.getString('unidade') || unidade
-      torre = user.getString('torre') || torre
+      const units = $app.findRecordsByFilter('units', 'id = {:id}', '', 1, 0, {
+        id: record.getString('unidade_id'),
+      })
+      if (units.length > 0) {
+        const condos = $app.findRecordsByFilter('condos', 'id = {:id}', '', 1, 0, {
+          id: units[0].getString('condo_id'),
+        })
+        if (condos.length > 0) condoName = condos[0].getString('name')
+      }
     } catch (_) {}
-  }
 
-  if (!phone && nome) {
-    try {
-      const moradorRecord = $app.findFirstRecordByData('moradores', 'nome', nome)
-      phone = moradorRecord.getString('telefone') || phone
-    } catch (_) {}
-  }
+    let message = template
+      .replace(/{name}/g, moradorName)
+      .replace(/{tracking}/g, tracking)
+      .replace(/{code}/g, code)
+      .replace(/{condoName}/g, condoName)
 
-  if (!phone) {
-    $app.logger().info('Notification skipped: no phone found', 'recebimento_id', e.record.id)
-    try {
-      const logCol = $app.findCollectionByNameOrId('notificacoes_enviadas')
-      const log = new Record(logCol)
-      log.set('morador', nome || 'Desconhecido')
-      log.set('status', status)
-      log.set('mensagem', 'Falha: Celular não encontrado ou ausente')
-      log.set('celular', 'N/A')
-      log.set('sucesso', false)
-      $app.saveNoValidate(log)
-    } catch (err) {}
-    return e.next()
-  }
+    const evolutionApiUrl = $secrets.get('EVOLUTION_API_URL') || ''
+    const evolutionApiKey = $secrets.get('EVOLUTION_API_KEY') || ''
+    const evolutionInstance = $secrets.get('EVOLUTION_INSTANCE') || ''
 
-  const codigo_rastreio = e.record.getString('codigo_rastreio') || ''
-  const codigo_retirada = e.record.getString('codigo_retirada') || ''
+    if (!evolutionApiUrl || !evolutionApiKey || !evolutionInstance) {
+      console.log('Evolution API not configured')
+      return e.next()
+    }
 
-  const message = templateStr
-    .replace(/{nome}/g, nome || 'Morador')
-    .replace(/{name}/g, nome || 'Morador')
-    .replace(/{unidade}/g, unidade)
-    .replace(/{torre}/g, torre)
-    .replace(/{codigo}/g, codigo_retirada)
-    .replace(/{codigo_rastreio}/g, codigo_rastreio)
-    .replace(/{tracking}/g, codigo_rastreio)
-    .replace(/{code}/g, codigo_retirada)
-    .replace(/{condoName}/g, condoName)
+    let cleanPhone = phone.replace(/\D/g, '')
+    if (!cleanPhone.startsWith('55') && cleanPhone.length <= 11) {
+      cleanPhone = '55' + cleanPhone
+    }
 
-  let digits = String(phone || '').replace(/\D/g, '')
-  digits = digits.replace(/^0+/, '')
-  if (!digits.startsWith('55') && digits.length > 0) {
-    digits = '55' + digits
-  }
-  const phoneNum = digits || phone
+    const payload = {
+      number: cleanPhone,
+      options: { delay: 1200, presence: 'composing' },
+      textMessage: { text: message },
+    }
 
-  let success = false
-  let logStatus = 'error'
-  let rawText = ''
-  let parsedJson = null
-
-  let url = $secrets.get('EVOLUTION_API_URL')
-  const instance = $secrets.get('EVOLUTION_INSTANCE')
-  const apikey = $secrets.get('EVOLUTION_API_KEY')
-  const senderNumber = $secrets.get('EVOLUTION_NUMERO_SENDER') || ''
-
-  if (url && instance && apikey) {
+    let url = evolutionApiUrl
     if (url.endsWith('/')) url = url.slice(0, -1)
-    const endpoint = `${url}/message/sendText/${instance}`
+    const endpoint = `${url}/message/sendText/${evolutionInstance}`
+
+    let success = false
+    let responseBody = null
+    let statusCode = 0
 
     try {
       const res = $http.send({
         url: endpoint,
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: apikey },
-        body: JSON.stringify({ number: phoneNum, text: message }),
+        body: JSON.stringify(payload),
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: evolutionApiKey,
+        },
         timeout: 15,
       })
-
+      statusCode = res.statusCode
+      success = res.statusCode >= 200 && res.statusCode < 300
       try {
-        if (res.body) {
-          rawText = new TextDecoder().decode(res.body)
-        }
-      } catch (decodeErr) {
-        if (Array.isArray(res.body)) {
-          rawText = String.fromCharCode.apply(null, res.body)
-        } else {
-          rawText = String(res.body)
-        }
-      }
-
-      try {
-        parsedJson = JSON.parse(rawText)
-      } catch (parseErr) {}
-
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        success = true
-        logStatus = 'success'
-      } else {
-        logStatus = parsedJson && parsedJson.error ? String(parsedJson.error) : rawText || 'error'
-        $app
-          .logger()
-          .error('Evolution API rejected (Create)', 'status', res.statusCode, 'body', rawText)
-      }
-    } catch (err) {
-      logStatus = err.message || 'error'
-      $app.logger().error('Evolution API error (Create)', 'error', logStatus)
+        responseBody = res.json
+      } catch (_) {}
+    } catch (httpErr) {
+      statusCode = 0
+      responseBody = { error: httpErr.message }
     }
-  } else {
-    logStatus = 'API não configurada (secrets ausentes)'
-  }
 
-  try {
-    const waLogCol = $app.findCollectionByNameOrId('whatsapp_logs')
-    const waLog = new Record(waLogCol)
-    waLog.set('phone', phoneNum)
-    waLog.set('message', message)
-    waLog.set('tipo', 'notificacao_status')
-    waLog.set('status', logStatus)
-    waLog.set('success', success)
-    if (parsedJson) waLog.set('response_body', parsedJson)
-    $app.saveNoValidate(waLog)
+    try {
+      const logs = $app.findCollectionByNameOrId('whatsapp_logs')
+      const logRecord = new Record(logs)
+      logRecord.set('phone', cleanPhone)
+      logRecord.set('message', message)
+      logRecord.set('status_code', statusCode)
+      logRecord.set('response_body', responseBody)
+      logRecord.set('success', success)
+      $app.save(logRecord)
+    } catch (_) {}
   } catch (err) {
-    $app.logger().error('Failed to save whatsapp log', 'error', err.message)
+    console.log('Error in notify create', err)
   }
-
-  try {
-    const logCol = $app.findCollectionByNameOrId('notificacoes_enviadas')
-    const log = new Record(logCol)
-    log.set('morador', nome || 'Desconhecido')
-    log.set('status', status)
-    log.set('mensagem', message)
-    log.set('celular', phoneNum)
-    log.set('sucesso', success)
-    log.set('sender_match', true)
-    log.set('sender_number', senderNumber)
-    $app.saveNoValidate(log)
-  } catch (err) {
-    $app.logger().error('Failed to log notification', 'error', err.message)
-  }
-
   return e.next()
 }, 'recebimentos_auditoria')
