@@ -28,6 +28,16 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import {
@@ -79,6 +89,7 @@ export default function GestorUsuarios() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<AppUser | null>(null)
+  const [userToDelete, setUserToDelete] = useState<AppUser | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [generatedLink, setGeneratedLink] = useState('')
@@ -365,14 +376,14 @@ export default function GestorUsuarios() {
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este usuário?')) {
-      try {
-        await deleteUser(id)
-        toast({ title: 'Sucesso', description: 'Usuário excluído com sucesso.' })
-        loadData()
-      } catch (err) {
-        toast({ title: 'Erro', description: 'Falha ao excluir usuário.', variant: 'destructive' })
-      }
+    try {
+      await deleteUser(id)
+      toast({ title: 'Sucesso', description: 'Usuário excluído com sucesso.' })
+      loadData()
+    } catch (err) {
+      toast({ title: 'Erro', description: 'Falha ao excluir usuário.', variant: 'destructive' })
+    } finally {
+      setUserToDelete(null)
     }
   }
 
@@ -488,7 +499,7 @@ export default function GestorUsuarios() {
                               variant="ghost"
                               size="icon"
                               className="text-destructive"
-                              onClick={() => handleDelete(u.id)}
+                              onClick={() => setUserToDelete(u)}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -738,6 +749,28 @@ export default function GestorUsuarios() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmação de Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              {userToDelete?.role === 'morador'
+                ? 'Esta ação é irreversível e excluirá permanentemente todos os dados cadastrais, encomendas pendentes e histórico deste morador. Deseja continuar?'
+                : 'Esta ação é irreversível e excluirá este usuário. Deseja continuar?'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => userToDelete && handleDelete(userToDelete.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Confirmar Exclusão
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
