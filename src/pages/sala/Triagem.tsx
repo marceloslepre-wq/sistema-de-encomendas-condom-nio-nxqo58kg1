@@ -65,13 +65,20 @@ export default function SalaTriagem() {
         filter: `status='ENTRADA_PORTARIA' || status='EM_TRIAGEM' || status='Validado' || status='Aprovação Manual'`,
         sort: 'created',
       })
-      const moradoresData = await pb.collection('moradores').getFullList<any>()
+      const moradoresData = await pb
+        .collection('users')
+        .getFullList<any>({ filter: "role='morador'" })
 
       const enhancedData = data.map((parcel) => {
         const morador = moradoresData.find((m) => {
           if (!parcel.unidade) return false
-          const aptMatch = parcel.unidade.includes(m.apartamento)
-          const torreMatch = m.torre ? parcel.unidade.includes(m.torre) : true
+
+          const normalizeString = (str: string) => (str || '').replace(/\s+/g, '').toLowerCase()
+          const normParcelUnit = normalizeString(parcel.unidade)
+
+          const aptMatch = m.unidade ? normParcelUnit.includes(normalizeString(m.unidade)) : false
+          const torreMatch = m.torre ? normParcelUnit.includes(normalizeString(m.torre)) : true
+
           return aptMatch && torreMatch
         })
 
@@ -232,7 +239,7 @@ export default function SalaTriagem() {
                 <TableRow key={vol.id}>
                   <TableCell className="pl-6 font-medium">{vol.unidade || 'N/D'}</TableCell>
                   <TableCell>
-                    {vol._matchedMorador?.nome || vol.morador || vol.entregador_nome || 'N/D'}
+                    {vol._matchedMorador?.name || vol.morador || vol.entregador_nome || 'N/D'}
                   </TableCell>
                   <TableCell className="font-mono text-muted-foreground whitespace-nowrap">
                     {vol.volume || '1'}

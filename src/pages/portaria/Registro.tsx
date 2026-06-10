@@ -29,7 +29,7 @@ import {
   Trash2,
   Plus,
 } from 'lucide-react'
-import { getUnits, getMoradores, getCarriers, Unit, Morador, Carrier } from '@/services/api'
+import { getUnits, getCarriers, Unit, Carrier } from '@/services/api'
 import { getErrorMessage, extractFieldErrors } from '@/lib/pocketbase/errors'
 import pb from '@/lib/pocketbase/client'
 import { RecebimentosTable } from '@/components/RecebimentosTable'
@@ -51,20 +51,32 @@ const formatPhone = (value: string) => {
   return v.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2')
 }
 
+type ResidentUser = {
+  id: string
+  name: string
+  email: string
+  cpf: string
+  phone: string
+  torre: string
+  unidade: string
+}
+
 type TableEntry = {
   id: string
   unitId: string
   residentId: string
   volumes: number
-  residents?: Morador[]
+  residents?: ResidentUser[]
   loadingResidents?: boolean
 }
+
+const normalizeString = (str: string) => (str || '').replace(/\s+/g, '').toLowerCase()
 
 export default function PortariaRegistro() {
   const { toast } = useToast()
 
   const [units, setUnits] = useState<Unit[]>([])
-  const [moradores, setMoradores] = useState<Morador[]>([])
+  const [moradores, setMoradores] = useState<ResidentUser[]>([])
   const [carriers, setCarriers] = useState<Carrier[]>([])
 
   const [entries, setEntries] = useState<TableEntry[]>(() => [
@@ -103,9 +115,10 @@ export default function PortariaRegistro() {
   }
 
   const loadMoradores = () => {
-    getMoradores()
-      .then(setMoradores)
-      .catch((err) => console.error('Error fetching moradores:', err))
+    pb.collection('users')
+      .getFullList({ filter: "role='morador'" })
+      .then((res) => setMoradores(res as unknown as ResidentUser[]))
+      .catch((err) => console.error('Error fetching users:', err))
   }
 
   const loadCarriers = () => {
@@ -121,7 +134,7 @@ export default function PortariaRegistro() {
   }, [])
 
   useRealtime('units', () => loadUnits())
-  useRealtime('moradores', () => loadMoradores())
+  useRealtime('users', () => loadMoradores())
   useRealtime('carriers', () => loadCarriers())
 
   const handleAddEntry = () => {
@@ -171,76 +184,74 @@ export default function PortariaRegistro() {
 
   const escapeFilterValue = (value: string) => String(value || '').replace(/'/g, "\\'")
 
-  const ensureMoradorVinculado = async (
+  const ensureUserVinculado = async (
     unit: Unit,
     group: TableEntry,
-    residentCandidate?: Morador,
-  ): Promise<Morador> => {
-    let moradorRecord: Morador | null = residentCandidate || null
+    residentCandidate?: ResidentUser,
+  ): Promise<{ id: string; name: string; phone: string }> => {
+    let userRecord: any = residentCandidate || null
 
     if (group.residentId) {
       try {
-        const byId = await pb.collection('moradores').getOne(group.residentId)
-        moradorRecord = byId as Morador
-      } catch (_err) {
-        // Se o ID selecionado não existir mais, seguimos para busca/criação.
+        userRecord = await pb.collection('users').getOne(group.residentId)
+      } catch {
+        /* intentionally ignored */
       }
     }
 
     const tower = String(unit.tower || '').trim()
     const apartment = String(unit.apartment || '').trim()
-    const residentName = String(moradorRecord?.nome || '').trim() || `Morador ${tower}-${apartment}`
+    const residentName = String(userRecord?.name || '').trim() || `Morador ${tower}-${apartment}`
 
-    if (!moradorRecord) {
+    if (!userRecord) {
       try {
-        const byName = await pb
-          .collection('moradores')
+        userRecord = await pb
+          .collection('users')
           .getFirstListItem(
-            `torre='${escapeFilterValue(tower)}' && apartamento='${escapeFilterValue(apartment)}' && nome='${escapeFilterValue(residentName)}'`,
+            `role='morador' && torre='${escapeFilterValue(tower)}' && unidade='${escapeFilterValue(apartment)}' && name='${escapeFilterValue(residentName)}'`,
           )
-        moradorRecord = byName as Morador
-      } catch (_err) {
-        // Não existe por nome/unidade, tentaremos criar abaixo.
+      } catch {
+        /* intentionally ignored */
       }
     }
 
-    if (!moradorRecord) {
+    if (!userRecord) {
       const fallbackEmail =
         String(residentCandidate?.email || '').trim() ||
-        `morador.${tower.toLowerCase()}${apartment.toLowerCase()}.${Date.now()}@sem-email.local`
-      const fallbackTelefone =
-        String(residentCandidate?.telefone || '').replace(/\D/g, '') || '00000000000'
+        `morador.${tower.toLowerCase().replace(/\s+/g, '')}${apartment.toLowerCase().replace(/\s+/g, '')}.${Date.now()}@sem-email.local`
+      const fallbackPhone =
+        String(residentCandidate?.phone || '').replace(/\D/g, '') || '00000000000'
       const fallbackCpf = String(residentCandidate?.cpf || '').replace(/\D/g, '') || '00000000000'
 
       try {
-        const created = await pb.collection('moradores').create({
-          nome: residentName,
+        userRecord = await pb.collection('users').create({
+          name: residentName,
           torre: tower,
-          apartamento: apartment,
+          unidade: apartment,
           email: fallbackEmail,
-          telefone: fallbackTelefone,
+          phone: fallbackPhone,
           cpf: fallbackCpf,
+          role: 'morador',
+          password: 'Skip@Password123',
+          passwordConfirm: 'Skip@Password123',
         })
-        moradorRecord = created as Morador
       } catch (createErr: any) {
         const detail = getErrorMessage(createErr)
         throw new Error(
-          `Não foi possível criar o morador automaticamente para a unidade ${tower}-${apartment}: ${detail}`,
+          `Não foi possível criar o usuário morador automaticamente para a unidade ${tower}-${apartment}: ${detail}`,
         )
       }
     }
 
-    if (!moradorRecord?.id) {
-      throw new Error('Falha ao vincular morador: morador_id não pôde ser determinado.')
+    if (!userRecord?.id) {
+      throw new Error('Falha ao vincular morador: user.id não pôde ser determinado.')
     }
 
-    console.log('Morador vinculado:', {
-      morador_id: moradorRecord.id,
-      nome: moradorRecord.nome,
-      unidade: `${tower}-${apartment}`,
-    })
-
-    return moradorRecord
+    return {
+      id: userRecord.id,
+      name: userRecord.name,
+      phone: userRecord.phone || '',
+    }
   }
 
   const handleFinish = async (autoSaveCodeVerified = false) => {
@@ -294,56 +305,13 @@ export default function PortariaRegistro() {
           )
         }
 
-        const moradorVinculado = await ensureMoradorVinculado(unit, group, residentCandidate)
+        const moradorVinculado = await ensureUserVinculado(unit, group, residentCandidate)
 
-        let userId = ''
-        let userPhone = ''
-        try {
-          const safeEmail = moradorVinculado.email
-            ? moradorVinculado.email.replace(/'/g, "\\'")
-            : ''
-          const safeCpf = moradorVinculado.cpf ? moradorVinculado.cpf.replace(/\D/g, '') : ''
-
-          const filters = []
-          if (safeEmail && !safeEmail.includes('@sem-email.local'))
-            filters.push(`email='${safeEmail}'`)
-          if (safeCpf && safeCpf !== '00000000000') filters.push(`cpf='${safeCpf}'`)
-
-          if (filters.length > 0) {
-            const userRecord = await pb.collection('users').getFirstListItem(filters.join(' || '))
-            if (userRecord && userRecord.id) {
-              userId = userRecord.id
-              userPhone = userRecord.phone || ''
-            }
-          }
-        } catch (_e) {
-          console.log('Morador não possui cadastro de usuário ainda.')
-        }
-
-        if (!userId) {
-          try {
-            const userRecord = await pb.collection('users').create({
-              email: moradorVinculado.email,
-              name: moradorVinculado.nome,
-              cpf: moradorVinculado.cpf,
-              phone: moradorVinculado.telefone,
-              torre: moradorVinculado.torre,
-              unidade: moradorVinculado.apartamento,
-              role: 'morador',
-              password: 'Skip@Password123',
-              passwordConfirm: 'Skip@Password123',
-            })
-            userId = userRecord.id
-            userPhone = userRecord.phone || ''
-          } catch (err) {
-            console.error('Failed to create stub user', err)
-          }
-        }
-
-        const moradorId = userId || ''
+        const moradorId = moradorVinculado.id
+        const userPhone = moradorVinculado.phone
 
         const unidadeStr = `${unit.tower} - ${unit.apartment}`
-        const moradorNome = moradorVinculado.nome
+        const moradorNome = moradorVinculado.name
         const codValidado = bypassValidation ? 'MANUAL' : validationCode
 
         if (!codValidado) {
@@ -443,7 +411,7 @@ export default function PortariaRegistro() {
 
             if (!messageSent) {
               const message = `Sua encomenda (${totalVols} volume${totalVols > 1 ? 's' : ''}) chegou na portaria`
-              const phone_morador = userPhone || moradorVinculado.telefone
+              const phone_morador = userPhone
 
               console.log('Enviando notificação para morador:', { phone_morador, message })
 
@@ -791,37 +759,23 @@ export default function PortariaRegistro() {
                                     return
                                   }
 
-                                  const safeTower = towerStr.replace(/'/g, "\\'")
-                                  const safeApartment = aptStr.replace(/'/g, "\\'")
+                                  const normTower = normalizeString(towerStr)
+                                  const normApt = normalizeString(aptStr)
 
-                                  pb.collection('moradores')
-                                    .getFullList({
-                                      filter: `torre='${safeTower}' && apartamento='${safeApartment}'`,
-                                    })
-                                    .then((resultado) => {
-                                      updateEntry(entry.id, (curr) =>
-                                        curr.unitId === val
-                                          ? {
-                                              residents: resultado as Morador[],
-                                              loadingResidents: false,
-                                            }
-                                          : {},
-                                      )
-                                    })
-                                    .catch((erro) => {
-                                      console.error('ERRO query moradores:', erro)
-                                      toast({
-                                        title: 'Erro de Busca',
-                                        description:
-                                          'Não foi possível carregar os moradores desta unidade. Verifique os dados e tente novamente.',
-                                        variant: 'destructive',
-                                      })
-                                      updateEntry(entry.id, (curr) =>
-                                        curr.unitId === val
-                                          ? { residents: [], loadingResidents: false }
-                                          : {},
-                                      )
-                                    })
+                                  const filtered = moradores.filter(
+                                    (m) =>
+                                      normalizeString(m.torre) === normTower &&
+                                      normalizeString(m.unidade) === normApt,
+                                  )
+
+                                  updateEntry(entry.id, (curr) =>
+                                    curr.unitId === val
+                                      ? {
+                                          residents: filtered,
+                                          loadingResidents: false,
+                                        }
+                                      : {},
+                                  )
                                 }}
                               >
                                 <SelectTrigger className="bg-background">
@@ -863,7 +817,7 @@ export default function PortariaRegistro() {
                                 <SelectContent>
                                   {filteredResidents.map((r) => (
                                     <SelectItem key={r.id} value={r.id}>
-                                      {r.nome}
+                                      {r.name}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>

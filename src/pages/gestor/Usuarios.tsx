@@ -304,40 +304,21 @@ export default function GestorUsuarios() {
     setFieldErrors({})
 
     try {
-      const dataToSave: any = {}
+      const dataToSave: any = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        role: formData.role,
+      }
 
-      if (editingUser) {
-        if (formData.name !== (editingUser.name || '')) dataToSave.name = formData.name
-        if (formData.email !== (editingUser.email || '')) dataToSave.email = formData.email
-        if (formData.phone !== (editingUser.phone || '')) dataToSave.phone = formData.phone
-        if (formData.role !== (editingUser.role || '')) dataToSave.role = formData.role
-
-        if (formData.role === 'morador') {
-          if (formData.cpf !== ((editingUser as any).cpf || '')) dataToSave.cpf = formData.cpf
-          if (formData.torre !== ((editingUser as any).torre || ''))
-            dataToSave.torre = formData.torre
-          if (formData.unidade !== ((editingUser as any).unidade || ''))
-            dataToSave.unidade = formData.unidade
-        } else {
-          dataToSave.cpf = ''
-          dataToSave.torre = ''
-          dataToSave.unidade = ''
-        }
+      if (formData.role === 'morador') {
+        dataToSave.cpf = formData.cpf
+        dataToSave.torre = formData.torre
+        dataToSave.unidade = formData.unidade
       } else {
-        dataToSave.name = formData.name
-        dataToSave.email = formData.email
-        dataToSave.phone = formData.phone
-        dataToSave.role = formData.role
-
-        if (formData.role === 'morador') {
-          dataToSave.cpf = formData.cpf
-          dataToSave.torre = formData.torre
-          dataToSave.unidade = formData.unidade
-        } else {
-          dataToSave.cpf = ''
-          dataToSave.torre = ''
-          dataToSave.unidade = ''
-        }
+        dataToSave.cpf = ''
+        dataToSave.torre = ''
+        dataToSave.unidade = ''
       }
 
       if (formData.password && formData.password.trim() !== '') {
@@ -346,12 +327,10 @@ export default function GestorUsuarios() {
       }
 
       if (editingUser) {
-        if (Object.keys(dataToSave).length > 0) {
-          await pb.send(`/backend/v1/admin/users/${editingUser.id}`, {
-            method: 'PATCH',
-            body: dataToSave,
-          })
-        }
+        await pb.send(`/backend/v1/admin/users/${editingUser.id}`, {
+          method: 'PATCH',
+          body: dataToSave,
+        })
         toast({
           title: 'Sucesso',
           description: 'Usuário atualizado com sucesso.',
