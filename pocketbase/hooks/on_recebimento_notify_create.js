@@ -2,22 +2,31 @@ onRecordAfterCreateSuccess((e) => {
   const status = e.record.getString('status')
   if (!status) return e.next()
 
-  let templateMessage = ''
+  let templates
   try {
-    const template = $app.findFirstRecordByData('templates_notificacao', 'flow_stage', status)
-    if (!template.getBool('ativo')) return e.next()
-    templateMessage = template.getString('mensagem_template')
-  } catch (_) {
+    templates = $app.findRecordsByFilter(
+      'templates_notificacao',
+      'flow_stage = {:status} && ativo = true',
+      '',
+      1,
+      0,
+      { status },
+    )
+  } catch (err) {
     return e.next()
   }
-  if (!templateMessage) return e.next()
 
+  if (!templates || templates.length === 0) return e.next()
+
+  const template = templates[0]
+  const templateStr = template.getString('mensagem_template')
+  if (!templateStr) return e.next()
+
+  const moradorId = e.record.getString('morador_id')
   let phone = ''
-  let name = e.record.getString('morador')
-  let torre = e.record.getString('unidade').split('-')[0]?.trim() || ''
-  let apartamento = e.record.getString('unidade')
-  let tracking = e.record.getString('codigo_rastreio') || ''
-  let code = e.record.getString('codigo_retirada') || ''
+  let nome = e.record.getString('morador')
+  let unidade = e.record.getString('unidade')
+  let torre = ''
   let condoName = ''
 
   try {
@@ -25,57 +34,61 @@ onRecordAfterCreateSuccess((e) => {
     if (condo) condoName = condo.getString('name')
   } catch (_) {}
 
-  const moradorId = e.record.getString('morador_id')
   if (moradorId) {
     try {
       const user = $app.findRecordById('users', moradorId)
       phone = user.getString('phone') || phone
-      name = user.getString('name') || name
+      nome = user.getString('name') || nome
+      unidade = user.getString('unidade') || unidade
       torre = user.getString('torre') || torre
-      apartamento = user.getString('unidade') || apartamento
     } catch (_) {}
   }
 
-  if (!phone && name) {
+  if (!phone && nome) {
     try {
-      const moradorRecord = $app.findFirstRecordByData('moradores', 'nome', name)
+      const moradorRecord = $app.findFirstRecordByData('moradores', 'nome', nome)
       phone = moradorRecord.getString('telefone') || phone
-      torre = moradorRecord.getString('torre') || torre
-      apartamento = moradorRecord.getString('apartamento') || apartamento
     } catch (_) {}
   }
 
   if (!phone) {
+    $app.logger().info('Notification skipped: no phone found', 'recebimento_id', e.record.id)
     try {
       const logCol = $app.findCollectionByNameOrId('notificacoes_enviadas')
       const log = new Record(logCol)
-      log.set('morador', name || 'Desconhecido')
+      log.set('morador', nome || 'Desconhecido')
       log.set('status', status)
-      log.set('mensagem', 'Skipped: No phone number found')
-      log.set('celular', '')
+      log.set('mensagem', 'Falha: Celular não encontrado ou ausente')
+      log.set('celular', 'N/A')
       log.set('sucesso', false)
       $app.saveNoValidate(log)
     } catch (err) {}
     return e.next()
   }
 
-  const message = templateMessage
-    .replace(/{nome}/g, name || 'Morador')
-    .replace(/{name}/g, name || 'Morador')
-    .replace(/{torre}/g, torre || '')
-    .replace(/{apartamento}/g, apartamento || '')
-    .replace(/{tracking}/g, tracking)
-    .replace(/{code}/g, code)
+  const codigo_rastreio = e.record.getString('codigo_rastreio') || ''
+  const codigo_retirada = e.record.getString('codigo_retirada') || ''
+
+  const message = templateStr
+    .replace(/{nome}/g, nome || 'Morador')
+    .replace(/{name}/g, nome || 'Morador')
+    .replace(/{unidade}/g, unidade)
+    .replace(/{torre}/g, torre)
+    .replace(/{codigo}/g, codigo_retirada)
+    .replace(/{codigo_rastreio}/g, codigo_rastreio)
+    .replace(/{tracking}/g, codigo_rastreio)
+    .replace(/{code}/g, codigo_retirada)
     .replace(/{condoName}/g, condoName)
 
+  let success = false
   let url = $secrets.get('EVOLUTION_API_URL')
   const instance = $secrets.get('EVOLUTION_INSTANCE')
   const apikey = $secrets.get('EVOLUTION_API_KEY')
 
-  let success = false
   if (url && instance && apikey) {
     if (url.endsWith('/')) url = url.slice(0, -1)
     const endpoint = `${url}/message/sendText/${instance}`
+
     try {
       const res = $http.send({
         url: endpoint,
@@ -87,17 +100,17 @@ onRecordAfterCreateSuccess((e) => {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         success = true
       } else {
-        $app.logger().error('Evolution API return', 'status', res.statusCode, 'body', res.json)
+        $app.logger().error('Evolution API rejected (Create)', 'status', res.statusCode)
       }
     } catch (err) {
-      $app.logger().error('Evolution API error', 'error', err.message)
+      $app.logger().error('Evolution API error (Create)', 'error', err.message)
     }
   }
 
   try {
     const logCol = $app.findCollectionByNameOrId('notificacoes_enviadas')
     const log = new Record(logCol)
-    log.set('morador', name)
+    log.set('morador', nome || 'Desconhecido')
     log.set('status', status)
     log.set('mensagem', message)
     log.set('celular', phone)

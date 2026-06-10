@@ -46,6 +46,8 @@ cronAdd('send_reminders', '0 * * * *', () => {
       let name = record.getString('morador')
       let tracking = record.getString('codigo_rastreio') || ''
       let code = record.getString('codigo_retirada') || ''
+      let unidade = record.getString('unidade') || ''
+      let torre = ''
       let condoName = ''
 
       try {
@@ -59,6 +61,8 @@ cronAdd('send_reminders', '0 * * * *', () => {
           const user = $app.findRecordById('users', moradorId)
           phone = user.getString('phone') || phone
           name = user.getString('name') || name
+          unidade = user.getString('unidade') || unidade
+          torre = user.getString('torre') || torre
         } catch (_) {}
       }
 
@@ -69,12 +73,28 @@ cronAdd('send_reminders', '0 * * * *', () => {
         } catch (_) {}
       }
 
-      if (!phone) continue
+      if (!phone) {
+        try {
+          const logCol = $app.findCollectionByNameOrId('notificacoes_enviadas')
+          const log = new Record(logCol)
+          log.set('morador', name || 'Desconhecido')
+          log.set('status', 'LEMBRETE')
+          log.set('mensagem', 'Falha: Celular não encontrado ou ausente')
+          log.set('celular', 'N/A')
+          log.set('sucesso', false)
+          $app.saveNoValidate(log)
+        } catch (err) {}
+        continue
+      }
 
       const message = template
         .getString('mensagem_template')
         .replace(/{nome}/g, name || 'Morador')
         .replace(/{name}/g, name || 'Morador')
+        .replace(/{unidade}/g, unidade)
+        .replace(/{torre}/g, torre)
+        .replace(/{codigo}/g, code)
+        .replace(/{codigo_rastreio}/g, tracking)
         .replace(/{tracking}/g, tracking)
         .replace(/{code}/g, code)
         .replace(/{condoName}/g, condoName)
