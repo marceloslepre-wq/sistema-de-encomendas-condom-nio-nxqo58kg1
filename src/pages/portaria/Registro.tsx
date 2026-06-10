@@ -61,6 +61,13 @@ type ResidentUser = {
   unidade: string
 }
 
+type Entregador = {
+  id: string
+  nome: string
+  cpf: string
+  celular: string
+}
+
 type TableEntry = {
   id: string
   unitId: string
@@ -78,6 +85,7 @@ export default function PortariaRegistro() {
   const [units, setUnits] = useState<Unit[]>([])
   const [moradores, setMoradores] = useState<ResidentUser[]>([])
   const [carriers, setCarriers] = useState<Carrier[]>([])
+  const [entregadoresList, setEntregadoresList] = useState<Entregador[]>([])
 
   const [entries, setEntries] = useState<TableEntry[]>(() => [
     {
@@ -127,15 +135,24 @@ export default function PortariaRegistro() {
       .catch((err) => console.error('Error fetching carriers:', err))
   }
 
+  const loadEntregadores = () => {
+    pb.collection('entregadores')
+      .getFullList<Entregador>()
+      .then(setEntregadoresList)
+      .catch((err) => console.error('Error fetching entregadores:', err))
+  }
+
   useEffect(() => {
     loadUnits()
     loadMoradores()
     loadCarriers()
+    loadEntregadores()
   }, [])
 
   useRealtime('units', () => loadUnits())
   useRealtime('users', () => loadMoradores())
   useRealtime('carriers', () => loadCarriers())
+  useRealtime('entregadores', () => loadEntregadores())
 
   const handleAddEntry = () => {
     setEntries((prev) => [
@@ -251,6 +268,23 @@ export default function PortariaRegistro() {
       id: userRecord.id,
       name: userRecord.name,
       phone: userRecord.phone || '',
+    }
+  }
+
+  const saveEntregadorIfNeeded = async (cpfVal: string, nome: string, celular: string) => {
+    const digits = cpfVal.replace(/\D/g, '')
+    if (digits.length !== 11) return
+    const exists = entregadoresList.find((e) => e.cpf === digits)
+    if (!exists) {
+      try {
+        await pb.collection('entregadores').create({
+          nome,
+          cpf: digits,
+          celular: celular.replace(/\D/g, ''),
+        })
+      } catch (err) {
+        console.error('Falha ao salvar entregador automaticamente', err)
+      }
     }
   }
 
@@ -415,6 +449,8 @@ export default function PortariaRegistro() {
           }
         }
       }
+
+      await saveEntregadorIfNeeded(courierCpf, courierName, courierPhone)
 
       setRegistrationSuccess(true)
       toast({
@@ -860,7 +896,22 @@ export default function PortariaRegistro() {
                   </Label>
                   <Input
                     value={courierCpf}
-                    onChange={(e) => setCourierCpf(formatCpf(e.target.value))}
+                    onChange={(e) => {
+                      const val = formatCpf(e.target.value)
+                      setCourierCpf(val)
+                      const digits = val.replace(/\D/g, '')
+                      if (digits.length === 11) {
+                        const found = entregadoresList.find((ent) => ent.cpf === digits)
+                        if (found) {
+                          setCourierName(found.nome)
+                          setCourierPhone(formatPhone(found.celular))
+                          toast({
+                            title: 'Entregador Encontrado',
+                            description: 'Dados preenchidos automaticamente.',
+                          })
+                        }
+                      }
+                    }}
                     placeholder="000.000.000-00"
                     maxLength={14}
                   />

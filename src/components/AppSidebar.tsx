@@ -48,11 +48,11 @@ export function AppSidebar() {
           { title: 'Recepção de Encomendas', url: '/portaria/registro', icon: Package },
           { title: 'Triagem & Etiqueta', url: '/sala/triagem', icon: ClipboardList },
           { title: 'Validar Retirada', url: '/sala/retirada', icon: QrCode },
+          { title: 'Cadastro de Entregador', url: '/portaria/entregadores', icon: Users },
         ]
       case 'morador':
         return [
           { title: 'Minhas Encomendas', url: '/morador/dashboard', icon: Package },
-          { title: 'Histórico', url: '/morador/historico', icon: History },
           { title: 'Meus Dados', url: '/morador/dados', icon: User },
         ]
       default:

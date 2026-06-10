@@ -6,15 +6,17 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { updateUser } from '@/services/api'
-import { User, Phone, Mail, Hash, MapPin, Building } from 'lucide-react'
+import { User, Phone, Mail, Hash, MapPin, Building, Shield } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 import { Skeleton } from '@/components/ui/skeleton'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 
 export default function MoradorDados() {
   const { user } = useAuth()
   const { toast } = useToast()
 
   const [phone, setPhone] = useState('')
+  const [permitirTerceiros, setPermitirTerceiros] = useState<string>('true')
   const [moradorData, setMoradorData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -23,11 +25,19 @@ export default function MoradorDados() {
     if (user) {
       console.log('Morador logado:', user.email)
       setPhone(user.phone || '')
+
+      if (user.permitir_retirada_terceiros !== undefined) {
+        setPermitirTerceiros(user.permitir_retirada_terceiros ? 'true' : 'false')
+      }
+
       pb.collection('moradores')
         .getFirstListItem(`email="${user.email}"`)
         .then((morador) => {
           console.log('Perfil carregado:', morador)
           setMoradorData(morador)
+          if (morador.permitir_retirada_terceiros !== undefined) {
+            setPermitirTerceiros(morador.permitir_retirada_terceiros ? 'true' : 'false')
+          }
         })
         .catch((erro) => {
           console.log('ERRO:', erro)
@@ -48,10 +58,13 @@ export default function MoradorDados() {
     e.preventDefault()
     if (!user) return
     setSubmitting(true)
+    const boolTerceiros = permitirTerceiros === 'true'
     try {
-      await updateUser(user.id, { phone })
+      await updateUser(user.id, { phone, permitir_retirada_terceiros: boolTerceiros })
       if (moradorData) {
-        await pb.collection('moradores').update(moradorData.id, { telefone: phone })
+        await pb
+          .collection('moradores')
+          .update(moradorData.id, { telefone: phone, permitir_retirada_terceiros: boolTerceiros })
       }
       toast({ title: 'Dados atualizados com sucesso.' })
     } catch (erro) {
@@ -163,6 +176,43 @@ export default function MoradorDados() {
                   className="bg-muted"
                 />
               </div>
+            </div>
+
+            <div className="pt-6 border-t space-y-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-base font-semibold">
+                  <Shield className="h-5 w-5 text-primary" />
+                  Autorização de Retirada por Terceiros
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Configure se você permite que outras pessoas retirem suas encomendas usando o seu
+                  código de liberação.
+                </p>
+              </div>
+
+              <RadioGroup
+                value={permitirTerceiros}
+                onValueChange={setPermitirTerceiros}
+                className="space-y-3"
+              >
+                <div className="flex items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm hover:bg-muted/50 cursor-pointer transition-colors">
+                  <RadioGroupItem value="true" id="permitir-sim" className="mt-1" />
+                  <div className="space-y-1 leading-none">
+                    <Label htmlFor="permitir-sim" className="cursor-pointer font-medium">
+                      PERMITIR A RETIRADA DA MINHA ENCOMENDA COM O CODIGO DE LIBERAÇÃO POR TERCEIROS
+                    </Label>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm hover:bg-muted/50 cursor-pointer transition-colors">
+                  <RadioGroupItem value="false" id="permitir-nao" className="mt-1" />
+                  <div className="space-y-1 leading-none">
+                    <Label htmlFor="permitir-nao" className="cursor-pointer font-medium">
+                      NÃO PERMITIR A RETIRADA DA MINHA ENCOMENDA POR TERCEIROS, MESMO COM O CODIGO
+                      DE LIBERAÇÃO
+                    </Label>
+                  </div>
+                </div>
+              </RadioGroup>
             </div>
 
             <div className="flex justify-end pt-4">

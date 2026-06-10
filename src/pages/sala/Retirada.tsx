@@ -174,6 +174,24 @@ export default function SalaRetirada() {
                     </span>
                   </div>
 
+                  <div
+                    className={`mt-4 p-4 border rounded-lg text-left w-full ${
+                      selectedParcel.expand?.morador_id?.permitir_retirada_terceiros === false
+                        ? 'bg-destructive/10 border-destructive/30 text-destructive'
+                        : 'bg-muted border-border text-muted-foreground'
+                    }`}
+                  >
+                    <p className="text-sm font-semibold flex items-center gap-2">
+                      <Info className="h-4 w-4" />
+                      Regra de Retirada do Morador:
+                    </p>
+                    <p className="mt-1 text-sm font-bold">
+                      {selectedParcel.expand?.morador_id?.permitir_retirada_terceiros === false
+                        ? 'NÃO PERMITIR A RETIRADA DA MINHA ENCOMENDA POR TERCEIROS, MESMO COM O CODIGO DE LIBERAÇÃO'
+                        : 'PERMITIR A RETIRADA DA MINHA ENCOMENDA COM O CODIGO DE LIBERAÇÃO POR TERCEIROS'}
+                    </p>
+                  </div>
+
                   {selectedParcel.codigo_retirada && (
                     <div className="mt-6 w-full text-left space-y-2">
                       <label className="text-sm font-semibold text-muted-foreground ml-1">

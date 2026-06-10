@@ -1,4 +1,3 @@
-/* Radio Group Component primitives - A component that displays a radio group - from shadcn/ui (exposes RadioGroup, RadioGroupItem) */
 import * as React from 'react'
 import * as RadioGroupPrimitive from '@radix-ui/react-radio-group'
 import { Circle } from 'lucide-react'

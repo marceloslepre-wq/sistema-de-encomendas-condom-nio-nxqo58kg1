@@ -22,6 +22,7 @@ import GestorLogistica from './pages/gestor/Logistica'
 
 // Portaria / Sala Pages
 import PortariaRegistro from './pages/portaria/Registro'
+import PortariaEntregadores from './pages/portaria/Entregadores'
 import SalaTriagem from './pages/sala/Triagem'
 import SalaRetirada from './pages/sala/Retirada'
 
@@ -154,6 +155,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="portaria">
                   <PortariaRegistro />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portaria/entregadores"
+              element={
+                <ProtectedRoute requiredRole="portaria">
+                  <PortariaEntregadores />
                 </ProtectedRoute>
               }
             />
