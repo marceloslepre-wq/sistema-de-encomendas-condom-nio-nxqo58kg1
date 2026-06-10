@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-10T13:24:18.724Z",
+  "generatedAt": "2026-06-10T16:02:38.370Z",
   "collections": [
     {
       "name": "users",
@@ -364,13 +364,6 @@
           "required": false,
           "system": false,
           "selectValues": [
-            "ENTRADA_PORTARIA",
-            "EM_TRIAGEM",
-            "SALA_ENCOMENDA",
-            "LIBERADO_RETIRADA",
-            "RETIRADO",
-            "CANCELADO",
-            "LEMBRETE",
             "Entrada na portaria",
             "Em triagem na sala de encomendas",
             "Processado e Liberado para Retirada",

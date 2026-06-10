@@ -9,11 +9,13 @@ onRecordAfterUpdateSuccess((e) => {
 
     const moradorId = record.getString('morador_id')
     let phone = ''
+    let moradorName = record.getString('morador') || ''
 
     if (moradorId) {
       try {
         const morador = $app.findRecordById('users', moradorId)
         phone = morador.getString('phone')
+        if (!moradorName) moradorName = morador.getString('name')
       } catch (_) {}
     }
 
@@ -44,12 +46,6 @@ onRecordAfterUpdateSuccess((e) => {
     if (templates.length === 0) return e.next()
 
     const template = templates[0].getString('mensagem_template')
-    let moradorName = record.getString('morador') || ''
-    if (!moradorName && moradorId) {
-      try {
-        moradorName = $app.findRecordById('users', moradorId).getString('name')
-      } catch (_) {}
-    }
     const tracking = record.getString('codigo_rastreio') || ''
     const code = record.getString('codigo_retirada') || ''
 
@@ -75,6 +71,7 @@ onRecordAfterUpdateSuccess((e) => {
     const evolutionApiUrl = $secrets.get('EVOLUTION_API_URL') || ''
     const evolutionApiKey = $secrets.get('EVOLUTION_API_KEY') || ''
     const evolutionInstance = $secrets.get('EVOLUTION_INSTANCE') || ''
+    const senderNumber = $secrets.get('EVOLUTION_NUMERO_SENDER') || ''
 
     if (!evolutionApiUrl || !evolutionApiKey || !evolutionInstance) {
       console.log('Evolution API not configured')
@@ -82,14 +79,13 @@ onRecordAfterUpdateSuccess((e) => {
     }
 
     let cleanPhone = phone.replace(/\D/g, '')
-    if (!cleanPhone.startsWith('55') && cleanPhone.length <= 11) {
+    if (!cleanPhone.startsWith('55') && cleanPhone.length > 0) {
       cleanPhone = '55' + cleanPhone
     }
 
     const payload = {
       number: cleanPhone,
-      options: { delay: 1200, presence: 'composing' },
-      textMessage: { text: message },
+      text: message,
     }
 
     let url = evolutionApiUrl
@@ -115,7 +111,11 @@ onRecordAfterUpdateSuccess((e) => {
       success = res.statusCode >= 200 && res.statusCode < 300
       try {
         responseBody = res.json
-      } catch (_) {}
+      } catch (_) {
+        if (res.body) {
+          responseBody = new TextDecoder().decode(res.body)
+        }
+      }
     } catch (httpErr) {
       statusCode = 0
       responseBody = { error: httpErr.message }
@@ -129,7 +129,20 @@ onRecordAfterUpdateSuccess((e) => {
       logRecord.set('status_code', statusCode)
       logRecord.set('response_body', responseBody)
       logRecord.set('success', success)
-      $app.save(logRecord)
+      $app.saveNoValidate(logRecord)
+    } catch (_) {}
+
+    try {
+      const notifLogs = $app.findCollectionByNameOrId('notificacoes_enviadas')
+      const notifRecord = new Record(notifLogs)
+      notifRecord.set('morador', moradorName || 'Desconhecido')
+      notifRecord.set('status', 'AUTOMATICO')
+      notifRecord.set('mensagem', message)
+      notifRecord.set('celular', cleanPhone)
+      notifRecord.set('sucesso', success)
+      notifRecord.set('sender_match', true)
+      notifRecord.set('sender_number', senderNumber)
+      $app.saveNoValidate(notifRecord)
     } catch (_) {}
   } catch (err) {
     console.log('Error in notify update', err)
