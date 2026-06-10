@@ -7,7 +7,7 @@ onRecordAfterUpdateSuccess((e) => {
 
   let templateMessage = ''
   try {
-    const template = $app.findFirstRecordByData('templates_notificacao', 'status', newStatus)
+    const template = $app.findFirstRecordByData('templates_notificacao', 'flow_stage', newStatus)
     if (!template.getBool('ativo')) return e.next()
     templateMessage = template.getString('mensagem_template')
   } catch (_) {
@@ -19,6 +19,14 @@ onRecordAfterUpdateSuccess((e) => {
   let name = e.record.getString('morador')
   let torre = e.record.getString('unidade').split('-')[0]?.trim() || ''
   let apartamento = e.record.getString('unidade')
+  let tracking = e.record.getString('codigo_rastreio') || ''
+  let code = e.record.getString('codigo_retirada') || ''
+  let condoName = ''
+
+  try {
+    const condo = $app.findRecordsByFilter('condos', '', '', 1)[0]
+    if (condo) condoName = condo.getString('name')
+  } catch (_) {}
 
   const moradorId = e.record.getString('morador_id')
   if (moradorId) {
@@ -56,8 +64,12 @@ onRecordAfterUpdateSuccess((e) => {
 
   const message = templateMessage
     .replace(/{nome}/g, name || 'Morador')
+    .replace(/{name}/g, name || 'Morador')
     .replace(/{torre}/g, torre || '')
     .replace(/{apartamento}/g, apartamento || '')
+    .replace(/{tracking}/g, tracking)
+    .replace(/{code}/g, code)
+    .replace(/{condoName}/g, condoName)
 
   let url = $secrets.get('EVOLUTION_API_URL')
   const instance = $secrets.get('EVOLUTION_INSTANCE')

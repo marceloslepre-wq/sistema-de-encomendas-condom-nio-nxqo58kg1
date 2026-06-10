@@ -1,0 +1,113 @@
+// @deps date-fns@4.1.0
+cronAdd('send_reminders', '0 * * * *', () => {
+  let url = $secrets.get('EVOLUTION_API_URL')
+  const instance = $secrets.get('EVOLUTION_INSTANCE')
+  const apikey = $secrets.get('EVOLUTION_API_KEY')
+  if (!url || !instance || !apikey) return
+
+  if (url.endsWith('/')) url = url.slice(0, -1)
+  const endpoint = `${url}/message/sendText/${instance}`
+
+  const templates = $app.findRecordsByFilter(
+    'templates_notificacao',
+    "flow_stage = 'LEMBRETE' && ativo = true",
+    '',
+    1,
+  )
+  if (!templates || templates.length === 0) return
+
+  const template = templates[0]
+  const freqDays = template.getInt('reminder_frequency') || 1
+  const remTime = template.getString('reminder_time') || '09:00'
+
+  const now = new Date()
+  const localHour = (now.getUTCHours() - 3 + 24) % 24
+  const targetHour = parseInt(remTime.split(':')[0] || '9', 10)
+
+  if (localHour !== targetHour) return
+
+  const records = $app.findRecordsByFilter(
+    'recebimentos_auditoria',
+    "status = 'LIBERADO_RETIRADA'",
+    '',
+    1000,
+  )
+
+  for (let i = 0; i < records.length; i++) {
+    const record = records[i]
+    const lastSentStr = record.getString('last_reminder_sent')
+    let lastSent = lastSentStr ? new Date(lastSentStr) : new Date(record.getString('updated'))
+
+    const diffTime = now.getTime() - lastSent.getTime()
+    const diffHours = diffTime / (1000 * 60 * 60)
+
+    if (diffHours >= freqDays * 24 - 1) {
+      let phone = ''
+      let name = record.getString('morador')
+      let tracking = record.getString('codigo_rastreio') || ''
+      let code = record.getString('codigo_retirada') || ''
+      let condoName = ''
+
+      try {
+        const condo = $app.findRecordsByFilter('condos', '', '', 1)[0]
+        if (condo) condoName = condo.getString('name')
+      } catch (_) {}
+
+      const moradorId = record.getString('morador_id')
+      if (moradorId) {
+        try {
+          const user = $app.findRecordById('users', moradorId)
+          phone = user.getString('phone') || phone
+          name = user.getString('name') || name
+        } catch (_) {}
+      }
+
+      if (!phone && name) {
+        try {
+          const moradorRecord = $app.findFirstRecordByData('moradores', 'nome', name)
+          phone = moradorRecord.getString('telefone') || phone
+        } catch (_) {}
+      }
+
+      if (!phone) continue
+
+      const message = template
+        .getString('mensagem_template')
+        .replace(/{nome}/g, name || 'Morador')
+        .replace(/{name}/g, name || 'Morador')
+        .replace(/{tracking}/g, tracking)
+        .replace(/{code}/g, code)
+        .replace(/{condoName}/g, condoName)
+
+      let success = false
+      try {
+        const res = $http.send({
+          url: endpoint,
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: apikey },
+          body: JSON.stringify({ number: phone, text: message }),
+          timeout: 15,
+        })
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          success = true
+        }
+      } catch (err) {
+        $app.logger().error('Evolution API error (Reminder)', 'error', err.message)
+      }
+
+      try {
+        const logCol = $app.findCollectionByNameOrId('notificacoes_enviadas')
+        const log = new Record(logCol)
+        log.set('morador', name)
+        log.set('status', 'LEMBRETE')
+        log.set('mensagem', message)
+        log.set('celular', phone)
+        log.set('sucesso', success)
+        $app.saveNoValidate(log)
+      } catch (err) {}
+
+      record.set('last_reminder_sent', now.toISOString())
+      $app.saveNoValidate(record)
+    }
+  }
+})

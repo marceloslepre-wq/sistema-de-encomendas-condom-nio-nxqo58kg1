@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-09T23:06:46.018Z",
+  "generatedAt": "2026-06-10T00:39:42.844Z",
   "collections": [
     {
       "name": "users",
@@ -305,6 +305,12 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "last_reminder_sent",
+          "type": "date",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
@@ -351,6 +357,33 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "flow_stage",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "ENTRADA_PORTARIA",
+            "EM_TRIAGEM",
+            "SALA_ENCOMENDA",
+            "LIBERADO_RETIRADA",
+            "RETIRADO",
+            "CANCELADO",
+            "LEMBRETE"
+          ]
+        },
+        {
+          "name": "reminder_frequency",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reminder_time",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
