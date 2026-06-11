@@ -756,7 +756,7 @@ export default function GestorUsuarios() {
             <AlertDialogTitle>Confirmação de Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
               {userToDelete?.role === 'morador'
-                ? 'Esta ação é irreversível e excluirá permanentemente todos os dados cadastrais, encomendas pendentes e histórico deste morador. Deseja continuar?'
+                ? 'ESTA AÇÃO É IRREVERSÍVEL. Todas as informações referentes a este usuário, incluindo dados cadastrais, encomendas pendentes e histórico arquivado, serão excluídos permanentemente do sistema.'
                 : 'Esta ação é irreversível e excluirá este usuário. Deseja continuar?'}
             </AlertDialogDescription>
           </AlertDialogHeader>

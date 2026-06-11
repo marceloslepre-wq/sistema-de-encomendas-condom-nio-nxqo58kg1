@@ -32,7 +32,7 @@ export function RecebimentosTable({ refreshTrigger = 0 }: { refreshTrigger?: num
     async (currentPage = 1) => {
       setLoading(true)
       try {
-        const conditions = []
+        const conditions = ['unidade_id != ""', 'morador_id != ""']
         if (searchTerm) {
           conditions.push(
             `(morador ~ "${searchTerm}" || entregador_nome ~ "${searchTerm}" || unidade ~ "${searchTerm}")`,

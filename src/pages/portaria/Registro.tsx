@@ -34,6 +34,17 @@ import { getErrorMessage, extractFieldErrors } from '@/lib/pocketbase/errors'
 import pb from '@/lib/pocketbase/client'
 import { RecebimentosTable } from '@/components/RecebimentosTable'
 import { useRealtime } from '@/hooks/use-realtime'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { ChevronsUpDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 const formatCpf = (value: string) => {
   const v = value.replace(/\D/g, '').substring(0, 11)
@@ -78,6 +89,62 @@ type TableEntry = {
 }
 
 const normalizeString = (str: string) => (str || '').replace(/\s+/g, '').toLowerCase()
+
+function UnitCombobox({
+  units,
+  value,
+  onChange,
+}: {
+  units: Unit[]
+  value: string
+  onChange: (val: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const selectedUnit = units.find((u) => u.id === value)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between bg-background font-normal"
+        >
+          {selectedUnit
+            ? `${selectedUnit.tower} - ${selectedUnit.apartment}`
+            : 'Selecione a unidade...'}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Buscar unidade (ex: A-102)..." />
+          <CommandList>
+            <CommandEmpty>Nenhuma unidade encontrada.</CommandEmpty>
+            <CommandGroup>
+              {units.map((u) => (
+                <CommandItem
+                  key={u.id}
+                  value={`${u.tower} - ${u.apartment}`}
+                  onSelect={() => {
+                    onChange(u.id)
+                    setOpen(false)
+                  }}
+                >
+                  <CheckCircle2
+                    className={cn('mr-2 h-4 w-4', value === u.id ? 'opacity-100' : 'opacity-0')}
+                  />
+                  {u.tower} - {u.apartment}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
 
 export default function PortariaRegistro() {
   const { toast } = useToast()
@@ -752,9 +819,10 @@ export default function PortariaRegistro() {
                         return (
                           <TableRow key={entry.id} className="animate-fade-in">
                             <TableCell className="align-top pt-4 pl-4">
-                              <Select
+                              <UnitCombobox
+                                units={units}
                                 value={entry.unitId}
-                                onValueChange={(val) => {
+                                onChange={(val) => {
                                   updateEntry(entry.id, () => ({
                                     unitId: val,
                                     residentId: '',
@@ -793,18 +861,7 @@ export default function PortariaRegistro() {
                                       : {},
                                   )
                                 }}
-                              >
-                                <SelectTrigger className="bg-background">
-                                  <SelectValue placeholder="Selecione..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {units.map((u) => (
-                                    <SelectItem key={u.id} value={u.id}>
-                                      {u.tower} - {u.apartment}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              />
                             </TableCell>
                             <TableCell className="align-top pt-4">
                               <Select

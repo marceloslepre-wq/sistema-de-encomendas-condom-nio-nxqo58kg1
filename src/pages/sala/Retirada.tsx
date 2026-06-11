@@ -20,9 +20,10 @@ export default function SalaRetirada() {
 
   const loadData = async () => {
     try {
-      const data = await pb
-        .collection('recebimentos_auditoria')
-        .getFullList({ expand: 'unidade_id,morador_id' })
+      const data = await pb.collection('recebimentos_auditoria').getFullList({
+        expand: 'unidade_id,morador_id',
+        filter: 'unidade_id != "" && morador_id != ""',
+      })
       setParcels(data.filter((p) => p.status === 'LIBERADO_RETIRADA'))
     } catch {
       /* intentionally ignored */
