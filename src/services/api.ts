@@ -215,10 +215,18 @@ export type InvitationLink = RecordModel & {
 }
 
 export const getInvitations = () =>
-  pb.collection('invitation_links').getFullList<InvitationLink>({ sort: '-created' })
-export const createInvitation = (data: any) =>
-  pb.collection('invitation_links').create<InvitationLink>(data)
-export const deleteInvitation = (id: string) => pb.collection('invitation_links').delete(id)
+  pb
+    .collection('invitation_links')
+    .getFullList<InvitationLink>({ sort: '-created', requestKey: null })
+
+export const createInvitation = async (data: any) => {
+  return await pb.collection('invitation_links').create<InvitationLink>(data, {
+    requestKey: null,
+  })
+}
+
+export const deleteInvitation = (id: string) =>
+  pb.collection('invitation_links').delete(id, { requestKey: null })
 
 export const getPublicInvitation = (token: string) =>
   pb.send(`/backend/v1/invitations/${token}`, { method: 'GET' })

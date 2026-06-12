@@ -220,17 +220,43 @@ export default function GestorUsuarios() {
 
   const handleGenerateLinkSubmit = async () => {
     setIsSubmitting(true)
-    try {
-      const token =
-        Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-      const data = {
-        role: linkFormData.role,
-        torre: linkFormData.role === 'morador' ? linkFormData.torre : '',
-        unidade: linkFormData.role === 'morador' ? linkFormData.unidade : '',
-        token,
-        active: true,
+    let success = false
+    let attempts = 0
+    let token = ''
+
+    while (!success && attempts < 3) {
+      try {
+        attempts++
+        token =
+          Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+        const data = {
+          role: linkFormData.role,
+          torre: linkFormData.role === 'morador' ? linkFormData.torre : '',
+          unidade: linkFormData.role === 'morador' ? linkFormData.unidade : '',
+          token,
+          active: true,
+        }
+        await createInvitation(data)
+        success = true
+      } catch (err: any) {
+        if (err?.response?.data?.token?.code === 'validation_not_unique' && attempts < 3) {
+          continue
+        }
+        setIsSubmitting(false)
+        let errorMessage = 'Falha ao gerar link. Tente novamente.'
+        if (err?.isAbort) {
+          errorMessage = 'A requisição foi cancelada.'
+        } else if (err?.message?.includes('Failed to fetch') || err?.status === 0) {
+          errorMessage =
+            'Falha de conexão com o servidor. Verifique sua internet e tente novamente.'
+        }
+        toast({ title: 'Erro', description: errorMessage, variant: 'destructive' })
+        return
       }
-      await createInvitation(data)
+    }
+
+    setIsSubmitting(false)
+    if (success) {
       setGeneratedLink(`${window.location.origin}/registrar/${token}`)
       toast({
         title: 'Sucesso',
@@ -238,10 +264,6 @@ export default function GestorUsuarios() {
         className: 'bg-success text-white',
       })
       loadData()
-    } catch (err) {
-      toast({ title: 'Erro', description: 'Falha ao gerar link.', variant: 'destructive' })
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
