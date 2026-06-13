@@ -40,6 +40,7 @@ routerAdd(
       const apiUrl = $secrets.get('EVOLUTION_API_URL')
       const instance = $secrets.get('EVOLUTION_INSTANCE')
       const apikey = $secrets.get('EVOLUTION_API_KEY')
+      const senderNumber = $secrets.get('EVOLUTION_NUMBER_SEND') || ''
 
       if (!apiUrl || !instance || !apikey) {
         $app.logger().error('Missing WhatsApp secrets')
@@ -162,7 +163,7 @@ routerAdd(
         notif.set('celular', exactPhone)
         notif.set('sucesso', isSuccess)
         notif.set('sender_match', true)
-        notif.set('sender_number', '')
+        notif.set('sender_number', senderNumber)
         $app.save(notif)
       } catch (err) {
         $app

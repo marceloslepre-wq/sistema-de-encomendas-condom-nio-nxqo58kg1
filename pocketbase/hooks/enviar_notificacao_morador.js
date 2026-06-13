@@ -13,7 +13,7 @@ routerAdd(
     let url = $secrets.get('EVOLUTION_API_URL')
     const instance = $secrets.get('EVOLUTION_INSTANCE')
     const apikey = $secrets.get('EVOLUTION_API_KEY')
-    const senderNumber = $secrets.get('EVOLUTION_NUMERO_SENDER') || ''
+    const senderNumber = $secrets.get('EVOLUTION_NUMBER_SEND') || ''
 
     if (!url || !instance || !apikey) {
       return e.internalServerError('Evolution API not configured')

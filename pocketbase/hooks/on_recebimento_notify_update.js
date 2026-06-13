@@ -71,7 +71,7 @@ onRecordAfterUpdateSuccess((e) => {
     const evolutionApiUrl = $secrets.get('EVOLUTION_API_URL') || ''
     const evolutionApiKey = $secrets.get('EVOLUTION_API_KEY') || ''
     const evolutionInstance = $secrets.get('EVOLUTION_INSTANCE') || ''
-    const senderNumber = $secrets.get('EVOLUTION_NUMERO_SENDER') || ''
+    const senderNumber = $secrets.get('EVOLUTION_NUMBER_SEND') || ''
 
     if (!evolutionApiUrl || !evolutionApiKey || !evolutionInstance) {
       console.log('Evolution API not configured')

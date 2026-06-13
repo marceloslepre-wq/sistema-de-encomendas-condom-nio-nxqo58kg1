@@ -42,7 +42,7 @@ routerAdd(
     const apiUrl = $secrets.get('EVOLUTION_API_URL')
     const apiKey = $secrets.get('EVOLUTION_API_KEY')
     const instance = $secrets.get('EVOLUTION_INSTANCE')
-    const senderNumber = $secrets.get('EVOLUTION_NUMERO_SENDER')
+    const senderNumber = $secrets.get('EVOLUTION_NUMBER_SEND')
 
     if (
       !apiUrl ||
@@ -66,7 +66,7 @@ routerAdd(
           !!senderNumber,
         )
       return e.internalServerError(
-        'Missing Skip Cloud configuration for WhatsApp (URL, API_KEY, INSTANCE or NUMERO_SENDER)',
+        'Missing Skip Cloud configuration for WhatsApp (URL, API_KEY, INSTANCE or NUMBER_SEND)',
       )
     }
 
