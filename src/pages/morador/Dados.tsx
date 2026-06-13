@@ -16,6 +16,7 @@ export default function MoradorDados() {
   const { toast } = useToast()
 
   const [phone, setPhone] = useState('')
+  const [newPassword, setNewPassword] = useState('')
   const [permitirTerceiros, setPermitirTerceiros] = useState<string>('true')
   const [moradorData, setMoradorData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -60,13 +61,30 @@ export default function MoradorDados() {
     setSubmitting(true)
     const boolTerceiros = permitirTerceiros === 'true'
     try {
-      await updateUser(user.id, { phone, permitir_retirada_terceiros: boolTerceiros })
+      const dataToUpdate: any = { phone, permitir_retirada_terceiros: boolTerceiros }
+
+      if (newPassword && newPassword.trim().length >= 8) {
+        dataToUpdate.password = newPassword
+        dataToUpdate.passwordConfirm = newPassword
+      } else if (newPassword && newPassword.trim().length > 0 && newPassword.trim().length < 8) {
+        toast({
+          title: 'Atenção',
+          description: 'A nova senha deve ter no mínimo 8 caracteres.',
+          variant: 'destructive',
+        })
+        setSubmitting(false)
+        return
+      }
+
+      await updateUser(user.id, dataToUpdate)
       if (moradorData) {
         await pb
           .collection('moradores')
           .update(moradorData.id, { telefone: phone, permitir_retirada_terceiros: boolTerceiros })
       }
-      toast({ title: 'Dados atualizados com sucesso.' })
+
+      setNewPassword('')
+      toast({ title: 'Dados atualizados com sucesso.', className: 'bg-success text-white' })
     } catch (erro) {
       console.log('ERRO:', erro)
       toast({
@@ -150,6 +168,20 @@ export default function MoradorDados() {
                   onChange={(e) => setPhone(maskPhone(e.target.value))}
                   placeholder="(00) 00000-0000"
                   maxLength={15}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-muted-foreground" />
+                  Nova Senha
+                </Label>
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Deixe em branco para manter a atual"
+                  minLength={8}
                 />
               </div>
 

@@ -18,7 +18,7 @@ export function MobileNav() {
       : [
           { title: 'Ativas', url: '/morador/dashboard', icon: Package },
           { title: 'Histórico', url: '/morador/historico', icon: History },
-          { title: 'Perfil', url: '#', icon: User },
+          { title: 'Perfil', url: '/morador/dados', icon: User },
         ]
 
   return (

@@ -17,6 +17,7 @@ export default function Index() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isRecovering, setIsRecovering] = useState(false)
 
   useEffect(() => {
     if (!loading && isAuthenticated && role) {
@@ -87,13 +88,50 @@ export default function Index() {
             <div className="space-y-2 relative">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Senha</Label>
-                <a
-                  href="#"
-                  className="text-xs text-primary hover:underline font-medium"
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.preventDefault()
+                    if (!email) {
+                      toast({
+                        title: 'Atenção',
+                        description: 'Preencha o campo e-mail para recuperar sua senha.',
+                        variant: 'destructive',
+                      })
+                      return
+                    }
+                    setIsRecovering(true)
+                    try {
+                      await fetch(
+                        `${import.meta.env.VITE_POCKETBASE_URL}/backend/v1/password-recovery`,
+                        {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ email }),
+                        },
+                      )
+                      toast({
+                        title: 'E-mail enviado',
+                        description:
+                          'Se o e-mail estiver cadastrado, você receberá uma senha provisória em instantes.',
+                        className: 'bg-success text-white',
+                      })
+                    } catch (err) {
+                      toast({
+                        title: 'Erro',
+                        description: 'Não foi possível solicitar a recuperação de senha.',
+                        variant: 'destructive',
+                      })
+                    } finally {
+                      setIsRecovering(false)
+                    }
+                  }}
+                  className="text-xs text-primary hover:underline font-medium disabled:opacity-50"
                   tabIndex={-1}
+                  disabled={isRecovering || isSubmitting}
                 >
-                  Esqueci minha senha
-                </a>
+                  {isRecovering ? 'Enviando...' : 'Esqueci minha senha'}
+                </button>
               </div>
               <Input
                 id="password"
