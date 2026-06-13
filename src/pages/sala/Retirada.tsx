@@ -134,7 +134,17 @@ export default function SalaRetirada() {
                       <p className="text-sm">
                         {p.expand?.morador_id?.name || p.morador || 'Morador'}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">VOL: {p.volume || 1}</p>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-1">
+                        <span>VOL: {p.volume || 1}</span>
+                        <span>•</span>
+                        <span>Transp: {p.transportadora || 'N/A'}</span>
+                        {p.codigo_rastreio && (
+                          <>
+                            <span>•</span>
+                            <span>Rastreio: {p.codigo_rastreio}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <Button variant="ghost" size="sm">
                       Selecionar
@@ -167,6 +177,11 @@ export default function SalaRetirada() {
                   <p className="text-muted-foreground">
                     {selectedParcel.expand?.morador_id?.name || selectedParcel.morador || 'Morador'}
                   </p>
+                  {selectedParcel.expand?.morador_id?.cpf && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      CPF: {selectedParcel.expand.morador_id.cpf}
+                    </p>
+                  )}
                   <div className="bg-muted p-3 rounded-md mt-4 flex items-center justify-center gap-2">
                     <Package className="w-5 h-5" />
                     <span>

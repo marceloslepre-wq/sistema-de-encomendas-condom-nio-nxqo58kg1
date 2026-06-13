@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Package, CalendarClock, Clock, CheckCircle2 } from 'lucide-react'
@@ -31,7 +29,6 @@ export default function MoradorDashboard() {
   const [recebimentosAtivos, setRecebimentosAtivos] = useState<RecebimentoAuditoria[]>([])
   const [recebimentosHistorico, setRecebimentosHistorico] = useState<RecebimentoAuditoria[]>([])
   const [historico, setHistorico] = useState<HistoricoAndamento[]>([])
-  const [privacy, setPrivacy] = useState(user?.autoriza_retirada_terceiros ?? true)
 
   const [selectedHistoryPkg, setSelectedHistoryPkg] = useState<RecebimentoAuditoria | null>(null)
 
@@ -105,7 +102,6 @@ export default function MoradorDashboard() {
 
   useEffect(() => {
     loadData()
-    if (user) setPrivacy(user.autoriza_retirada_terceiros ?? true)
   }, [user])
 
   useEffect(() => {
@@ -121,17 +117,6 @@ export default function MoradorDashboard() {
 
   useRealtime('recebimentos_auditoria', () => loadData())
   useRealtime('historico_andamento', () => loadData())
-
-  const handlePrivacyToggle = async (checked: boolean) => {
-    setPrivacy(checked)
-    try {
-      await pb.collection('users').update(user.id, { autoriza_retirada_terceiros: checked })
-      toast({ title: 'Privacidade atualizada' })
-    } catch (erro) {
-      setPrivacy(!checked)
-      toast({ title: 'Erro', description: 'Não foi possível atualizar.', variant: 'destructive' })
-    }
-  }
 
   const getPackageHistory = (pkgId: string) => {
     return historico
@@ -180,7 +165,6 @@ export default function MoradorDashboard() {
         <TabsList className="mb-4">
           <TabsTrigger value="encomendas">Minhas Encomendas</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
-          <TabsTrigger value="privacidade">Configurações</TabsTrigger>
         </TabsList>
 
         <TabsContent value="encomendas" className="space-y-4">
@@ -356,18 +340,6 @@ export default function MoradorDashboard() {
               ))}
             </div>
           )}
-        </TabsContent>
-
-        <TabsContent value="privacidade">
-          <div className="flex items-center justify-between bg-muted/30 p-4 rounded-lg border shadow-sm max-w-2xl">
-            <div className="space-y-0.5">
-              <Label className="text-base font-semibold">Permitir retirada por vizinhos</Label>
-              <p className="text-sm text-muted-foreground">
-                Autoriza outros moradores da sua unidade a visualizarem e retirarem suas encomendas.
-              </p>
-            </div>
-            <Switch checked={privacy} onCheckedChange={handlePrivacyToggle} />
-          </div>
         </TabsContent>
       </Tabs>
 
