@@ -394,20 +394,53 @@ export default function SalaTriagem() {
 
       {/* Print-only layout */}
       {selectedVolume && (
-        <div className="hidden print:flex flex-col items-center justify-center space-y-4 print:w-full print:m-0 print:p-0 print:fixed print:top-0 print:left-0 print:bg-white print:z-50 print:h-screen">
-          <div className="w-64 bg-white border-2 border-dashed border-gray-300 p-6 flex flex-col items-center text-center shadow-sm rounded-md print:border-none print:shadow-none print:w-auto">
-            <h3 className="font-extrabold text-3xl mb-1 text-black">{selectedVolume.unidade}</h3>
-            <p className="text-base font-medium mb-4 text-black line-clamp-1 overflow-hidden">
-              {selectedVolume.morador || 'Morador'}
-            </p>
-            <p className="text-xs font-bold uppercase mt-2 text-black">
-              LOC: {shelfLocation} | VOL: {selectedVolume.volume}
-            </p>
-            <p className="text-[10px] text-gray-600 font-medium">{volumeType}</p>
-            <p className="text-[10px] text-gray-500 mt-2">
-              ID: {selectedVolume.id.substring(0, 6).toUpperCase()} •{' '}
-              {format(new Date(), 'dd/MM/yyyy')}
-            </p>
+        <div className="hidden print:flex flex-col items-center justify-center p-8 print:w-[100mm] print:h-[150mm] print:m-0 print:fixed print:top-0 print:left-0 print:bg-white print:z-50 print:box-border text-black">
+          <div className="w-full h-full border-4 border-black p-6 flex flex-col justify-between rounded-xl">
+            <div className="text-center">
+              <h3 className="font-extrabold text-5xl mb-2 tracking-tight">
+                {selectedVolume._matchedMorador?.torre
+                  ? `${selectedVolume._matchedMorador.torre} - `
+                  : ''}
+                {selectedVolume.unidade || 'S/N'}
+              </h3>
+              <p className="text-3xl font-bold mb-6 line-clamp-2 overflow-hidden leading-tight">
+                {selectedVolume._matchedMorador?.name || selectedVolume.morador || 'Morador N/D'}
+              </p>
+            </div>
+
+            <div className="border-t-4 border-b-4 border-black py-6 my-4 w-full flex flex-col gap-4 text-center">
+              <p className="text-3xl font-bold uppercase">
+                LOC: <span className="font-black">{shelfLocation || 'N/D'}</span>
+              </p>
+              <p className="text-3xl font-bold uppercase">
+                VOL: <span className="font-black">{selectedVolume.volume || '1'}</span>{' '}
+                {volumeType ? `(${volumeType})` : ''}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 w-full text-xl flex-1 justify-center">
+              <div className="bg-gray-100 p-3 rounded-lg border-2 border-black">
+                <p className="font-bold text-gray-600 uppercase text-sm mb-1">Transportadora</p>
+                <p className="font-black text-2xl truncate">
+                  {selectedVolume.transportadora || 'N/D'}
+                </p>
+              </div>
+              <div className="bg-gray-100 p-3 rounded-lg border-2 border-black">
+                <p className="font-bold text-gray-600 uppercase text-sm mb-1">Cód. Rastreio</p>
+                <p className="font-black text-2xl truncate">
+                  {trackingCode || selectedVolume.codigo_rastreio || 'N/D'}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 text-center">
+              <p className="text-lg font-bold text-gray-800">
+                ID: {selectedVolume.id.substring(0, 8).toUpperCase()}
+              </p>
+              <p className="text-sm font-semibold text-gray-500 mt-1">
+                Processado em: {format(new Date(), 'dd/MM/yyyy HH:mm')}
+              </p>
+            </div>
           </div>
         </div>
       )}
@@ -416,12 +449,18 @@ export default function SalaTriagem() {
         dangerouslySetInnerHTML={{
           __html: `
         @media print {
-          body > :not(.print\\:flex) { visibility: hidden; }
-          .print\\:w-auto, .print\\:w-auto * { visibility: visible; }
-          .print\\:w-auto {
-            position: absolute; left: 0; top: 0;
-            width: 100% !important; margin: 0 !important; padding: 0 !important;
+          @page {
+            size: 100mm 150mm;
+            margin: 0;
           }
+          html, body {
+            margin: 0;
+            padding: 0;
+            width: 100mm;
+            height: 150mm;
+            background: white;
+          }
+          body > :not(.print\\:flex) { display: none !important; }
         }
       `,
         }}

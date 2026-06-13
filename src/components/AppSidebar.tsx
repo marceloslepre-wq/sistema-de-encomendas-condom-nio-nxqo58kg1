@@ -60,8 +60,6 @@ export function AppSidebar() {
       case 'morador':
         return [
           { title: 'Minhas Encomendas', url: '/morador/dashboard', icon: Package },
-          { title: 'Histórico', url: '/morador/historico', icon: History },
-          { title: 'Retirada', url: '/morador/retirada', icon: QrCode },
           { title: 'Meus Dados', url: '/morador/dados', icon: UserCircle },
         ]
       default:
