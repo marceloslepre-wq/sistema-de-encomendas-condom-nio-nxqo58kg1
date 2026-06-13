@@ -50,7 +50,6 @@ export function AppSidebar() {
         return [
           { title: 'Registro', url: '/portaria/registro', icon: Package },
           { title: 'Entregadores', url: '/portaria/entregadores', icon: Truck },
-          { title: 'Etiqueta', url: '/portaria/etiqueta', icon: QrCode },
         ]
       case 'triagem':
         return [

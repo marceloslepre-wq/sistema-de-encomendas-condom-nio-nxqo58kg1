@@ -363,16 +363,61 @@ export default function SalaTriagem() {
               </div>
             </div>
 
-            <div className="space-y-6 flex flex-col">
-              <div className="bg-muted/30 p-4 rounded-lg border flex flex-col items-center flex-1 justify-center">
-                <p className="text-sm font-medium mb-3">Gerar Etiqueta</p>
-                <Button variant="outline" className="w-full" onClick={handlePrint}>
-                  <Printer className="w-4 h-4 mr-2" /> Imprimir Etiqueta
-                </Button>
-                <p className="text-xs text-muted-foreground mt-3 text-center">
-                  A etiqueta será gerada especificamente para este volume ({selectedVolume?.volume}
-                  ).
-                </p>
+            <div className="space-y-4 flex flex-col h-full">
+              <div className="bg-muted/30 rounded-lg border flex flex-col items-center flex-1 overflow-hidden">
+                <div className="bg-white text-black p-4 w-full aspect-[2/3] max-w-[220px] flex flex-col justify-between border-b mx-auto shadow-sm my-4">
+                  <div className="text-center">
+                    <h3 className="font-extrabold text-xl tracking-tight leading-none mb-1">
+                      {selectedVolume?._matchedMorador?.torre
+                        ? `${selectedVolume?._matchedMorador.torre} - `
+                        : ''}
+                      {selectedVolume?.unidade || 'S/N'}
+                    </h3>
+                    <p className="text-sm font-bold line-clamp-2 leading-tight">
+                      {selectedVolume?._matchedMorador?.name ||
+                        selectedVolume?.morador ||
+                        'Morador N/D'}
+                    </p>
+                  </div>
+
+                  <div className="border-t-2 border-b-2 border-black py-2 my-2 w-full flex flex-col gap-1 text-center">
+                    <p className="text-sm font-bold uppercase">
+                      LOC: <span className="font-black">{shelfLocation || 'N/D'}</span>
+                    </p>
+                    <p className="text-sm font-bold uppercase">
+                      VOL: <span className="font-black">{selectedVolume?.volume || '1'}</span>{' '}
+                      {volumeType ? `(${volumeType})` : ''}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-2 w-full">
+                    <div className="bg-gray-100 p-1.5 rounded border border-black text-center">
+                      <p className="font-bold text-gray-600 uppercase text-[9px] leading-none mb-0.5">
+                        Transportadora
+                      </p>
+                      <p className="font-black text-xs truncate leading-none">
+                        {selectedVolume?.transportadora || 'N/D'}
+                      </p>
+                    </div>
+                    <div className="bg-gray-100 p-1.5 rounded border border-black text-center">
+                      <p className="font-bold text-gray-600 uppercase text-[9px] leading-none mb-0.5">
+                        Cód. Rastreio
+                      </p>
+                      <p className="font-black text-xs truncate leading-none">
+                        {trackingCode || selectedVolume?.codigo_rastreio || 'N/D'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 w-full bg-muted/10 border-t mt-auto">
+                  <Button variant="outline" className="w-full bg-white" onClick={handlePrint}>
+                    <Printer className="w-4 h-4 mr-2" /> Imprimir Etiqueta
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-3 text-center">
+                    Etiqueta no formato 100x150mm.
+                  </p>
+                </div>
               </div>
 
               <Button
@@ -394,50 +439,50 @@ export default function SalaTriagem() {
 
       {/* Print-only layout */}
       {selectedVolume && (
-        <div className="hidden print:flex flex-col items-center justify-center p-8 print:w-[100mm] print:h-[150mm] print:m-0 print:fixed print:top-0 print:left-0 print:bg-white print:z-50 print:box-border text-black">
-          <div className="w-full h-full border-4 border-black p-6 flex flex-col justify-between rounded-xl">
+        <div id="print-section" className="hidden print:flex bg-white text-black">
+          <div className="w-full h-full border-[6px] border-black p-6 flex flex-col justify-between rounded-xl">
             <div className="text-center">
-              <h3 className="font-extrabold text-5xl mb-2 tracking-tight">
+              <h3 className="font-extrabold text-[4.5rem] mb-2 tracking-tight leading-none">
                 {selectedVolume._matchedMorador?.torre
                   ? `${selectedVolume._matchedMorador.torre} - `
                   : ''}
                 {selectedVolume.unidade || 'S/N'}
               </h3>
-              <p className="text-3xl font-bold mb-6 line-clamp-2 overflow-hidden leading-tight">
+              <p className="text-4xl font-bold mb-6 line-clamp-2 overflow-hidden leading-tight">
                 {selectedVolume._matchedMorador?.name || selectedVolume.morador || 'Morador N/D'}
               </p>
             </div>
 
-            <div className="border-t-4 border-b-4 border-black py-6 my-4 w-full flex flex-col gap-4 text-center">
-              <p className="text-3xl font-bold uppercase">
+            <div className="border-t-[6px] border-b-[6px] border-black py-8 my-4 w-full flex flex-col gap-4 text-center">
+              <p className="text-4xl font-bold uppercase">
                 LOC: <span className="font-black">{shelfLocation || 'N/D'}</span>
               </p>
-              <p className="text-3xl font-bold uppercase">
+              <p className="text-4xl font-bold uppercase">
                 VOL: <span className="font-black">{selectedVolume.volume || '1'}</span>{' '}
                 {volumeType ? `(${volumeType})` : ''}
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 w-full text-xl flex-1 justify-center">
-              <div className="bg-gray-100 p-3 rounded-lg border-2 border-black">
-                <p className="font-bold text-gray-600 uppercase text-sm mb-1">Transportadora</p>
-                <p className="font-black text-2xl truncate">
+            <div className="flex flex-col gap-4 w-full text-xl flex-1 justify-center">
+              <div className="bg-gray-100 p-4 rounded-lg border-[3px] border-black text-center">
+                <p className="font-bold text-gray-600 uppercase text-lg mb-1">Transportadora</p>
+                <p className="font-black text-3xl truncate">
                   {selectedVolume.transportadora || 'N/D'}
                 </p>
               </div>
-              <div className="bg-gray-100 p-3 rounded-lg border-2 border-black">
-                <p className="font-bold text-gray-600 uppercase text-sm mb-1">Cód. Rastreio</p>
-                <p className="font-black text-2xl truncate">
+              <div className="bg-gray-100 p-4 rounded-lg border-[3px] border-black text-center">
+                <p className="font-bold text-gray-600 uppercase text-lg mb-1">Cód. Rastreio</p>
+                <p className="font-black text-3xl truncate">
                   {trackingCode || selectedVolume.codigo_rastreio || 'N/D'}
                 </p>
               </div>
             </div>
 
-            <div className="mt-6 text-center">
-              <p className="text-lg font-bold text-gray-800">
+            <div className="mt-8 text-center">
+              <p className="text-2xl font-bold text-gray-800">
                 ID: {selectedVolume.id.substring(0, 8).toUpperCase()}
               </p>
-              <p className="text-sm font-semibold text-gray-500 mt-1">
+              <p className="text-lg font-semibold text-gray-500 mt-2">
                 Processado em: {format(new Date(), 'dd/MM/yyyy HH:mm')}
               </p>
             </div>
@@ -454,13 +499,33 @@ export default function SalaTriagem() {
             margin: 0;
           }
           html, body {
-            margin: 0;
-            padding: 0;
             width: 100mm;
             height: 150mm;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
             background: white;
           }
-          body > :not(.print\\:flex) { display: none !important; }
+          body * {
+            visibility: hidden;
+          }
+          #print-section, #print-section * {
+            visibility: visible;
+          }
+          #print-section {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100mm;
+            height: 150mm;
+            display: flex !important;
+            margin: 0;
+            padding: 6mm;
+            box-sizing: border-box;
+            background: white !important;
+            color: black !important;
+            z-index: 99999;
+          }
         }
       `,
         }}

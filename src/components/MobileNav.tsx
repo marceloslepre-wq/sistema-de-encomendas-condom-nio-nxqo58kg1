@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Package, History, User, QrCode } from 'lucide-react'
+import { Package, History, User, QrCode, Truck } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
 
@@ -10,10 +10,10 @@ export function MobileNav() {
   if (!role || role === 'gestor') return null
 
   const links =
-    role === 'portaria'
+    role === 'portaria' || role === 'porteiro'
       ? [
           { title: 'Registro', url: '/portaria/registro', icon: Package },
-          { title: 'Etiqueta', url: '/portaria/etiqueta', icon: QrCode },
+          { title: 'Entregadores', url: '/portaria/entregadores', icon: Truck },
         ]
       : [
           { title: 'Ativas', url: '/morador/dashboard', icon: Package },
