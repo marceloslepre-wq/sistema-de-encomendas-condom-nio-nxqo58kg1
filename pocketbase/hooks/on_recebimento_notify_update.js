@@ -22,7 +22,13 @@ onRecordAfterUpdateSuccess((e) => {
     if (!phone) return e.next()
 
     let flowStage = ''
-    if (status === 'ENTRADA_PORTARIA' || status === 'Validado' || status === 'Aprovação Manual') {
+    if (
+      status === 'ENTRADA_PORTARIA' ||
+      status === 'Entrada na portaria' ||
+      status === 'Recebido' ||
+      status === 'Validado' ||
+      status === 'Aprovação Manual'
+    ) {
       flowStage = 'Entrada na portaria'
     } else if (status === 'EM_TRIAGEM') {
       flowStage = 'Em triagem na sala de encomendas'

@@ -62,7 +62,7 @@ export default function SalaTriagem() {
     try {
       console.log('Carregando triagem...')
       const data = await pb.collection('recebimentos_auditoria').getFullList<RecebimentoAuditoria>({
-        filter: `status='ENTRADA_PORTARIA' || status='EM_TRIAGEM' || status='Validado' || status='Aprovação Manual'`,
+        filter: `status='ENTRADA_PORTARIA' || status='Entrada na portaria' || status='Recebido' || status='EM_TRIAGEM' || status='Validado' || status='Aprovação Manual'`,
         sort: 'created',
       })
       const moradoresData = await pb
@@ -131,7 +131,15 @@ export default function SalaTriagem() {
     try {
       let updatedVol = { ...vol }
 
-      if (['ENTRADA_PORTARIA', 'Validado', 'Aprovação Manual'].includes(vol.status || '')) {
+      if (
+        [
+          'ENTRADA_PORTARIA',
+          'Entrada na portaria',
+          'Recebido',
+          'Validado',
+          'Aprovação Manual',
+        ].includes(vol.status || '')
+      ) {
         const updated = await updateRecebimentoAuditoria(vol.id, {
           status: 'EM_TRIAGEM',
         })
@@ -246,9 +254,13 @@ export default function SalaTriagem() {
                   </TableCell>
                   <TableCell>{vol.transportadora || 'N/D'}</TableCell>
                   <TableCell>
-                    {['ENTRADA_PORTARIA', 'Validado', 'Aprovação Manual'].includes(
-                      vol.status || '',
-                    ) ? (
+                    {[
+                      'ENTRADA_PORTARIA',
+                      'Entrada na portaria',
+                      'Recebido',
+                      'Validado',
+                      'Aprovação Manual',
+                    ].includes(vol.status || '') ? (
                       <Select onValueChange={() => handleStatusChange(vol)}>
                         <SelectTrigger className="w-[260px] h-8 bg-background">
                           <SelectValue
