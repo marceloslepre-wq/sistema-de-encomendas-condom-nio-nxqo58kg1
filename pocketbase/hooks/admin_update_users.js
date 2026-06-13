@@ -3,11 +3,20 @@ routerAdd(
   '/backend/v1/admin/users/{id}',
   (e) => {
     const auth = e.auth
-    if (!auth || auth.getString('role') !== 'gestor') {
-      throw new ForbiddenError('Acesso negado. Apenas gestores podem realizar esta ação.')
+    const id = e.request.pathValue('id')
+
+    if (!auth) {
+      throw new UnauthorizedError('Acesso negado.')
     }
 
-    const id = e.request.pathValue('id')
+    const isGestor = auth.getString('role') === 'gestor' || auth.getString('role') === 'admin'
+    const isSelf = auth.id === id
+
+    if (!isGestor && !isSelf) {
+      throw new ForbiddenError(
+        'Acesso negado. Apenas gestores ou o próprio usuário podem realizar esta ação.',
+      )
+    }
     let record
     try {
       record = $app.findRecordById('users', id)
@@ -18,13 +27,20 @@ routerAdd(
     let body = e.requestInfo().body || {}
     const errors = {}
 
+    if (!isGestor) {
+      delete body.role
+      delete body.cpf
+      delete body.torre
+      delete body.unidade
+    }
+
     const targetRole = body.role !== undefined ? body.role : record.getString('role')
 
     if (targetRole !== 'morador') {
       body.cpf = ''
       body.torre = ''
       body.unidade = ''
-    } else {
+    } else if (isGestor) {
       const finalCpf = body.cpf !== undefined ? body.cpf : record.getString('cpf')
       const finalTorre = body.torre !== undefined ? body.torre : record.getString('torre')
       const finalUnidade = body.unidade !== undefined ? body.unidade : record.getString('unidade')
@@ -97,6 +113,10 @@ routerAdd(
       }
     }
 
+    if (body.permitir_retirada_terceiros !== undefined) {
+      record.set('permitir_retirada_terceiros', Boolean(body.permitir_retirada_terceiros))
+    }
+
     if (body.email !== undefined && body.email !== '') {
       record.setEmail(body.email)
     }
@@ -107,11 +127,6 @@ routerAdd(
       body.password === body.passwordConfirm
     ) {
       record.setPassword(String(body.password))
-    }
-
-    const avatarFiles = e.findUploadedFiles('avatar')
-    if (avatarFiles && avatarFiles.length > 0) {
-      record.set('avatar', avatarFiles[0])
     }
 
     try {

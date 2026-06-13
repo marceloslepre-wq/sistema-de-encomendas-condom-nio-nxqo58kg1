@@ -62,6 +62,7 @@ import {
   createInvitation,
   deleteInvitation,
   InvitationLink,
+  adminUpdateUser,
 } from '@/services/api'
 import { extractFieldErrors } from '@/lib/pocketbase/errors'
 
@@ -322,6 +323,15 @@ export default function GestorUsuarios() {
       return
     }
 
+    if (editingUser && formData.password && formData.password.length < 8) {
+      toast({
+        title: 'Atenção',
+        description: 'A senha deve ter no mínimo 8 caracteres.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     if (formData.role === 'morador') {
       if (!formData.cpf || !formData.torre || !formData.unidade) {
         toast({
@@ -360,10 +370,7 @@ export default function GestorUsuarios() {
       }
 
       if (editingUser) {
-        await pb.send(`/backend/v1/admin/users/${editingUser.id}`, {
-          method: 'PATCH',
-          body: dataToSave,
-        })
+        await adminUpdateUser(editingUser.id, dataToSave)
         toast({
           title: 'Sucesso',
           description: 'Usuário atualizado com sucesso.',

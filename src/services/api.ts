@@ -120,7 +120,15 @@ export const updateUser = async (id: string, data: any) => {
   const existingRecord = await pb.collection('users').getOne(id)
   const payload: any = {}
 
-  const allowedFields = ['name', 'phone', 'role', 'cpf', 'torre', 'unidade']
+  const allowedFields = [
+    'name',
+    'phone',
+    'role',
+    'cpf',
+    'torre',
+    'unidade',
+    'permitir_retirada_terceiros',
+  ]
 
   allowedFields.forEach((field) => {
     if (field in data) {
@@ -146,14 +154,26 @@ export const updateUser = async (id: string, data: any) => {
 
   if (Object.keys(payload).length === 0) return existingRecord
 
-  return pb.collection('users').update(id, payload)
+  return pb.send(`/backend/v1/admin/users/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+    headers: { 'Content-Type': 'application/json' },
+  })
 }
 
 export const adminUpdateUser = async (id: string, data: any) => {
   const existingRecord = await pb.collection('users').getOne(id)
   const payload: any = {}
 
-  const allowedFields = ['name', 'phone', 'role', 'cpf', 'torre', 'unidade']
+  const allowedFields = [
+    'name',
+    'phone',
+    'role',
+    'cpf',
+    'torre',
+    'unidade',
+    'permitir_retirada_terceiros',
+  ]
 
   allowedFields.forEach((field) => {
     if (field in data) {
