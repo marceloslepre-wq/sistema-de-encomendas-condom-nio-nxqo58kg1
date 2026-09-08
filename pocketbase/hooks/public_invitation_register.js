@@ -16,6 +16,7 @@ routerAdd('POST', '/backend/v1/invitations/{token}/register', (e) => {
   const role = inv.getString('role')
   const invTorre = inv.getString('torre')
   const invUnidade = inv.getString('unidade')
+  const invCondoId = inv.getString('condo_id')
 
   if (!body.name || !body.email || !body.password) {
     return e.badRequestError('Nome, e-mail e senha são obrigatórios.')
@@ -42,6 +43,10 @@ routerAdd('POST', '/backend/v1/invitations/{token}/register', (e) => {
       const finalUnidade = role === 'morador' ? invUnidade || body.unidade : ''
       const finalCpf = role === 'morador' ? body.cpf : ''
 
+      if (invCondoId) {
+        user.set('condo_id', invCondoId)
+      }
+
       if (role === 'morador') {
         user.set('cpf', finalCpf)
         user.set('torre', finalTorre)
@@ -59,6 +64,9 @@ routerAdd('POST', '/backend/v1/invitations/{token}/register', (e) => {
         morador.set('torre', finalTorre)
         morador.set('apartamento', finalUnidade)
         morador.set('telefone', body.phone || '')
+        if (invCondoId) {
+          morador.set('condo_id', invCondoId)
+        }
         txApp.save(morador)
       }
     })

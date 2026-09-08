@@ -18,14 +18,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(
-    pb.authStore.isValid ? (pb.authStore.record as AppUser) : null,
+    pb.authStore.isValid ? (pb.authStore.record as unknown as AppUser) : null,
   )
   const [isAuthenticated, setIsAuthenticated] = useState(pb.authStore.isValid)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const unsubscribe = pb.authStore.onChange((_token, record) => {
-      setUser(pb.authStore.isValid ? (record as AppUser) : null)
+      setUser(pb.authStore.isValid ? (record as unknown as AppUser) : null)
       setIsAuthenticated(pb.authStore.isValid)
     })
 

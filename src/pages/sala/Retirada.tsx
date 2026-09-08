@@ -8,9 +8,11 @@ import { RecebimentoAuditoria } from '@/services/api'
 import useRealtime from '@/hooks/use-realtime'
 import { format } from 'date-fns'
 import pb from '@/lib/pocketbase/client'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function SalaRetirada() {
   const { toast } = useToast()
+  const { user } = useAuth()
   const [parcels, setParcels] = useState<any[]>([])
   const [search, setSearch] = useState('')
   const [selectedParcel, setSelectedParcel] = useState<any | null>(null)
@@ -20,9 +22,13 @@ export default function SalaRetirada() {
 
   const loadData = async () => {
     try {
+      let filter = 'unidade_id != "" && morador_id != ""'
+      if (user?.role !== 'master' && user?.condo_id) {
+        filter = `${filter} && condo_id = "${user.condo_id}"`
+      }
       const data = await pb.collection('recebimentos_auditoria').getFullList({
         expand: 'unidade_id,morador_id',
-        filter: 'unidade_id != "" && morador_id != ""',
+        filter,
       })
       setParcels(data.filter((p) => p.status === 'LIBERADO_RETIRADA'))
     } catch {

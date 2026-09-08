@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-08T13:25:22.740Z",
+  "generatedAt": "2026-09-08T13:49:53.273Z",
   "collections": [
     {
       "name": "users",
       "type": "auth",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "(@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')) || (@request.auth.id = '' && @request.body.role = 'morador')",
-        "update": "id = @request.auth.id || @request.auth.role = 'gestor' || @request.auth.role = 'admin'",
-        "delete": "id = @request.auth.id || @request.auth.role = 'gestor' || @request.auth.role = 'admin'"
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || id = @request.auth.id || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "create": "(@request.auth.id != '' && (@request.auth.role = 'master' || @request.auth.role = 'admin' || @request.auth.role = 'gestor')) || (@request.auth.id = '' && @request.body.role = 'morador')",
+        "update": "id = @request.auth.id || @request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.role = 'gestor' && condo_id = @request.auth.condo_id)",
+        "delete": "id = @request.auth.id || @request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.role = 'gestor' && condo_id = @request.auth.condo_id)"
       },
       "fields": [
         {
@@ -68,6 +68,13 @@
           "type": "bool",
           "required": false,
           "system": false
+        },
+        {
+          "name": "condo_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "condos"
         }
       ],
       "indexes": [
@@ -80,11 +87,11 @@
       "name": "condos",
       "type": "base",
       "apiRules": {
-        "list": "",
-        "view": "",
-        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
-        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
-        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && id = @request.auth.condo_id)",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && id = @request.auth.condo_id)",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'admin'",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && id = @request.auth.condo_id && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem'))",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin'"
       },
       "fields": [
         {
@@ -138,11 +145,11 @@
       "name": "units",
       "type": "base",
       "apiRules": {
-        "list": "",
-        "view": "",
-        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
-        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
-        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.role = 'gestor' && @request.auth.condo_id != '')",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.role = 'gestor' && condo_id = @request.auth.condo_id)",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.role = 'gestor' && condo_id = @request.auth.condo_id)"
       },
       "fields": [
         {
@@ -185,11 +192,11 @@
       "name": "recebimentos_auditoria",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem' || (@request.auth.role = 'morador' && morador_id = @request.auth.id))",
-        "view": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem' || (@request.auth.role = 'morador' && morador_id = @request.auth.id))",
-        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
-        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
-        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem' || (@request.auth.role = 'morador' && morador_id = @request.auth.id)))",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem' || (@request.auth.role = 'morador' && morador_id = @request.auth.id)))",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem'))",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem'))",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')"
       },
       "fields": [
         {
@@ -317,6 +324,13 @@
           "type": "date",
           "required": false,
           "system": false
+        },
+        {
+          "name": "condo_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "condos"
         }
       ],
       "indexes": []
@@ -325,11 +339,11 @@
       "name": "templates_notificacao",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
-        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
-        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem'))",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem'))",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')"
       },
       "fields": [
         {
@@ -387,6 +401,13 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "condo_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "condos"
         }
       ],
       "indexes": []
@@ -395,11 +416,11 @@
       "name": "notificacoes_enviadas",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.role = 'gestor'",
-        "view": "@request.auth.role = 'gestor'",
-        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
-        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
-        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem'))",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem'))",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')"
       },
       "fields": [
         {
@@ -464,6 +485,13 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "condo_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "condos"
         }
       ],
       "indexes": []
@@ -472,11 +500,11 @@
       "name": "carriers",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')",
-        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')",
-        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem'))",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')"
       },
       "fields": [
         {
@@ -504,6 +532,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "condo_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "condos"
         }
       ],
       "indexes": []
@@ -512,11 +547,11 @@
       "name": "moradores",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem' || @request.auth.role = 'morador')",
-        "view": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem' || @request.auth.role = 'morador')",
-        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'morador')",
-        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')",
-        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.role = 'gestor' && @request.auth.condo_id != '') || @request.auth.role = 'morador' || @request.auth.id = ''",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')"
       },
       "fields": [
         {
@@ -574,6 +609,13 @@
           "type": "bool",
           "required": false,
           "system": false
+        },
+        {
+          "name": "condo_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "condos"
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX `idx_moradores_cpf` ON `moradores` (cpf) WHERE cpf != ''"]
@@ -582,11 +624,11 @@
       "name": "volume_types",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')",
-        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')",
-        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && @request.auth.role = 'gestor')",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')"
       },
       "fields": [
         {
@@ -608,6 +650,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "condo_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "condos"
         }
       ],
       "indexes": []
@@ -616,11 +665,11 @@
       "name": "shelf_locations",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')",
-        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')",
-        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && @request.auth.role = 'gestor')",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')"
       },
       "fields": [
         {
@@ -642,6 +691,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "condo_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "condos"
         }
       ],
       "indexes": []
@@ -650,9 +706,9 @@
       "name": "historico_andamento",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem'))",
         "update": null,
         "delete": null
       },
@@ -696,6 +752,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "condo_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "condos"
         }
       ],
       "indexes": []
@@ -704,11 +767,11 @@
       "name": "whatsapp_verifications",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
-        "view": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
-        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
-        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
-        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem'))",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem'))",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem'))",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem'))",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')"
       },
       "fields": [
         {
@@ -754,6 +817,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "condo_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "condos"
         }
       ],
       "indexes": []
@@ -762,8 +832,8 @@
       "name": "whatsapp_logs",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
-        "view": "@request.auth.id != '' && (@request.auth.role = 'admin' || @request.auth.role = 'gestor')",
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')",
         "create": null,
         "update": null,
         "delete": null
@@ -812,6 +882,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "condo_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "condos"
         }
       ],
       "indexes": []
@@ -820,11 +897,11 @@
       "name": "invitation_links",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')",
-        "view": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')",
-        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')",
-        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')",
-        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin')"
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && @request.auth.role = 'gestor')",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')"
       },
       "fields": [
         {
@@ -871,6 +948,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "condo_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "condos"
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_invitation_token ON invitation_links (token)"]
@@ -879,11 +963,11 @@
       "name": "entregadores",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
-        "create": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
-        "update": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')",
-        "delete": "@request.auth.id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'admin' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem')"
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem'))",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem'))",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem'))"
       },
       "fields": [
         {
@@ -917,6 +1001,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "condo_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "condos"
         }
       ],
       "indexes": []

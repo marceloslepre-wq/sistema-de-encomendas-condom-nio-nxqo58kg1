@@ -190,8 +190,12 @@ export default function PortariaRegistro() {
   }
 
   const loadMoradores = () => {
+    const authCondoId = pb.authStore.record?.condo_id
+    const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
+    const filter =
+      !isMaster && authCondoId ? `role='morador' && condo_id='${authCondoId}'` : "role='morador'"
     pb.collection('users')
-      .getFullList({ filter: "role='morador'" })
+      .getFullList({ filter })
       .then((res) => setMoradores(res as unknown as ResidentUser[]))
       .catch((err) => console.error('Error fetching users:', err))
   }
@@ -289,10 +293,12 @@ export default function PortariaRegistro() {
 
     if (!userRecord) {
       try {
+        const authCondoId = pb.authStore.record?.condo_id
+        const condoFilter = authCondoId ? ` && condo_id='${authCondoId}'` : ''
         userRecord = await pb
           .collection('users')
           .getFirstListItem(
-            `role='morador' && torre='${escapeFilterValue(tower)}' && unidade='${escapeFilterValue(apartment)}' && name='${escapeFilterValue(residentName)}'`,
+            `role='morador' && torre='${escapeFilterValue(tower)}' && unidade='${escapeFilterValue(apartment)}' && name='${escapeFilterValue(residentName)}'${condoFilter}`,
           )
       } catch {
         /* intentionally ignored */
@@ -308,6 +314,7 @@ export default function PortariaRegistro() {
       const fallbackCpf = String(residentCandidate?.cpf || '').replace(/\D/g, '') || '00000000000'
 
       try {
+        const authCondoId = pb.authStore.record?.condo_id
         userRecord = await pb.collection('users').create({
           name: residentName,
           torre: tower,
@@ -316,6 +323,7 @@ export default function PortariaRegistro() {
           phone: fallbackPhone,
           cpf: fallbackCpf,
           role: 'morador',
+          condo_id: authCondoId || undefined,
           password: 'Skip@Password123',
           passwordConfirm: 'Skip@Password123',
         })

@@ -352,6 +352,7 @@ export default function GestorUsuarios() {
         email: formData.email,
         phone: formData.phone,
         role: formData.role,
+        condo_id: pb.authStore.record?.condo_id || undefined,
       }
 
       if (formData.role === 'morador') {

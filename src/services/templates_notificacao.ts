@@ -2,14 +2,20 @@ import pb from '@/lib/pocketbase/client'
 
 export const getTemplatesNotificacao = async () => {
   try {
-    return await pb.collection('templates_notificacao').getFullList()
+    const authCondoId = pb.authStore.record?.condo_id
+    const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
+    const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+    return await pb.collection('templates_notificacao').getFullList({ filter })
   } catch (e) {
     return []
   }
 }
 
 export const createTemplateNotificacao = async (data: any) => {
-  return pb.collection('templates_notificacao').create(data)
+  const authCondoId = pb.authStore.record?.condo_id
+  const payload: any = { ...data }
+  if (authCondoId && !payload.condo_id) payload.condo_id = authCondoId
+  return pb.collection('templates_notificacao').create(payload)
 }
 
 export const updateTemplateNotificacao = async (id: string, data: any) => {

@@ -8,14 +8,21 @@ import { RecebimentoAuditoria } from '@/services/api'
 import { useRealtime } from '@/hooks/use-realtime'
 import { format, subDays, isSameDay } from 'date-fns'
 import pb from '@/lib/pocketbase/client'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function GestorDashboard() {
+  const { user } = useAuth()
   const [recebimentos, setRecebimentos] = useState<RecebimentoAuditoria[]>([])
   const [loading, setLoading] = useState(true)
 
   const loadData = async () => {
     try {
-      const data = await pb.collection('recebimentos_auditoria').getFullList({ sort: '-created' })
+      const filter =
+        user?.role !== 'master' && user?.condo_id ? `condo_id = "${user.condo_id}"` : ''
+      const data = await pb.collection('recebimentos_auditoria').getFullList({
+        filter,
+        sort: '-created',
+      })
       setRecebimentos(data as RecebimentoAuditoria[])
     } catch (e) {
       console.error(e)

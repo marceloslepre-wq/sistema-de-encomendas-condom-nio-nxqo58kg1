@@ -92,10 +92,12 @@ export default function PortariaEntregadores() {
         return
       }
 
+      const authCondoId = pb.authStore.record?.condo_id
       await pb.collection('entregadores').create({
         nome,
         cpf: digitsCpf,
         celular: celular.replace(/\D/g, ''),
+        condo_id: authCondoId || undefined,
       })
 
       toast({ title: 'Sucesso', description: 'Entregador cadastrado com sucesso.' })

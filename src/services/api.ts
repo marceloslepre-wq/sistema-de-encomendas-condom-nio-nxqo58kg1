@@ -2,6 +2,14 @@ import pb from '@/lib/pocketbase/client'
 import { RecordModel } from 'pocketbase'
 
 export const getCondo = async () => {
+  const authCondoId = pb.authStore.record?.condo_id
+  if (authCondoId) {
+    try {
+      return await pb.collection('condos').getOne(authCondoId)
+    } catch {
+      // fallback
+    }
+  }
   const records = await pb.collection('condos').getFullList()
   return records[0]
 }
@@ -10,8 +18,19 @@ export const createCondo = (data: any) => pb.collection('condos').create(data)
 
 export const updateCondo = (id: string, data: any) => pb.collection('condos').update(id, data)
 
-export const getUnits = () => pb.collection('units').getFullList({ sort: 'tower,apartment' })
-export const createUnit = (data: any) => pb.collection('units').create(data)
+export const getUnits = () => {
+  const authCondoId = pb.authStore.record?.condo_id
+  const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
+  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  return pb.collection('units').getFullList({ filter, sort: 'tower,apartment' })
+}
+
+export const createUnit = (data: any) => {
+  const authCondoId = pb.authStore.record?.condo_id
+  const payload = { ...data }
+  if (authCondoId && !payload.condo_id) payload.condo_id = authCondoId
+  return pb.collection('units').create(payload)
+}
 export const updateUnit = (id: string, data: any) => pb.collection('units').update(id, data)
 export const deleteUnit = (id: string) => pb.collection('units').delete(id)
 
@@ -24,9 +43,16 @@ export type Morador = RecordModel & {
   telefone: string
 }
 
-export const getMoradores = () => pb.collection('moradores').getFullList({ sort: '-created' })
+export const getMoradores = () => {
+  const authCondoId = pb.authStore.record?.condo_id
+  const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
+  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  return pb.collection('moradores').getFullList({ filter, sort: '-created' })
+}
+
 export const createMorador = async (data: any) => {
-  const userPayload = {
+  const authCondoId = pb.authStore.record?.condo_id
+  const userPayload: any = {
     name: data.nome,
     email: data.email,
     password: data.password,
@@ -37,20 +63,23 @@ export const createMorador = async (data: any) => {
     unidade: data.apartamento,
     role: 'morador',
   }
+  if (authCondoId) userPayload.condo_id = authCondoId
 
   // Create user first. Any unique constraint error will be thrown to the caller.
   await pb.collection('users').create(userPayload)
 
   // Create morador with strictly defined payload
   const { password, ...moradorData } = data
-  return await pb.collection('moradores').create({
+  const moradorPayload: any = {
     nome: moradorData.nome,
     email: moradorData.email,
     cpf: moradorData.cpf,
     torre: moradorData.torre,
     apartamento: moradorData.apartamento,
     telefone: moradorData.telefone || '',
-  })
+  }
+  if (authCondoId) moradorPayload.condo_id = authCondoId
+  return await pb.collection('moradores').create(moradorPayload)
 }
 
 export const updateMorador = async (id: string, data: any) => {
@@ -114,8 +143,12 @@ export const updateMorador = async (id: string, data: any) => {
 }
 export const deleteMorador = (id: string) => pb.collection('moradores').delete(id)
 
-export const getUsers = () => pb.collection('users').getFullList({ sort: '-created' })
-
+export const getUsers = () => {
+  const authCondoId = pb.authStore.record?.condo_id
+  const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
+  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  return pb.collection('users').getFullList({ filter, sort: '-created' })
+}
 export const updateUser = async (id: string, data: any) => {
   const existingRecord = await pb.collection('users').getOne(id)
   const payload: any = {}
@@ -128,6 +161,7 @@ export const updateUser = async (id: string, data: any) => {
     'torre',
     'unidade',
     'permitir_retirada_terceiros',
+    'condo_id',
   ]
 
   allowedFields.forEach((field) => {
@@ -209,7 +243,7 @@ export const adminUpdateUser = async (id: string, data: any) => {
 export const createUser = (data: any) => {
   const payload: any = {}
 
-  const allowedFields = ['name', 'email', 'phone', 'role', 'cpf', 'torre', 'unidade']
+  const allowedFields = ['name', 'email', 'phone', 'role', 'cpf', 'torre', 'unidade', 'condo_id']
 
   allowedFields.forEach((field) => {
     if (field in data) {
@@ -234,13 +268,19 @@ export type InvitationLink = RecordModel & {
   active: boolean
 }
 
-export const getInvitations = () =>
-  pb
+export const getInvitations = () => {
+  const authCondoId = pb.authStore.record?.condo_id
+  const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
+  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  return pb
     .collection('invitation_links')
-    .getFullList<InvitationLink>({ sort: '-created', requestKey: null })
-
+    .getFullList<InvitationLink>({ filter, sort: '-created', requestKey: null })
+}
 export const createInvitation = async (data: any) => {
-  return await pb.collection('invitation_links').create<InvitationLink>(data, {
+  const authCondoId = pb.authStore.record?.condo_id
+  const payload = { ...data }
+  if (authCondoId && !payload.condo_id) payload.condo_id = authCondoId
+  return await pb.collection('invitation_links').create<InvitationLink>(payload, {
     requestKey: null,
   })
 }
@@ -257,24 +297,63 @@ export const registerWithInvitation = (token: string, data: any) =>
     headers: { 'Content-Type': 'application/json' },
   })
 
-export const getCarriers = () => pb.collection('carriers').getFullList({ sort: 'name' })
-export const createCarrier = (data: any) => pb.collection('carriers').create(data)
+export const getCarriers = () => {
+  const authCondoId = pb.authStore.record?.condo_id
+  const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
+  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  return pb.collection('carriers').getFullList({ filter, sort: 'name' })
+}
+
+export const createCarrier = (data: any) => {
+  const authCondoId = pb.authStore.record?.condo_id
+  const payload = { ...data }
+  if (authCondoId && !payload.condo_id) payload.condo_id = authCondoId
+  return pb.collection('carriers').create(payload)
+}
+
 export const updateCarrier = (id: string, data: any) => pb.collection('carriers').update(id, data)
 export const deleteCarrier = (id: string) => pb.collection('carriers').delete(id)
 
-export const getParcels = () =>
-  pb
+export const getParcels = () => {
+  const authCondoId = pb.authStore.record?.condo_id
+  const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
+  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  return pb
     .collection('recebimentos_auditoria')
-    .getFullList({ expand: 'unidade_id,morador_id', sort: '-created' })
+    .getFullList({ filter, expand: 'unidade_id,morador_id', sort: '-created' })
+}
 
-export const getVolumeTypes = () => pb.collection('volume_types').getFullList()
-export const createVolumeType = (data: any) => pb.collection('volume_types').create(data)
+export const getVolumeTypes = () => {
+  const authCondoId = pb.authStore.record?.condo_id
+  const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
+  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  return pb.collection('volume_types').getFullList({ filter })
+}
+
+export const createVolumeType = (data: any) => {
+  const authCondoId = pb.authStore.record?.condo_id
+  const payload = { ...data }
+  if (authCondoId && !payload.condo_id) payload.condo_id = authCondoId
+  return pb.collection('volume_types').create(payload)
+}
+
 export const updateVolumeType = (id: string, data: any) =>
   pb.collection('volume_types').update(id, data)
 export const deleteVolumeType = (id: string) => pb.collection('volume_types').delete(id)
 
-export const getShelfLocations = () => pb.collection('shelf_locations').getFullList()
-export const createShelfLocation = (data: any) => pb.collection('shelf_locations').create(data)
+export const getShelfLocations = () => {
+  const authCondoId = pb.authStore.record?.condo_id
+  const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
+  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  return pb.collection('shelf_locations').getFullList({ filter })
+}
+
+export const createShelfLocation = (data: any) => {
+  const authCondoId = pb.authStore.record?.condo_id
+  const payload = { ...data }
+  if (authCondoId && !payload.condo_id) payload.condo_id = authCondoId
+  return pb.collection('shelf_locations').create(payload)
+}
 export const updateShelfLocation = (id: string, data: any) =>
   pb.collection('shelf_locations').update(id, data)
 export const deleteShelfLocation = (id: string) => pb.collection('shelf_locations').delete(id)
@@ -362,4 +441,9 @@ export type AppUser = RecordModel & {
   email: string
   phone: string
   role: string
+  condo_id?: string
+  torre?: string
+  unidade?: string
+  cpf?: string
+  permitir_retirada_terceiros?: boolean
 }

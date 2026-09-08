@@ -9,7 +9,9 @@ routerAdd(
       throw new UnauthorizedError('Acesso negado.')
     }
 
-    const isGestor = auth.getString('role') === 'gestor' || auth.getString('role') === 'admin'
+    const role = auth.getString('role')
+    const isMaster = role === 'master' || role === 'admin'
+    const isGestor = role === 'gestor' || isMaster
     const isSelf = auth.id === id
 
     if (!isGestor && !isSelf) {
@@ -22,6 +24,13 @@ routerAdd(
       record = $app.findRecordById('users', id)
     } catch (err) {
       throw new NotFoundError('Usuário não encontrado.')
+    }
+
+    if (!isMaster && !isSelf) {
+      const authCondoId = auth.getString('condo_id')
+      if (record.getString('condo_id') && record.getString('condo_id') !== authCondoId) {
+        throw new ForbiddenError('Acesso negado a usuário de outro condomínio.')
+      }
     }
 
     let body = e.requestInfo().body || {}
@@ -105,7 +114,7 @@ routerAdd(
       throw new BadRequestError('Dados inválidos.', errors)
     }
 
-    const allowedFields = ['name', 'phone', 'role', 'cpf', 'torre', 'unidade']
+    const allowedFields = ['name', 'phone', 'role', 'cpf', 'torre', 'unidade', 'condo_id']
 
     for (const field of allowedFields) {
       if (body[field] !== undefined) {

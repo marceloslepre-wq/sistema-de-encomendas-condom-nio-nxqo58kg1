@@ -31,8 +31,9 @@ export default function MoradorDados() {
         setPermitirTerceiros(user.permitir_retirada_terceiros ? 'true' : 'false')
       }
 
+      const condoFilter = user.condo_id ? ` && condo_id="${user.condo_id}"` : ''
       pb.collection('moradores')
-        .getFirstListItem(`email="${user.email}"`)
+        .getFirstListItem(`email="${user.email}"${condoFilter}`)
         .then((morador) => {
           console.log('Perfil carregado:', morador)
           setMoradorData(morador)

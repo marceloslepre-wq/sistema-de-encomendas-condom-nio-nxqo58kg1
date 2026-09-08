@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -43,6 +44,7 @@ type ExpandedVolume = RecebimentoAuditoria & {
 
 export default function SalaTriagem() {
   const { toast } = useToast()
+  const { user } = useAuth()
   const [recebimentos, setRecebimentos] = useState<ExpandedVolume[]>([])
   const [selectedVolume, setSelectedVolume] = useState<ExpandedVolume | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -61,13 +63,17 @@ export default function SalaTriagem() {
   const loadData = async () => {
     try {
       console.log('Carregando triagem...')
+      let filter = `(status='ENTRADA_PORTARIA' || status='Entrada na portaria' || status='Recebido' || status='EM_TRIAGEM' || status='Validado' || status='Aprovação Manual')`
+      let userFilter = "role='morador'"
+      if (user?.role !== 'master' && user?.condo_id) {
+        filter = `${filter} && condo_id = "${user.condo_id}"`
+        userFilter = `${userFilter} && condo_id = "${user.condo_id}"`
+      }
       const data = await pb.collection('recebimentos_auditoria').getFullList<RecebimentoAuditoria>({
-        filter: `status='ENTRADA_PORTARIA' || status='Entrada na portaria' || status='Recebido' || status='EM_TRIAGEM' || status='Validado' || status='Aprovação Manual'`,
+        filter,
         sort: 'created',
       })
-      const moradoresData = await pb
-        .collection('users')
-        .getFullList<any>({ filter: "role='morador'" })
+      const moradoresData = await pb.collection('users').getFullList<any>({ filter: userFilter })
 
       const enhancedData = data.map((parcel) => {
         const morador = moradoresData.find((m) => {

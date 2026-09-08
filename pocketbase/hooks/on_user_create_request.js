@@ -2,7 +2,8 @@ onRecordCreateRequest((e) => {
   if (e.hasSuperuserAuth()) return e.next()
 
   const auth = e.auth
-  if (auth && auth.get('role') === 'gestor') {
+  const role = auth ? auth.getString('role') : ''
+  if (auth && (role === 'gestor' || role === 'master' || role === 'admin')) {
     return e.next()
   }
 
