@@ -10,7 +10,7 @@ import { Package, Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 export default function Index() {
-  const { signIn, isAuthenticated, role, loading } = useAuth()
+  const { signIn, isAuthenticated, role, licenseExpired, loading } = useAuth()
   const navigate = useNavigate()
   const { toast } = useToast()
 
@@ -21,6 +21,10 @@ export default function Index() {
 
   useEffect(() => {
     if (!loading && isAuthenticated && role) {
+      if (licenseExpired && role !== 'master') {
+        navigate('/renovar')
+        return
+      }
       if (role === 'master') navigate('/master')
       else if (role === 'gestor') navigate('/gestor/dashboard')
       else if (role === 'portaria') navigate('/portaria/registro')
@@ -28,14 +32,14 @@ export default function Index() {
       else if (role === 'morador') navigate('/morador/dashboard')
       else navigate('/')
     }
-  }, [isAuthenticated, role, loading, navigate])
+  }, [isAuthenticated, role, licenseExpired, loading, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !password) return
 
     setIsSubmitting(true)
-    const { error, record } = await signIn(email, password)
+    const { error, record, licenseExpired: isExpired } = await signIn(email, password)
     if (error) {
       console.log('ERRO:', error)
       const msg = getErrorMessage(error)
@@ -46,7 +50,14 @@ export default function Index() {
       })
       setIsSubmitting(false)
     } else {
-      if (record?.role === 'morador') {
+      if (isExpired && record?.role !== 'master') {
+        toast({
+          title: 'Licença Expirada',
+          description: 'Sua licença expirou. Renove seu plano para continuar.',
+          variant: 'destructive',
+        })
+        navigate('/renovar')
+      } else if (record?.role === 'morador') {
         console.log('Morador logado:', record.email)
       }
     }

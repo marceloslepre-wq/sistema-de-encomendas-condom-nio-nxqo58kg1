@@ -9,6 +9,7 @@ import Index from './pages/Index'
 import NotFound from './pages/NotFound'
 import Cadastro from './pages/Cadastro'
 import Registrar from './pages/Registrar'
+import Renovar from './pages/Renovar'
 
 // Gestor Pages
 import GestorDashboard from './pages/gestor/Dashboard'
@@ -43,7 +44,7 @@ const ProtectedRoute = ({
   children: React.ReactNode
   requiredRole?: string
 }) => {
-  const { user, role, isAuthenticated, loading } = useAuth()
+  const { user, role, isAuthenticated, licenseExpired, loading } = useAuth()
 
   if (loading) {
     return (
@@ -54,6 +55,11 @@ const ProtectedRoute = ({
   }
 
   if (!isAuthenticated || !user) return <Navigate to="/" replace />
+
+  // Bloqueio por expiração de licença: se o condomínio estiver com licença expirada e não for master, direciona para /renovar
+  if (licenseExpired && role !== 'master') {
+    return <Navigate to="/renovar" replace />
+  }
 
   if (requiredRole && role !== requiredRole) {
     const isPortariaGroup = ['portaria', 'triagem', 'porteiro']
@@ -88,6 +94,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/cadastro" element={<Cadastro />} />
           <Route path="/registrar/:token" element={<Registrar />} />
+          <Route path="/renovar" element={<Renovar />} />
 
           {/* Rota Protegida Exclusiva para Master */}
           <Route

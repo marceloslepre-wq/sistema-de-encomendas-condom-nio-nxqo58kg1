@@ -8,15 +8,15 @@ import { useToast } from '@/hooks/use-toast'
 import {
   Check,
   CheckCircle2,
-  Copy,
   ArrowRight,
   Loader2,
   Building2,
   ShieldCheck,
   Sparkles,
   Calendar,
-  KeyRound,
+  Lock,
   Mail,
+  UserCheck,
 } from 'lucide-react'
 import {
   getPublicPlans,
@@ -34,7 +34,7 @@ export default function Cadastro() {
   const [selectedPlanId, setSelectedPlanId] = useState<string>('')
   const [loadingPlans, setLoadingPlans] = useState(true)
 
-  // Form states
+  // Form states - Passo 2 (Dados da Empresa)
   const [razaoSocial, setRazaoSocial] = useState('')
   const [cnpj, setCnpj] = useState('')
   const [email, setEmail] = useState('')
@@ -43,8 +43,11 @@ export default function Cadastro() {
   const [responsavel, setResponsavel] = useState('')
   const [phone, setPhone] = useState('')
 
+  // Form states - Passo 3 (Credenciamento "Primeiro Cadastro" / Criar Própria Senha)
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+
   const [submitting, setSubmitting] = useState(false)
-  const [copiedPassword, setCopiedPassword] = useState(false)
   const [onboardingResult, setOnboardingResult] = useState<OnboardingResult | null>(null)
 
   // Mascaras
@@ -144,6 +147,33 @@ export default function Cadastro() {
       return
     }
 
+    if (!password) {
+      toast({
+        variant: 'destructive',
+        title: 'Senha obrigatória',
+        description: 'Crie uma senha de acesso para o seu login de gestor.',
+      })
+      return
+    }
+
+    if (password.length < 8) {
+      toast({
+        variant: 'destructive',
+        title: 'Senha muito curta',
+        description: 'A senha de acesso deve ter no mínimo 8 caracteres.',
+      })
+      return
+    }
+
+    if (password !== confirmPassword) {
+      toast({
+        variant: 'destructive',
+        title: 'Senhas divergentes',
+        description: 'A confirmação de senha não confere com a senha digitada.',
+      })
+      return
+    }
+
     setSubmitting(true)
 
     try {
@@ -156,12 +186,13 @@ export default function Cadastro() {
         responsavel: responsavel.trim() || undefined,
         phone: phone.trim() || undefined,
         planoId: selectedPlanId || undefined,
+        password,
       })
 
       setOnboardingResult(res)
       toast({
         title: 'Conta criada com sucesso!',
-        description: 'Seu período de teste grátis de 15 dias está ativo.',
+        description: 'Seu período de teste grátis de 15 dias está ativo com seu login exclusivo.',
       })
     } catch (error: any) {
       toast({
@@ -171,18 +202,6 @@ export default function Cadastro() {
       })
     } finally {
       setSubmitting(false)
-    }
-  }
-
-  const handleCopyPassword = () => {
-    if (onboardingResult?.gestor.senha_provisoria) {
-      navigator.clipboard.writeText(onboardingResult.gestor.senha_provisoria)
-      setCopiedPassword(true)
-      toast({
-        title: 'Senha copiada!',
-        description: 'A senha provisória foi copiada para a área de transferência.',
-      })
-      setTimeout(() => setCopiedPassword(false), 3000)
     }
   }
 
@@ -249,7 +268,7 @@ export default function Cadastro() {
               <p className="text-slate-600 max-w-lg mx-auto">
                 Seu condomínio foi provisionado e sua licença de avaliação de{' '}
                 <span className="font-semibold text-slate-800">15 dias</span> já está pronta para
-                uso.
+                uso no seu login exclusivo.
               </p>
             </div>
 
@@ -274,56 +293,24 @@ export default function Cadastro() {
               </div>
 
               <CardContent className="p-6 space-y-6">
-                {/* Alerta de Senha Provisória */}
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 space-y-3">
-                  <div className="flex items-center gap-2 text-amber-800 font-semibold">
-                    <KeyRound className="w-5 h-5 text-amber-600" />
-                    <span>Credenciais de Primeiro Acesso (Gestor)</span>
+                {/* Confirmação de Credenciais Criadas */}
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 space-y-3">
+                  <div className="flex items-center gap-2 text-blue-900 font-semibold">
+                    <UserCheck className="w-5 h-5 text-blue-600" />
+                    <span>Seu Login Exclusivo de Gestor Foi Criado</span>
                   </div>
-                  <p className="text-xs text-amber-700 leading-relaxed">
-                    Guarde ou copie sua senha provisória abaixo para realizar seu primeiro login.
-                    Você poderá alterá-la para uma senha pessoal quando quiser na plataforma.
+                  <p className="text-xs text-blue-700 leading-relaxed">
+                    Você definiu sua senha pessoal de acesso com segurança. Utilize seu e-mail
+                    corporativo e a senha cadastrada para acessar o sistema.
                   </p>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    <div className="bg-white p-3 rounded-lg border border-amber-200">
-                      <span className="text-xs text-slate-500 flex items-center gap-1 font-medium">
-                        <Mail className="w-3.5 h-3.5 text-slate-400" /> E-mail de Login:
-                      </span>
-                      <p className="text-sm font-semibold text-slate-800 truncate select-all">
-                        {onboardingResult.gestor.email}
-                      </p>
-                    </div>
-
-                    <div className="bg-white p-3 rounded-lg border border-amber-300 relative flex items-center justify-between">
-                      <div>
-                        <span className="text-xs text-amber-800 font-semibold block">
-                          Senha Provisória:
-                        </span>
-                        <code className="text-base font-bold text-slate-900 tracking-wider">
-                          {onboardingResult.gestor.senha_provisoria}
-                        </code>
-                      </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        onClick={handleCopyPassword}
-                        className="h-8 gap-1.5 text-xs bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300"
-                      >
-                        {copiedPassword ? (
-                          <>
-                            <Check className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Copiado!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3.5 h-3.5" />
-                            <span>Copiar</span>
-                          </>
-                        )}
-                      </Button>
-                    </div>
+                  <div className="bg-white p-3 rounded-lg border border-blue-200">
+                    <span className="text-xs text-slate-500 flex items-center gap-1 font-medium">
+                      <Mail className="w-3.5 h-3.5 text-slate-400" /> E-mail de Login:
+                    </span>
+                    <p className="text-sm font-semibold text-slate-800 truncate select-all">
+                      {onboardingResult.gestor.email}
+                    </p>
                   </div>
                 </div>
 
@@ -364,7 +351,7 @@ export default function Cadastro() {
                     <ArrowRight className="w-5 h-5" />
                   </Button>
                   <p className="text-center text-xs text-slate-400 mt-2">
-                    Utilize o e-mail cadastrado e a senha provisória acima na tela de login.
+                    Faça login com seu e-mail e a senha que você acabou de definir.
                   </p>
                 </div>
               </CardContent>
@@ -375,10 +362,10 @@ export default function Cadastro() {
           <div className="space-y-8">
             <div className="space-y-2">
               <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                Solicite seu Teste Grátis
+                Solicite seu Teste Grátis por 15 dias
               </h1>
               <p className="text-base sm:text-lg text-slate-600">
-                Avalie nossa solução por 15 dias sem compromisso.
+                Avalie nossa solução por 15 dias sem compromisso e comece com seu login exclusivo.
               </p>
             </div>
 
@@ -588,6 +575,74 @@ export default function Cadastro() {
                       </CardContent>
                     </Card>
                   </div>
+
+                  {/* PASSO 3: Credenciamento "Primeiro Cadastro" (Criar Própria Senha) */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 font-bold text-sm flex items-center justify-center">
+                        3
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-slate-800">
+                          Primeiro Cadastro — Credenciamento do Gestor
+                        </h2>
+                        <p className="text-xs text-slate-500">
+                          Defina sua senha de acesso exclusiva para entrar na plataforma.
+                        </p>
+                      </div>
+                    </div>
+
+                    <Card className="border border-slate-200 shadow-sm bg-white">
+                      <CardContent className="p-6 space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="password"
+                              className="text-slate-700 font-medium text-sm flex items-center gap-1.5"
+                            >
+                              <Lock className="w-3.5 h-3.5 text-slate-400" />
+                              Criar Senha de Acesso <span className="text-rose-500">*</span>
+                            </Label>
+                            <Input
+                              id="password"
+                              type="password"
+                              placeholder="Mínimo 8 caracteres"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              required
+                              minLength={8}
+                              className="h-11 bg-slate-50/50 border-slate-300 focus:bg-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="confirmPassword"
+                              className="text-slate-700 font-medium text-sm flex items-center gap-1.5"
+                            >
+                              <Lock className="w-3.5 h-3.5 text-slate-400" />
+                              Confirmar Senha <span className="text-rose-500">*</span>
+                            </Label>
+                            <Input
+                              id="confirmPassword"
+                              type="password"
+                              placeholder="Repita sua senha"
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              required
+                              minLength={8}
+                              className="h-11 bg-slate-50/50 border-slate-300 focus:bg-white"
+                            />
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-slate-500">
+                          A senha deve conter pelo menos 8 caracteres para garantir a segurança da
+                          sua administração.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
 
                 {/* Coluna Direita: Resumo do Pedido (5 colunas) */}
@@ -659,20 +714,20 @@ export default function Cadastro() {
                               <span>Configurando seu condomínio...</span>
                             </>
                           ) : (
-                            <span>Solicitar Teste Grátis — 15 Dias</span>
+                            <span>Teste Grátis por 15 dias</span>
                           )}
                         </Button>
 
                         <p className="text-center text-xs text-slate-500 leading-relaxed px-2">
-                          Após 15 dias enviaremos um link de pagamento para seu e-mail. Sem
-                          compromisso, cancele quando quiser.
+                          Após os 15 dias, você poderá renovar o plano por 30 dias diretamente pelo
+                          sistema. Sem compromisso, cancele quando quiser.
                         </p>
                       </div>
 
                       <div className="pt-2 border-t border-slate-100 space-y-2">
                         <div className="flex items-center gap-2 text-xs text-slate-600">
                           <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span>Ativação imediata e credenciais de login instantâneas</span>
+                          <span>Ativação imediata e credenciais exclusivas de gestor</span>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-slate-600">
                           <Check className="w-4 h-4 text-emerald-600 shrink-0" />

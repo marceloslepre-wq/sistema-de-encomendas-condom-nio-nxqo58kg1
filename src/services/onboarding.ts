@@ -19,6 +19,7 @@ export interface OnboardingPayload {
   responsavel?: string
   phone?: string
   planoId?: string
+  password?: string
 }
 
 export interface OnboardingResult {
@@ -44,7 +45,6 @@ export interface OnboardingResult {
   gestor: {
     id: string
     email: string
-    senha_provisoria: string
     role: string
   }
 }

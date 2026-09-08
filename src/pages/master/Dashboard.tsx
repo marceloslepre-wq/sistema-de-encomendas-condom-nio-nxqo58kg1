@@ -47,6 +47,7 @@ import {
   getLicencas,
   createLicenca,
   updateLicenca,
+  reativarLicenca30Dias,
   deleteLicenca,
   getCondosList,
 } from '@/services/master'
@@ -59,6 +60,8 @@ export default function MasterDashboard() {
   const [licencas, setLicencas] = useState<Licenca[]>([])
   const [condos, setCondos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [filterStatus, setFilterStatus] = useState<string>('todos')
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null)
 
   // Modais de Plano
   const [isPlanoModalOpen, setIsPlanoModalOpen] = useState(false)
@@ -196,10 +199,30 @@ export default function MasterDashboard() {
     setLicencaForm({
       condo_id: condos[0]?.id || '',
       plano_id: planos[0]?.id || '',
-      status: 'ativa',
+      status: 'ativa' as const,
       data_expiracao: '2027-12-31',
     })
     setIsLicencaModalOpen(true)
+  }
+
+  const handleReativar30Dias = async (licenca: Licenca) => {
+    setReactivatingId(licenca.id)
+    try {
+      await reativarLicenca30Dias(licenca.id, licenca.data_expiracao)
+      toast({
+        title: 'Licença reativada!',
+        description: 'A licença foi renovada por mais 30 dias com status ativa.',
+      })
+      await loadData()
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao reativar licença',
+        description: err.message || 'Falha ao processar reativação.',
+      })
+    } finally {
+      setReactivatingId(null)
+    }
   }
 
   const handleEditLicenca = (licenca: Licenca) => {
@@ -373,7 +396,25 @@ export default function MasterDashboard() {
               <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-3 text-center min-w-[110px]">
                 <span className="text-xs text-slate-400 font-medium">Licenças Ativas</span>
                 <p className="text-xl font-bold text-emerald-400">
-                  {licencas.filter((l) => l.status === 'ativa').length}
+                  {
+                    licencas.filter(
+                      (l) =>
+                        l.status === 'ativa' &&
+                        (!l.data_expiracao || new Date(l.data_expiracao) > new Date()),
+                    ).length
+                  }
+                </p>
+              </div>
+              <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-3 text-center min-w-[110px]">
+                <span className="text-xs text-slate-400 font-medium">Expiradas</span>
+                <p className="text-xl font-bold text-rose-400">
+                  {
+                    licencas.filter(
+                      (l) =>
+                        l.status === 'expirada' ||
+                        (l.data_expiracao && new Date(l.data_expiracao) <= new Date()),
+                    ).length
+                  }
                 </p>
               </div>
               <div className="bg-slate-800/80 border border-slate-700 rounded-lg p-3 text-center min-w-[110px]">
@@ -411,82 +452,169 @@ export default function MasterDashboard() {
 
           {/* TAB: LICENÇAS */}
           <TabsContent value="licencas" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {licencas.map((licenca) => {
-                const condoName =
-                  licenca.expand?.condo_id?.name ||
-                  condos.find((c) => c.id === licenca.condo_id)?.name ||
-                  'Condomínio não identificado'
-                const condoCnpj =
-                  licenca.expand?.condo_id?.cnpj ||
-                  condos.find((c) => c.id === licenca.condo_id)?.cnpj ||
-                  ''
-                const planoName =
-                  licenca.expand?.plano_id?.nome ||
-                  planos.find((p) => p.id === licenca.plano_id)?.nome ||
-                  'Plano Padrão'
-
-                return (
-                  <Card
-                    key={licenca.id}
-                    className="hover:shadow-md transition-shadow relative overflow-hidden"
+            {/* Barra de Filtro de Licenças (com destaque para Expiradas) */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-lg border">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Filtrar por:
+                </span>
+                <div className="flex gap-1.5">
+                  <Button
+                    size="sm"
+                    variant={filterStatus === 'todos' ? 'default' : 'outline'}
+                    onClick={() => setFilterStatus('todos')}
+                    className="h-8 text-xs"
                   >
-                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-indigo-500" />
-                    <CardHeader className="pb-3 pt-5">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <CardTitle className="text-lg font-bold">{condoName}</CardTitle>
-                          {condoCnpj && (
-                            <CardDescription className="text-xs">CNPJ: {condoCnpj}</CardDescription>
-                          )}
-                        </div>
-                        {getStatusBadge(licenca.status)}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4 text-sm">
-                      <div className="bg-slate-50 p-3 rounded-lg border space-y-2">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-muted-foreground">Plano Vinculado:</span>
-                          <span className="font-semibold text-foreground">{planoName}</span>
-                        </div>
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-muted-foreground">Validade / Expiração:</span>
-                          <span className="font-medium text-foreground">
-                            {licenca.data_expiracao
-                              ? new Date(licenca.data_expiracao).toLocaleDateString('pt-BR')
-                              : 'Indeterminada'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-muted-foreground">ID do Condomínio:</span>
-                          <span className="font-mono text-[11px] text-muted-foreground">
-                            {licenca.condo_id}
-                          </span>
-                        </div>
-                      </div>
+                    Todos ({licencas.length})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={filterStatus === 'expirada' ? 'destructive' : 'outline'}
+                    onClick={() => setFilterStatus('expirada')}
+                    className={`h-8 text-xs gap-1.5 ${filterStatus !== 'expirada' ? 'text-rose-600 border-rose-200 hover:bg-rose-50' : ''}`}
+                  >
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    Expirados (
+                    {
+                      licencas.filter(
+                        (l) =>
+                          l.status === 'expirada' ||
+                          (l.data_expiracao && new Date(l.data_expiracao) <= new Date()),
+                      ).length
+                    }
+                    )
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={filterStatus === 'ativa' ? 'default' : 'outline'}
+                    onClick={() => setFilterStatus('ativa')}
+                    className="h-8 text-xs text-emerald-700 hover:text-emerald-800"
+                  >
+                    Ativas (
+                    {
+                      licencas.filter(
+                        (l) =>
+                          l.status === 'ativa' &&
+                          (!l.data_expiracao || new Date(l.data_expiracao) > new Date()),
+                      ).length
+                    }
+                    )
+                  </Button>
+                </div>
+              </div>
+            </div>
 
-                      <div className="flex items-center justify-end gap-2 pt-2 border-t">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditLicenca(licenca)}
-                          className="h-8 gap-1"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" /> Editar
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteLicenca(licenca)}
-                          className="h-8 text-destructive hover:text-destructive gap-1"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Excluir
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {licencas
+                .filter((lic) => {
+                  const isExpired =
+                    lic.status === 'expirada' ||
+                    (lic.data_expiracao && new Date(lic.data_expiracao) <= new Date())
+                  if (filterStatus === 'expirada') return isExpired
+                  if (filterStatus === 'ativa') return lic.status === 'ativa' && !isExpired
+                  return true
+                })
+                .map((licenca) => {
+                  const isExpired =
+                    licenca.status === 'expirada' ||
+                    (licenca.data_expiracao && new Date(licenca.data_expiracao) <= new Date())
+                  const condoName =
+                    licenca.expand?.condo_id?.name ||
+                    condos.find((c) => c.id === licenca.condo_id)?.name ||
+                    'Condomínio não identificado'
+                  const condoCnpj =
+                    licenca.expand?.condo_id?.cnpj ||
+                    condos.find((c) => c.id === licenca.condo_id)?.cnpj ||
+                    ''
+                  const planoName =
+                    licenca.expand?.plano_id?.nome ||
+                    planos.find((p) => p.id === licenca.plano_id)?.nome ||
+                    'Plano Padrão'
+
+                  return (
+                    <Card
+                      key={licenca.id}
+                      className="hover:shadow-md transition-shadow relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 left-0 right-0 h-1.5 bg-indigo-500" />
+                      <CardHeader className="pb-3 pt-5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <CardTitle className="text-lg font-bold">{condoName}</CardTitle>
+                            {condoCnpj && (
+                              <CardDescription className="text-xs">
+                                CNPJ: {condoCnpj}
+                              </CardDescription>
+                            )}
+                          </div>
+                          {getStatusBadge(licenca.status)}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4 text-sm">
+                        <div className="bg-slate-50 p-3 rounded-lg border space-y-2">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-muted-foreground">Plano Vinculado:</span>
+                            <span className="font-semibold text-foreground">{planoName}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-muted-foreground">Validade / Expiração:</span>
+                            <span className="font-medium text-foreground">
+                              {licenca.data_expiracao
+                                ? new Date(licenca.data_expiracao).toLocaleDateString('pt-BR')
+                                : 'Indeterminada'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-muted-foreground">ID do Condomínio:</span>
+                            <span className="font-mono text-[11px] text-muted-foreground">
+                              {licenca.condo_id}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t">
+                          {/* Botão de Reativação por 30 dias para fallback ou renovação rápida */}
+                          <Button
+                            size="sm"
+                            onClick={() => handleReativar30Dias(licenca)}
+                            disabled={reactivatingId === licenca.id}
+                            className={`h-8 text-xs font-semibold gap-1.5 ${
+                              isExpired
+                                ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                            }`}
+                          >
+                            {reactivatingId === licenca.id ? (
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <RefreshCw className="w-3.5 h-3.5" />
+                            )}
+                            <span>Reativar +30 dias</span>
+                          </Button>
+
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditLicenca(licenca)}
+                              className="h-8 gap-1 px-2"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" /> Editar
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteLicenca(licenca)}
+                              className="h-8 text-destructive hover:text-destructive gap-1 px-2"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
 
               {licencas.length === 0 && !loading && (
                 <div className="col-span-full py-12 text-center bg-white rounded-xl border border-dashed">

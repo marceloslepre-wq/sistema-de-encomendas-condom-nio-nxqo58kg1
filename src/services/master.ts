@@ -44,6 +44,26 @@ export const createLicenca = (data: Partial<Licenca>) =>
 export const updateLicenca = (id: string, data: Partial<Licenca>) =>
   pb.collection('licencas').update<Licenca>(id, data, { requestKey: null })
 
+export const reativarLicenca30Dias = async (id: string, currentExpDate?: string) => {
+  const now = new Date()
+  let baseDate = now
+  if (currentExpDate) {
+    const cur = new Date(currentExpDate)
+    if (cur.getTime() > now.getTime()) {
+      baseDate = cur
+    }
+  }
+  const novaExp = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000)
+  return await pb.collection('licencas').update<Licenca>(
+    id,
+    {
+      status: 'ativa',
+      data_expiracao: novaExp.toISOString(),
+    },
+    { requestKey: null },
+  )
+}
+
 export const deleteLicenca = (id: string) =>
   pb.collection('licencas').delete(id, { requestKey: null })
 

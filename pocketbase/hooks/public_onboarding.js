@@ -7,6 +7,7 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
   const estado = (body.estado || '').trim()
   const responsavel = (body.responsavel || body.name || '').trim()
   const planoId = (body.planoId || '').trim()
+  const password = (body.password || '').trim()
 
   // Validações obrigatórias
   if (!razaoSocial) {
@@ -23,6 +24,11 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
   }
   if (!estado) {
     return e.badRequestError('O Estado é obrigatório.')
+  }
+
+  // Validação da senha definida pelo próprio gestor (mínimo 8 caracteres)
+  if (!password || password.length < 8) {
+    return e.badRequestError('A senha de acesso do Gestor deve conter no mínimo 8 caracteres.')
   }
 
   // Verificar se o e-mail já existe na base de usuários
@@ -68,9 +74,6 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
     return e.badRequestError('Nenhum plano ativo foi encontrado para vincular ao teste grátis.')
   }
 
-  // Gerar senha provisória aleatória amigável e segura (ex: Cond@8caracteres)
-  const provisionalPassword = 'Cnd@' + $security.randomString(6)
-
   // Calcular data de expiração (15 dias a partir de hoje às 23:59:59)
   const now = new Date()
   const expirationDate = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000)
@@ -102,12 +105,12 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
       txApp.save(licencaRecord)
       createdLicencaId = licencaRecord.id
 
-      // 3. Criar usuário Gestor
+      // 3. Criar usuário Gestor com a senha escolhida por ele
       const usersCol = txApp.findCollectionByNameOrId('users')
       const userRecord = new Record(usersCol)
       userRecord.set('name', responsavel || razaoSocial)
       userRecord.setEmail(email)
-      userRecord.setPassword(provisionalPassword)
+      userRecord.setPassword(password)
       userRecord.setVerified(true)
       userRecord.set('role', 'gestor')
       userRecord.set('condo_id', createdCondoId)
@@ -141,7 +144,6 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
       gestor: {
         id: createdUserId,
         email: email,
-        senha_provisoria: provisionalPassword,
         role: 'gestor',
       },
     })
