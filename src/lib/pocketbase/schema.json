@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-08T13:49:53.273Z",
+  "generatedAt": "2026-09-08T16:33:51.717Z",
   "collections": [
     {
       "name": "users",
@@ -1016,8 +1016,8 @@
       "name": "planos",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
+        "list": "status = 'ativo' || @request.auth.id != ''",
+        "view": "status = 'ativo' || @request.auth.id != ''",
         "create": "@request.auth.role = 'master' || @request.auth.role = 'admin'",
         "update": "@request.auth.role = 'master' || @request.auth.role = 'admin'",
         "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin'"
