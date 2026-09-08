@@ -74,8 +74,23 @@ onRecordAfterCreateSuccess((e) => {
     const evolutionInstance = $secrets.get('EVOLUTION_INSTANCE') || ''
     const senderNumber = $secrets.get('EVOLUTION_NUMBER_SEND') || ''
 
-    if (!evolutionApiUrl || !evolutionApiKey || !evolutionInstance) {
-      console.log('Evolution API not configured')
+    if (!evolutionApiUrl || !evolutionApiKey || !evolutionInstance || !senderNumber) {
+      console.log('Evolution API not fully configured, missing EVOLUTION_NUMBER_SEND or others')
+      try {
+        const logs = $app.findCollectionByNameOrId('whatsapp_logs')
+        const logRecord = new Record(logs)
+        let fallbackPhone = phone.replace(/\D/g, '')
+        if (!fallbackPhone.startsWith('55') && fallbackPhone.length > 0)
+          fallbackPhone = '55' + fallbackPhone
+        logRecord.set('phone', fallbackPhone)
+        logRecord.set('message', message)
+        logRecord.set('status_code', 500)
+        logRecord.set('response_body', {
+          error: 'Missing EVOLUTION_NUMBER_SEND or other configuration',
+        })
+        logRecord.set('success', false)
+        $app.saveNoValidate(logRecord)
+      } catch (_) {}
       return e.next()
     }
 

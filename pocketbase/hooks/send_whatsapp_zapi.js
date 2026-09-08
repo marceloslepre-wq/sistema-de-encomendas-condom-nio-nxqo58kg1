@@ -52,6 +52,8 @@ routerAdd(
       !instance ||
       !senderNumber
     ) {
+      const errorMsg =
+        'Missing Skip Cloud configuration for WhatsApp (URL, API_KEY, INSTANCE or NUMBER_SEND)'
       $app
         .logger()
         .error(
@@ -65,9 +67,20 @@ routerAdd(
           'senderNumber',
           !!senderNumber,
         )
-      return e.internalServerError(
-        'Missing Skip Cloud configuration for WhatsApp (URL, API_KEY, INSTANCE or NUMBER_SEND)',
-      )
+
+      try {
+        const phoneNum = normalizeBrazilianNumber(body.phone || '')
+        const logCol = $app.findCollectionByNameOrId('whatsapp_logs')
+        const log = new Record(logCol)
+        log.set('phone', phoneNum)
+        log.set('message', body.message || 'Mensagem padrão')
+        log.set('status_code', 500)
+        log.set('response_body', { error: errorMsg })
+        log.set('success', false)
+        $app.saveNoValidate(log)
+      } catch (err) {}
+
+      return e.internalServerError(errorMsg)
     }
 
     const baseUrl = String(apiUrl).replace(/\/+$/, '')
@@ -156,9 +169,14 @@ routerAdd(
         const log = new Record(logCol)
         log.set('phone', phoneNum)
         log.set('message', originalMessage)
-        log.set('tipo', tipo)
-        log.set('status', logStatus)
-        $app.save(log)
+        log.set('status_code', res.statusCode)
+        log.set('success', isSuccess)
+        if (parsedJson) {
+          log.set('response_body', parsedJson)
+        } else {
+          log.set('response_body', { error: logStatus })
+        }
+        $app.saveNoValidate(log)
       } catch (logErr) {
         $app
           .logger()

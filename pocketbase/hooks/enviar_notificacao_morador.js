@@ -15,8 +15,20 @@ routerAdd(
     const apikey = $secrets.get('EVOLUTION_API_KEY')
     const senderNumber = $secrets.get('EVOLUTION_NUMBER_SEND') || ''
 
-    if (!url || !instance || !apikey) {
-      return e.internalServerError('Evolution API not configured')
+    if (!url || !instance || !apikey || !senderNumber) {
+      const errorMsg = 'Evolution API not fully configured, missing EVOLUTION_NUMBER_SEND or others'
+      $app.logger().error(errorMsg)
+      try {
+        const waLogCol = $app.findCollectionByNameOrId('whatsapp_logs')
+        const waLog = new Record(waLogCol)
+        waLog.set('phone', phone || '')
+        waLog.set('message', message || '')
+        waLog.set('status_code', 500)
+        waLog.set('response_body', { error: errorMsg })
+        waLog.set('success', false)
+        $app.saveNoValidate(waLog)
+      } catch (_) {}
+      return e.internalServerError(errorMsg)
     }
 
     if (url.endsWith('/')) {
@@ -86,10 +98,13 @@ routerAdd(
       const waLog = new Record(waLogCol)
       waLog.set('phone', phoneNum)
       waLog.set('message', message)
-      waLog.set('tipo', 'notificacao_manual')
-      waLog.set('status', logStatus)
+      waLog.set('status_code', responseStatus)
       waLog.set('success', success)
-      if (parsedJson) waLog.set('response_body', parsedJson)
+      if (parsedJson) {
+        waLog.set('response_body', parsedJson)
+      } else {
+        waLog.set('response_body', { error: logStatus })
+      }
       $app.saveNoValidate(waLog)
     } catch (err) {}
 
