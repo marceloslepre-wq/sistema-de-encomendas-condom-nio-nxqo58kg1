@@ -1,0 +1,46 @@
+[
+  {
+    "id": "dg1qxzyl79x5z3q",
+    "status": "Entrada na portaria",
+    "flow_stage": "Entrada na portaria",
+    "mensagem_template": "Olá, {name} sua encomenda acabou de dar entrada no {condoName}",
+    "ativo": true,
+    "reminder_frequency": 0,
+    "reminder_time": "",
+    "created": "2026-06-10 00:43:29.910Z",
+    "updated": "2026-06-10 16:02:38.340Z"
+  },
+  {
+    "id": "tdy5ts6mfxmvv9d",
+    "status": "Em triagem na sala de encomendas",
+    "flow_stage": "Em triagem na sala de encomendas",
+    "mensagem_template": "Olá {name} sua encomenda esta na sala de encomendas para ser registrada.",
+    "ativo": true,
+    "reminder_frequency": 0,
+    "reminder_time": "",
+    "created": "2026-06-10 00:46:58.003Z",
+    "updated": "2026-06-10 16:02:38.340Z"
+  },
+  {
+    "id": "v4f9pqyn0kqgf1d",
+    "status": "Processado e Liberado para Retirada",
+    "flow_stage": "Processado e Liberado para Retirada",
+    "mensagem_template": "Olá {name} sua encomenda com o rastreio numero:{tracking}, foi liberada para retirada, apresente o código de liberação n={code} para liberação",
+    "ativo": true,
+    "reminder_frequency": 0,
+    "reminder_time": "",
+    "created": "2026-06-10 00:48:23.566Z",
+    "updated": "2026-06-10 19:18:14.292Z"
+  },
+  {
+    "id": "gdbtzz9qam1yvn3",
+    "status": "Encomenda Retirada",
+    "flow_stage": "Encomenda Retirada",
+    "mensagem_template": "Olá {name} sua encomenda foi retirada com validação do código de liberação, esperamos que esteja tudo certo.",
+    "ativo": true,
+    "reminder_frequency": 0,
+    "reminder_time": "",
+    "created": "2026-06-10 00:50:11.745Z",
+    "updated": "2026-06-10 16:02:38.340Z"
+  }
+]

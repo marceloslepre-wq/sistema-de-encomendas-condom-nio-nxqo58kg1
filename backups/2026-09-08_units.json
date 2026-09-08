@@ -1,0 +1,74 @@
+[
+  {
+    "id": "a2eyfij4ni2kpxx",
+    "tower": "A",
+    "apartment": "101",
+    "condo_id": "cjvbjhk0senz1yt",
+    "created": "2026-05-29 21:52:21.410Z",
+    "updated": "2026-05-29 21:52:21.410Z"
+  },
+  {
+    "id": "rpid3rdj05aj4pw",
+    "tower": "A",
+    "apartment": "102",
+    "condo_id": "cjvbjhk0senz1yt",
+    "created": "2026-05-29 21:52:21.410Z",
+    "updated": "2026-05-29 21:52:21.410Z"
+  },
+  {
+    "id": "7z2g6bvjbp3lyqg",
+    "tower": "B",
+    "apartment": "201",
+    "condo_id": "cjvbjhk0senz1yt",
+    "created": "2026-05-29 21:52:21.411Z",
+    "updated": "2026-05-29 21:52:21.411Z"
+  },
+  {
+    "id": "lvki2vv6pohle9z",
+    "tower": "A",
+    "apartment": "103",
+    "condo_id": "j6ofxo1v937yizu",
+    "created": "2026-05-30 11:58:34.982Z",
+    "updated": "2026-05-30 11:58:34.982Z"
+  },
+  {
+    "id": "1myu7vv752tydt2",
+    "tower": "D",
+    "apartment": "1603",
+    "condo_id": "cjvbjhk0senz1yt",
+    "created": "2026-05-30 13:41:08.926Z",
+    "updated": "2026-05-30 13:41:43.613Z"
+  },
+  {
+    "id": "ztpv6sdb8phzuxc",
+    "tower": "C",
+    "apartment": "101",
+    "condo_id": "cjvbjhk0senz1yt",
+    "created": "2026-06-01 20:45:27.980Z",
+    "updated": "2026-06-01 20:45:27.980Z"
+  },
+  {
+    "id": "pfnuhmrpt9z7qyk",
+    "tower": "C",
+    "apartment": "102",
+    "condo_id": "cjvbjhk0senz1yt",
+    "created": "2026-06-01 20:47:12.349Z",
+    "updated": "2026-06-01 20:47:12.349Z"
+  },
+  {
+    "id": "h6xlja9yxtx9ajc",
+    "tower": "D",
+    "apartment": "1601",
+    "condo_id": "cjvbjhk0senz1yt",
+    "created": "2026-06-05 16:20:01.292Z",
+    "updated": "2026-06-05 16:20:01.292Z"
+  },
+  {
+    "id": "0bu8cntl5y8pfti",
+    "tower": "D",
+    "apartment": "1602",
+    "condo_id": "cjvbjhk0senz1yt",
+    "created": "2026-06-07 16:43:14.236Z",
+    "updated": "2026-06-07 16:43:14.236Z"
+  }
+]

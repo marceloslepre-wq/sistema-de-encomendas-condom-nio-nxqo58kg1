@@ -1,0 +1,26 @@
+[
+  {
+    "id": "aogstpzz9ra5r8i",
+    "nome": "Marcelo Olmo",
+    "email": "marceloolmo@email.com",
+    "cpf": "123.555.588-88",
+    "torre": "A",
+    "apartamento": "101",
+    "telefone": "(27) 99859-9040",
+    "permitir_retirada_terceiros": false,
+    "created": "2026-06-11 15:17:59.163Z",
+    "updated": "2026-06-11 15:17:59.163Z"
+  },
+  {
+    "id": "5tms9drdhjc1v72",
+    "nome": "Pedro Lima",
+    "email": "pedrolima@email.com",
+    "cpf": "569.882.214-74",
+    "torre": "B",
+    "apartamento": "201",
+    "telefone": "(27) 99881-1783",
+    "permitir_retirada_terceiros": false,
+    "created": "2026-06-12 15:20:31.623Z",
+    "updated": "2026-06-12 15:20:31.623Z"
+  }
+]

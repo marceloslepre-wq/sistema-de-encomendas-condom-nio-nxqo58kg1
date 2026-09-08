@@ -24,10 +24,10 @@ export default function PortariaEtiqueta() {
     getParcels()
       .then((data) => {
         // Only show parcels that are received or cataloged
-        const activeParcels = data.filter((p) =>
+        const activeParcels = (data as any[]).filter((p) =>
           ['RECEBIDO_PORTARIA', 'CATALOGADO'].includes(p.status),
         )
-        setParcels(activeParcels)
+        setParcels(activeParcels as Parcel[])
         if (activeParcels.length > 0) {
           setSelectedParcelId(activeParcels[0].id)
         }

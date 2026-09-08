@@ -33,6 +33,9 @@ import MoradorDetalhes from './pages/morador/Detalhes'
 import MoradorDados from './pages/morador/Dados'
 import MoradorRetirada from './pages/morador/Retirada'
 
+// Master Multi-tenant Pages
+import MasterDashboard from './pages/master/Dashboard'
+
 const ProtectedRoute = ({
   children,
   requiredRole,
@@ -62,6 +65,7 @@ const ProtectedRoute = ({
     ) {
       // allow interchangeable access based on layout needs
     } else {
+      if (role === 'master') return <Navigate to="/master" replace />
       if (role === 'gestor') return <Navigate to="/gestor/dashboard" replace />
       if (role === 'portaria' || role === 'porteiro')
         return <Navigate to="/portaria/registro" replace />
@@ -75,7 +79,7 @@ const ProtectedRoute = ({
 }
 
 const App = () => (
-  <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
+  <BrowserRouter>
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
@@ -84,6 +88,16 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/cadastro" element={<Cadastro />} />
           <Route path="/registrar/:token" element={<Registrar />} />
+
+          {/* Rota Protegida Exclusiva para Master */}
+          <Route
+            path="/master"
+            element={
+              <ProtectedRoute requiredRole="master">
+                <MasterDashboard />
+              </ProtectedRoute>
+            }
+          />
 
           <Route element={<Layout />}>
             <Route

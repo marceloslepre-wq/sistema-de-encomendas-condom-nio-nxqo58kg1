@@ -185,7 +185,7 @@ export default function PortariaRegistro() {
 
   const loadUnits = () => {
     getUnits()
-      .then(setUnits)
+      .then((res) => setUnits(res as unknown as Unit[]))
       .catch((err) => console.error('Error fetching units:', err))
   }
 
@@ -198,7 +198,7 @@ export default function PortariaRegistro() {
 
   const loadCarriers = () => {
     getCarriers()
-      .then(setCarriers)
+      .then((res) => setCarriers(res as unknown as Carrier[]))
       .catch((err) => console.error('Error fetching carriers:', err))
   }
 

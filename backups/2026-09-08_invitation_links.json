@@ -1,0 +1,62 @@
+[
+  {
+    "id": "qzgm1bmksa1jti5",
+    "role": "morador",
+    "token": "qryhbp7otshu6jw1vc01e",
+    "torre": "A",
+    "unidade": "101",
+    "active": true,
+    "created": "2026-06-11 14:56:09.202Z",
+    "updated": "2026-06-11 14:56:09.202Z"
+  },
+  {
+    "id": "r3yvxa2rib8nm12",
+    "role": "morador",
+    "token": "4ozlv88q5vdl9bb8w18e6s",
+    "torre": "B",
+    "unidade": "201",
+    "active": true,
+    "created": "2026-06-12 14:23:48.629Z",
+    "updated": "2026-06-12 14:23:48.629Z"
+  },
+  {
+    "id": "ycl824gte71p3j8",
+    "role": "morador",
+    "token": "gstucnpa1zmpk6urp9pkc",
+    "torre": "",
+    "unidade": "",
+    "active": true,
+    "created": "2026-06-21 02:57:58.218Z",
+    "updated": "2026-06-21 02:57:58.218Z"
+  },
+  {
+    "id": "cuoiaqyqaznxmz1",
+    "role": "morador",
+    "token": "3x4r1za5kdj0ihvvq3s5hhl",
+    "torre": "A",
+    "unidade": "103",
+    "active": true,
+    "created": "2026-07-24 12:41:43.991Z",
+    "updated": "2026-07-24 12:41:43.991Z"
+  },
+  {
+    "id": "lba239o0hpwj2ql",
+    "role": "morador",
+    "token": "j98abihd6pqrpdu5sv8yc",
+    "torre": "A",
+    "unidade": "101",
+    "active": true,
+    "created": "2026-08-01 15:42:03.199Z",
+    "updated": "2026-08-01 15:42:03.199Z"
+  },
+  {
+    "id": "2vzc0xoontwfey4",
+    "role": "morador",
+    "token": "42xeg3jz10enftviw17sc",
+    "torre": "D",
+    "unidade": "1601",
+    "active": true,
+    "created": "2026-08-01 16:14:54.021Z",
+    "updated": "2026-08-01 16:14:54.021Z"
+  }
+]

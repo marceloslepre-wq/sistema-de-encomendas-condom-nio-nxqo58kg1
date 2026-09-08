@@ -21,7 +21,8 @@ export default function Index() {
 
   useEffect(() => {
     if (!loading && isAuthenticated && role) {
-      if (role === 'gestor') navigate('/gestor/dashboard')
+      if (role === 'master') navigate('/master')
+      else if (role === 'gestor') navigate('/gestor/dashboard')
       else if (role === 'portaria') navigate('/portaria/registro')
       else if (role === 'triagem') navigate('/sala/triagem')
       else if (role === 'morador') navigate('/morador/dashboard')

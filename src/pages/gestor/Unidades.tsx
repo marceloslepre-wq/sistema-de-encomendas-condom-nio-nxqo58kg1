@@ -11,7 +11,15 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Search, Plus, Trash2, Edit } from 'lucide-react'
-import { getUnits, createUnit, updateUnit, deleteUnit, getCondo, Unit } from '@/services/api'
+import {
+  getUnits,
+  createUnit,
+  updateUnit,
+  deleteUnit,
+  getCondo,
+  createCondo,
+  Unit,
+} from '@/services/api'
 import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
 import {

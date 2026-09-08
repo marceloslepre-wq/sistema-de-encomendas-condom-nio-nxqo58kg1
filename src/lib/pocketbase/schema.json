@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-13T14:42:26.363Z",
+  "generatedAt": "2026-09-08T13:25:22.740Z",
   "collections": [
     {
       "name": "users",
@@ -43,7 +43,7 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["gestor", "porteiro", "portaria", "triagem", "morador"]
+          "selectValues": ["gestor", "porteiro", "portaria", "triagem", "morador", "master"]
         },
         {
           "name": "torre",
@@ -902,6 +902,132 @@
           "name": "celular",
           "type": "text",
           "required": true,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "planos",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'admin'",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin'",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "nome",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "descricao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "preco_mensal",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "max_moradores",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "max_units",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recursos_liberados",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["ativo", "inativo"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "licencas",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'admin'",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin'",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "condo_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "condos"
+        },
+        {
+          "name": "plano_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "planos"
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["ativa", "pausada", "cancelada", "expirada"]
+        },
+        {
+          "name": "data_expiracao",
+          "type": "date",
+          "required": false,
           "system": false
         },
         {

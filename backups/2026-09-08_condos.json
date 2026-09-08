@@ -1,0 +1,25 @@
+[
+  {
+    "id": "cjvbjhk0senz1yt",
+    "name": "Condomínio Residencial Parque",
+    "address": "Av Fernando Ferrari, 2102, goiabeiras, Vitoria-ES, 29.075-010.",
+    "cnpj": "12.105.420/0001-11",
+    "phone": "11 99999-9999",
+    "janitor_settings": {
+      "guards": 4,
+      "shifts": "24h"
+    },
+    "created": "2026-05-29 21:52:21.410Z",
+    "updated": "2026-09-08 13:16:52.534Z"
+  },
+  {
+    "id": "j6ofxo1v937yizu",
+    "name": "Condomínio Residencial Parque",
+    "address": "",
+    "cnpj": "",
+    "phone": "",
+    "janitor_settings": null,
+    "created": "2026-05-30 11:58:34.981Z",
+    "updated": "2026-05-30 11:58:34.981Z"
+  }
+]
