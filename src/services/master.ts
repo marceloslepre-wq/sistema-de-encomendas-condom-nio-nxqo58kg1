@@ -7,6 +7,7 @@ export type Plano = RecordModel & {
   preco_mensal?: number
   max_moradores?: number
   max_units?: number
+  exclusivo_master?: boolean
   recursos_liberados?: Record<string, any>
   status: 'ativo' | 'inativo'
 }
@@ -69,3 +70,40 @@ export const deleteLicenca = (id: string) =>
 
 export const getCondosList = () =>
   pb.collection('condos').getFullList({ sort: 'name', requestKey: null })
+
+export type HistoricoLicenca = RecordModel & {
+  condo_id: string
+  licenca_id?: string
+  plano_id?: string
+  tipo_evento: string
+  plano_nome?: string
+  data_expiracao?: string
+  descricao?: string
+  alterado_por?: string
+  created: string
+}
+
+export const getPlanosDisponiveisCliente = () =>
+  pb.collection('planos').getFullList<Plano>({
+    filter: 'status = "ativo" && (exclusivo_master = false || exclusivo_master = null)',
+    sort: 'preco_mensal',
+    requestKey: null,
+  })
+
+export const getHistoricoLicencas = (condoId?: string) => {
+  const filter = condoId ? `condo_id = "${condoId}"` : ''
+  return pb.collection('historico_licencas').getFullList<HistoricoLicenca>({
+    filter,
+    sort: '-created',
+    requestKey: null,
+  })
+}
+
+export const trocarPlanoGestor = async (planoId: string) => {
+  return await pb.send('/backend/v1/licenca/trocar-plano', {
+    method: 'POST',
+    body: JSON.stringify({ plano_id: planoId }),
+    headers: { 'Content-Type': 'application/json' },
+    requestKey: null,
+  })
+}

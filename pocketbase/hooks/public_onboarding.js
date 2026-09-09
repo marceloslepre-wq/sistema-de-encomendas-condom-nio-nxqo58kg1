@@ -59,7 +59,7 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
     try {
       const activePlans = $app.findRecordsByFilter(
         'planos',
-        "status = 'ativo'",
+        "status = 'ativo' && (exclusivo_master = false || exclusivo_master = null)",
         'preco_mensal',
         1,
         0,
@@ -68,6 +68,15 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
         selectedPlano = activePlans[0]
       }
     } catch (_) {}
+  }
+
+  // Se o plano selecionado for exclusivo_master, impedir cadastro público por ele
+  if (
+    selectedPlano &&
+    (selectedPlano.getBool('exclusivo_master') ||
+      selectedPlano.getString('nome') === 'Plano no Master')
+  ) {
+    return e.badRequestError('O plano selecionado não está disponível para contratação pública.')
   }
 
   if (!selectedPlano) {

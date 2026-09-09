@@ -51,7 +51,7 @@ export interface OnboardingResult {
 
 export const getPublicPlans = async (): Promise<PublicPlan[]> => {
   return await pb.collection('planos').getFullList<PublicPlan>({
-    filter: 'status = "ativo"',
+    filter: 'status = "ativo" && (exclusivo_master = false || exclusivo_master = null)',
     sort: 'preco_mensal',
     requestKey: null,
   })

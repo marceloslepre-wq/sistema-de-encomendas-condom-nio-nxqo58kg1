@@ -13,6 +13,7 @@ import {
   QrCode,
   LogOut,
   MapPin,
+  Award,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import {
@@ -44,6 +45,7 @@ export function AppSidebar() {
           { title: 'Relatórios', url: '/gestor/relatorios', icon: FileText },
           { title: 'Permissões', url: '/gestor/permissoes', icon: Shield },
           { title: 'Configurações', url: '/gestor/configuracoes', icon: Settings },
+          { title: 'Licenças e Planos', url: '/gestor/licencas', icon: Award },
         ]
       case 'portaria':
       case 'porteiro':

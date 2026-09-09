@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-09T18:55:26.211Z",
+  "generatedAt": "2026-09-09T19:36:02.643Z",
   "collections": [
     {
       "name": "users",
@@ -1016,8 +1016,8 @@
       "name": "planos",
       "type": "base",
       "apiRules": {
-        "list": "status = 'ativo' || @request.auth.id != ''",
-        "view": "status = 'ativo' || @request.auth.id != ''",
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (status = 'ativo' && (exclusivo_master = false || exclusivo_master = null))",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (status = 'ativo' && (exclusivo_master = false || exclusivo_master = null))",
         "create": "@request.auth.role = 'master' || @request.auth.role = 'admin'",
         "update": "@request.auth.role = 'master' || @request.auth.role = 'admin'",
         "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin'"
@@ -1079,6 +1079,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "exclusivo_master",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
@@ -1218,6 +1224,87 @@
       "indexes": [
         "CREATE INDEX idx_pag_preference_id ON pagamentos_renovacao (preference_id)",
         "CREATE INDEX idx_pag_payment_id ON pagamentos_renovacao (payment_id)"
+      ]
+    },
+    {
+      "name": "historico_licencas",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin'",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin'"
+      },
+      "fields": [
+        {
+          "name": "condo_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "condos"
+        },
+        {
+          "name": "licenca_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "licencas"
+        },
+        {
+          "name": "plano_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "planos"
+        },
+        {
+          "name": "tipo_evento",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "plano_nome",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "data_expiracao",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "descricao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "alterado_por",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_hist_condo_created ON historico_licencas (condo_id, created DESC)"
       ]
     }
   ]

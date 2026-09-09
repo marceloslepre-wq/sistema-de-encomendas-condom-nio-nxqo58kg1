@@ -65,8 +65,27 @@ routerAdd('GET', '/backend/v1/licenca/status', (e) => {
       }
     }
 
+    // Se o plano vinculado for "Plano no Master" ou exclusivo_master, nunca expira nem bloqueia
+    let isPlanoMaster = false
+    const planoIdCheck = lic.getString('plano_id')
+    if (planoIdCheck) {
+      try {
+        const pCheck = $app.findRecordById('planos', planoIdCheck)
+        if (pCheck.getBool('exclusivo_master') || pCheck.getString('nome') === 'Plano no Master') {
+          isPlanoMaster = true
+        }
+      } catch (_) {}
+    }
+
+    if (isPlanoMaster) {
+      isExpiradaPorData = false
+      diasRestantes = null
+      status = 'ativa'
+    }
+
     const bloqueado =
-      status === 'expirada' || status === 'pausada' || status === 'cancelada' || isExpiradaPorData
+      !isPlanoMaster &&
+      (status === 'expirada' || status === 'pausada' || status === 'cancelada' || isExpiradaPorData)
 
     // Buscar dados do plano para caso precise de renovação
     let planoData = null
@@ -79,6 +98,10 @@ routerAdd('GET', '/backend/v1/licenca/status', (e) => {
           nome: plano.getString('nome'),
           preco_mensal: plano.getInt('preco_mensal'),
           descricao: plano.getString('descricao'),
+          exclusivo_master: plano.getBool('exclusivo_master'),
+          max_moradores: plano.getInt('max_moradores'),
+          max_units: plano.getInt('max_units'),
+          recursos_liberados: plano.get('recursos_liberados'),
         }
       } catch (_) {}
     }
@@ -93,8 +116,9 @@ routerAdd('GET', '/backend/v1/licenca/status', (e) => {
     return e.json(200, {
       bloqueado: bloqueado,
       status: status,
-      data_expiracao: expStr,
-      dias_restantes: diasRestantes,
+      data_expiracao: isPlanoMaster ? null : expStr,
+      dias_restantes: isPlanoMaster ? null : diasRestantes,
+      sem_expiracao: isPlanoMaster || !expStr,
       licenca_id: lic.id,
       condo_id: condoId,
       condo_name: condoName,

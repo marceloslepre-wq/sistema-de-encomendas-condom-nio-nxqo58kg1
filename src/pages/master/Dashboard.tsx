@@ -73,6 +73,7 @@ export default function MasterDashboard() {
     preco_mensal: '',
     max_moradores: '',
     max_units: '',
+    exclusivo_master: false,
     status: 'ativo' as 'ativo' | 'inativo',
   })
 
@@ -119,6 +120,7 @@ export default function MasterDashboard() {
       preco_mensal: '199.90',
       max_moradores: '100',
       max_units: '50',
+      exclusivo_master: false,
       status: 'ativo',
     })
     setIsPlanoModalOpen(true)
@@ -132,6 +134,7 @@ export default function MasterDashboard() {
       preco_mensal: plano.preco_mensal !== undefined ? String(plano.preco_mensal) : '',
       max_moradores: plano.max_moradores !== undefined ? String(plano.max_moradores) : '',
       max_units: plano.max_units !== undefined ? String(plano.max_units) : '',
+      exclusivo_master: !!plano.exclusivo_master,
       status: plano.status,
     })
     setIsPlanoModalOpen(true)
@@ -156,6 +159,7 @@ export default function MasterDashboard() {
         preco_mensal: planoForm.preco_mensal ? parseFloat(planoForm.preco_mensal) : 0,
         max_moradores: planoForm.max_moradores ? parseInt(planoForm.max_moradores, 10) : 0,
         max_units: planoForm.max_units ? parseInt(planoForm.max_units, 10) : 0,
+        exclusivo_master: planoForm.exclusivo_master,
         status: planoForm.status,
       }
 
@@ -649,7 +653,16 @@ export default function MasterDashboard() {
                   <div>
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-2">
-                        <CardTitle className="text-lg font-bold">{plano.nome}</CardTitle>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-lg font-bold">{plano.nome}</CardTitle>
+                            {plano.exclusivo_master && (
+                              <Badge className="bg-indigo-600 text-white text-[10px] py-0 px-1.5">
+                                Exclusivo Master
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
                         {getStatusBadge(plano.status)}
                       </div>
                       <CardDescription className="line-clamp-2 text-xs">
@@ -661,10 +674,16 @@ export default function MasterDashboard() {
                         <div className="flex items-baseline justify-between">
                           <span className="text-xs text-muted-foreground">Valor Mensal</span>
                           <span className="text-xl font-bold text-indigo-600">
-                            R${' '}
-                            {plano.preco_mensal !== undefined
-                              ? Number(plano.preco_mensal).toFixed(2).replace('.', ',')
-                              : '0,00'}
+                            {plano.preco_mensal === 0 ? (
+                              'Grátis / Master'
+                            ) : (
+                              <>
+                                R${' '}
+                                {plano.preco_mensal !== undefined
+                                  ? Number(plano.preco_mensal).toFixed(2).replace('.', ',')
+                                  : '0,00'}
+                              </>
+                            )}
                             <span className="text-xs font-normal text-muted-foreground">/mês</span>
                           </span>
                         </div>
@@ -811,6 +830,21 @@ export default function MasterDashboard() {
                     <SelectItem value="inativo">Inativo</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="plano-exclusivo"
+                  checked={planoForm.exclusivo_master}
+                  onChange={(e) =>
+                    setPlanoForm({ ...planoForm, exclusivo_master: e.target.checked })
+                  }
+                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                />
+                <Label htmlFor="plano-exclusivo" className="text-sm font-medium cursor-pointer">
+                  Plano exclusivo Master (oculto para clientes e público)
+                </Label>
               </div>
             </div>
 

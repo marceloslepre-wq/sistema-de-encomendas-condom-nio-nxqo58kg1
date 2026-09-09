@@ -20,6 +20,7 @@ import GestorConfiguracoes from './pages/gestor/Configuracoes'
 import GestorPermissoes from './pages/gestor/Permissoes'
 import GestorTransportadoras from './pages/gestor/Carriers'
 import GestorLogistica from './pages/gestor/Logistica'
+import GestorLicencas from './pages/gestor/Licencas'
 
 // Portaria / Sala Pages
 import PortariaRegistro from './pages/portaria/Registro'
@@ -152,6 +153,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="gestor">
                   <GestorConfiguracoes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gestor/licencas"
+              element={
+                <ProtectedRoute requiredRole="gestor">
+                  <GestorLicencas />
                 </ProtectedRoute>
               }
             />

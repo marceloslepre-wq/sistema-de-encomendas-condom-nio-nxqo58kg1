@@ -13,6 +13,15 @@ cronAdd('verificar_expiracao_licencas', '0 * * * *', () => {
 
     for (let i = 0; i < expiredList.length; i++) {
       const lic = expiredList[i]
+      const planoId = lic.getString('plano_id')
+      if (planoId) {
+        try {
+          const plano = $app.findRecordById('planos', planoId)
+          if (plano.getBool('exclusivo_master') || plano.getString('nome') === 'Plano no Master') {
+            continue // Não expira planos master
+          }
+        } catch (_) {}
+      }
       lic.set('status', 'expirada')
       $app.saveNoValidate(lic)
       $app

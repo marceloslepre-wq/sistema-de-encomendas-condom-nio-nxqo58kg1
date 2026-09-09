@@ -22,7 +22,7 @@ export const getUnits = () => {
   const authCondoId = pb.authStore.record?.condo_id
   const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
   const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
-  return pb.collection('units').getFullList({ filter, sort: 'tower,apartment' })
+  return pb.collection('units').getFullList({ filter, sort: 'tower,apartment', requestKey: null })
 }
 
 export const createUnit = (data: any) => {
@@ -47,7 +47,7 @@ export const getMoradores = () => {
   const authCondoId = pb.authStore.record?.condo_id
   const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
   const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
-  return pb.collection('moradores').getFullList({ filter, sort: '-created' })
+  return pb.collection('moradores').getFullList({ filter, sort: '-created', requestKey: null })
 }
 
 export const createMorador = async (data: any) => {

@@ -3,8 +3,9 @@ import pb from '@/lib/pocketbase/client'
 export interface LicencaStatusResponse {
   bloqueado: boolean
   status: string
-  data_expiracao: string | null
-  dias_restantes: number | null
+  data_expiracao?: string | null
+  dias_restantes?: number | null
+  sem_expiracao?: boolean
   licenca_id?: string
   condo_id?: string
   condo_name?: string
@@ -12,14 +13,17 @@ export interface LicencaStatusResponse {
     id: string
     nome: string
     preco_mensal: number
-    descricao?: string
-  }
+    descricao: string
+    exclusivo_master?: boolean
+    max_moradores?: number
+    max_units?: number
+    recursos_liberados?: any
+  } | null
   role?: string
   master?: boolean
   sem_condo?: boolean
   observacao?: string
 }
-
 export interface IniciarRenovacaoResponse {
   configured: boolean
   message?: string
