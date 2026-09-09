@@ -51,6 +51,7 @@ import {
   deleteLicenca,
   getCondosList,
 } from '@/services/master'
+import { LinkGeneratorCadastro } from './LinkGeneratorCadastro'
 
 export default function MasterDashboard() {
   const { user, signOut } = useAuth()
@@ -377,6 +378,9 @@ export default function MasterDashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6">
+        {/* Gerador de Links de Primeiro Cadastro para o Master */}
+        <LinkGeneratorCadastro planos={planos} />
+
         {/* Banner de Boas-Vindas */}
         <div className="bg-gradient-to-r from-indigo-900 via-slate-900 to-slate-800 text-white rounded-xl p-6 shadow-md border border-slate-700">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
