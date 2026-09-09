@@ -61,10 +61,16 @@ export interface PixStatusResponse {
   error?: string
 }
 
+const getAuthHeaders = () => {
+  const token = pb.authStore.token
+  return token ? { Authorization: token } : {}
+}
+
 export const getLicencaStatus = async (): Promise<LicencaStatusResponse> => {
   return await pb.send('/backend/v1/licenca/status', {
     method: 'GET',
     requestKey: null,
+    headers: getAuthHeaders(),
   })
 }
 
@@ -72,6 +78,7 @@ export const iniciarRenovacao = async (): Promise<IniciarRenovacaoResponse> => {
   return await pb.send('/backend/v1/pagamento/renovar', {
     method: 'POST',
     requestKey: null,
+    headers: getAuthHeaders(),
   })
 }
 
@@ -79,6 +86,7 @@ export const criarPixRenovacao = async (): Promise<CriarPixResponse> => {
   return await pb.send('/backend/v1/pagamento/pix/criar', {
     method: 'POST',
     requestKey: null,
+    headers: getAuthHeaders(),
   })
 }
 
@@ -86,5 +94,6 @@ export const consultarPixStatus = async (paymentId: string): Promise<PixStatusRe
   return await pb.send(`/backend/v1/pagamento/pix/status/${encodeURIComponent(paymentId)}`, {
     method: 'GET',
     requestKey: null,
+    headers: getAuthHeaders(),
   })
 }

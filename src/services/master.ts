@@ -100,10 +100,14 @@ export const getHistoricoLicencas = (condoId?: string) => {
 }
 
 export const trocarPlanoGestor = async (planoId: string) => {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (pb.authStore.token) {
+    headers['Authorization'] = pb.authStore.token
+  }
   return await pb.send('/backend/v1/licenca/trocar-plano', {
     method: 'POST',
     body: JSON.stringify({ plano_id: planoId }),
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     requestKey: null,
   })
 }

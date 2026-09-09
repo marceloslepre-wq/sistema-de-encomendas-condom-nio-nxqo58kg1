@@ -43,9 +43,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      const headers = pb.authStore.token ? { Authorization: pb.authStore.token } : undefined
       const res: any = await pb.send('/backend/v1/licenca/status', {
         method: 'GET',
         requestKey: null,
+        headers,
       })
 
       const isBlocked = !!res.bloqueado
