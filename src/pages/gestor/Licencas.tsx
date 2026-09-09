@@ -37,7 +37,14 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
-import { getLicencaStatus, LicencaStatusResponse } from '@/services/pagamentos'
+import { QrCode, Copy, CheckCircle, ExternalLink, ShieldAlert, Loader2 } from 'lucide-react'
+import {
+  getLicencaStatus,
+  LicencaStatusResponse,
+  criarPixRenovacao,
+  consultarPixStatus,
+  CriarPixResponse,
+} from '@/services/pagamentos'
 import {
   Plano,
   HistoricoLicenca,
@@ -64,6 +71,18 @@ export default function GestorLicencas() {
   const [loadingPlanos, setLoadingPlanos] = useState(false)
   const [selectedPlanoId, setSelectedPlanoId] = useState<string | null>(null)
   const [savingTroca, setSavingTroca] = useState(false)
+
+  // Modal de Pagamento PIX de Renovação
+  const [isPixModalOpen, setIsPixModalOpen] = useState(false)
+  const [gerandoPix, setGerandoPix] = useState(false)
+  const [pixData, setPixData] = useState<CriarPixResponse | null>(null)
+  const [pixStatus, setPixStatus] = useState<'pending' | 'approved' | 'rejected'>('pending')
+  const [novaLicencaInfo, setNovaLicencaInfo] = useState<{
+    licenca_id?: string
+    data_expiracao?: string | null
+  } | null>(null)
+  const [verificandoPix, setVerificandoPix] = useState(false)
+  const [copiadoPix, setCopiadoPix] = useState(false)
 
   const loadData = async () => {
     setLoading(true)
@@ -96,6 +115,120 @@ export default function GestorLicencas() {
   useEffect(() => {
     loadData()
   }, [])
+
+  // Iniciar fluxo de pagamento PIX
+  const handleOpenPixRenovacao = async () => {
+    setIsPixModalOpen(true)
+    setGerandoPix(true)
+    setPixData(null)
+    setPixStatus('pending')
+    setNovaLicencaInfo(null)
+    setCopiadoPix(false)
+
+    try {
+      const res = await criarPixRenovacao()
+      if (!res.configured) {
+        toast({
+          title: 'Configuração do Gateway',
+          description:
+            res.message ||
+            'O Mercado Pago está em fase de configuração. Contate o suporte ou o master.',
+          variant: 'destructive',
+        })
+        setIsPixModalOpen(false)
+        return
+      }
+
+      setPixData(res)
+      setPixStatus(res.status === 'approved' ? 'approved' : 'pending')
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao gerar cobrança PIX',
+        description: err.message || 'Falha ao comunicar com o servidor.',
+        variant: 'destructive',
+      })
+      setIsPixModalOpen(false)
+    } finally {
+      setGerandoPix(false)
+    }
+  }
+
+  // Polling automático enquanto modal PIX estiver aberto e pendente
+  useEffect(() => {
+    if (!isPixModalOpen || !pixData?.payment_id || pixStatus === 'approved') {
+      return
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        const check = await consultarPixStatus(pixData.payment_id!)
+        if (check.status === 'approved') {
+          setPixStatus('approved')
+          setNovaLicencaInfo({
+            licenca_id: check.licenca_id,
+            data_expiracao: check.data_expiracao,
+          })
+          toast({
+            title: 'Pagamento Aprovado via PIX!',
+            description: 'Sua licença foi renovada por mais 30 dias com sucesso!',
+          })
+          // Atualiza dados de tela automaticamente
+          loadData()
+        }
+      } catch (e) {
+        // Silencioso no polling
+      }
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [isPixModalOpen, pixData?.payment_id, pixStatus])
+
+  // Checagem manual de redundância
+  const handleManualCheckPix = async () => {
+    if (!pixData?.payment_id) return
+    setVerificandoPix(true)
+    try {
+      const check = await consultarPixStatus(pixData.payment_id)
+      if (check.status === 'approved') {
+        setPixStatus('approved')
+        setNovaLicencaInfo({
+          licenca_id: check.licenca_id,
+          data_expiracao: check.data_expiracao,
+        })
+        toast({
+          title: 'Pagamento Aprovado via PIX!',
+          description: 'Sua licença foi renovada por mais 30 dias com sucesso!',
+        })
+        await loadData()
+      } else {
+        toast({
+          title: 'Pagamento ainda não identificado',
+          description:
+            'Aguardando compensação do PIX pelo Mercado Pago. O status atualizará automaticamente assim que confirmado.',
+        })
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Erro na verificação',
+        description: err.message || 'Não foi possível consultar o status agora.',
+        variant: 'destructive',
+      })
+    } finally {
+      setVerificandoPix(false)
+    }
+  }
+
+  // Copiar código PIX copia e cola
+  const handleCopyPix = () => {
+    if (!pixData?.qr_code) return
+    navigator.clipboard.writeText(pixData.qr_code)
+    setCopiadoPix(true)
+    toast({
+      title: 'Chave PIX copiada!',
+      description: 'Cole o código no app do seu banco para pagar.',
+    })
+    setTimeout(() => setCopiadoPix(false), 4000)
+  }
 
   const handleOpenTrocaPlano = async () => {
     setIsModalOpen(true)
@@ -329,9 +462,24 @@ export default function GestorLicencas() {
             Atualizar
           </Button>
 
+          {!isMasterPlan && (
+            <Button
+              onClick={handleOpenPixRenovacao}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-sm font-semibold"
+            >
+              <QrCode className="w-4 h-4" />
+              Renovar por 30 dias (PIX)
+            </Button>
+          )}
+
           <Button
             onClick={handleOpenTrocaPlano}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 shadow-sm font-semibold"
+            variant={isMasterPlan ? 'default' : 'outline'}
+            className={
+              isMasterPlan
+                ? 'bg-indigo-600 hover:bg-indigo-700 text-white gap-2 shadow-sm font-semibold'
+                : 'gap-2 shadow-sm font-semibold border-indigo-200 text-indigo-700 hover:bg-indigo-50'
+            }
           >
             <ArrowUpRight className="w-4 h-4" />
             Mudar de Plano
@@ -527,7 +675,16 @@ export default function GestorLicencas() {
             </CardContent>
           </div>
 
-          <div className="p-4 pt-0">
+          <div className="p-4 pt-0 space-y-2">
+            {!isMasterPlan && (
+              <Button
+                onClick={handleOpenPixRenovacao}
+                className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm"
+              >
+                <QrCode className="w-4 h-4" /> Renovar por 30 dias (PIX)
+              </Button>
+            )}
+
             <Button
               variant="outline"
               onClick={handleOpenTrocaPlano}
@@ -751,6 +908,232 @@ export default function GestorLicencas() {
               {savingTroca ? 'Alterando plano...' : 'Confirmar Mudança'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL: PAGAMENTO DE RENOVAÇÃO EXCLUSIVO VIA PIX */}
+      <Dialog open={isPixModalOpen} onOpenChange={setIsPixModalOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[92vh] overflow-y-auto">
+          <DialogHeader className="text-center sm:text-left">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                <QrCode className="w-5 h-5" />
+              </div>
+              <DialogTitle className="text-xl font-bold">Renovação via PIX (30 dias)</DialogTitle>
+            </div>
+            <DialogDescription>
+              Pagamento instantâneo via Mercado Pago. Sua licença é reativada automaticamente assim
+              que o PIX for concluído.
+            </DialogDescription>
+          </DialogHeader>
+
+          {gerandoPix ? (
+            <div className="py-14 flex flex-col items-center justify-center gap-3 text-center">
+              <Loader2 className="w-9 h-9 animate-spin text-emerald-600" />
+              <div className="space-y-1">
+                <p className="font-semibold text-slate-800 text-sm">
+                  Gerando cobrança PIX no Mercado Pago...
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Aguarde um instante enquanto conectamos ao gateway.
+                </p>
+              </div>
+            </div>
+          ) : pixStatus === 'approved' ? (
+            /* TELA DE SUCESSO / APROVADO */
+            <div className="py-6 space-y-6 text-center animate-fade-in">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
+                <CheckCircle className="w-10 h-10" />
+              </div>
+
+              <div className="space-y-1">
+                <Badge className="bg-emerald-600 text-white px-3 py-1 text-xs">
+                  Pagamento Aprovado
+                </Badge>
+                <h3 className="text-2xl font-bold text-slate-900 pt-2">
+                  Licença Renovada com Sucesso!
+                </h3>
+                <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                  Seu pagamento PIX foi compensado pelo Mercado Pago e a vigência do condomínio foi
+                  estendida por mais 30 dias.
+                </p>
+              </div>
+
+              {/* Informações da Nova Licença */}
+              <div className="p-4 rounded-xl border bg-emerald-50/60 border-emerald-200 text-left space-y-3">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground font-medium">Novo Número de Licença:</span>
+                  <span className="font-mono font-bold text-emerald-800 text-sm">
+                    {novaLicencaInfo?.licenca_id || pixData?.licenca_id || licencaData?.licenca_id}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground font-medium">Nova Validade:</span>
+                  <span className="font-bold text-emerald-800">
+                    {novaLicencaInfo?.data_expiracao
+                      ? new Date(novaLicencaInfo.data_expiracao).toLocaleDateString('pt-BR')
+                      : 'Renovada por +30 dias'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground font-medium">Status do Sistema:</span>
+                  <span className="font-semibold text-emerald-700 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Ativa e Liberada
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                onClick={() => setIsPixModalOpen(false)}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+              >
+                Concluir e Voltar
+              </Button>
+            </div>
+          ) : (
+            /* TELA DE PAGAMENTO PENDENTE COM QR CODE E COPIA E COLA */
+            <div className="space-y-5 py-2">
+              {/* Badge de Status Pendente */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50 border border-amber-200">
+                <div className="flex items-center gap-2 text-xs font-semibold text-amber-800">
+                  <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
+                  <span>Aguardando Pagamento do PIX...</span>
+                </div>
+                <Badge variant="outline" className="border-amber-400 text-amber-800 text-[11px]">
+                  Pendente
+                </Badge>
+              </div>
+
+              {/* Valor e Resumo do Plano */}
+              <div className="flex items-center justify-between p-3 rounded-xl border bg-slate-50/80">
+                <div>
+                  <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold block">
+                    Plano Selecionado
+                  </span>
+                  <span className="font-bold text-sm text-foreground">
+                    {pixData?.plano_nome || licencaData?.plano?.nome || 'Plano Mensal'}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold block">
+                    Valor a Pagar
+                  </span>
+                  <span className="text-xl font-black text-emerald-600">
+                    R${' '}
+                    {Number(pixData?.valor || licencaData?.plano?.preco_mensal || 0)
+                      .toFixed(2)
+                      .replace('.', ',')}
+                  </span>
+                </div>
+              </div>
+
+              {/* QR Code Renderizado */}
+              <div className="flex flex-col items-center justify-center p-4 bg-white border rounded-xl shadow-xs space-y-2">
+                {pixData?.qr_code_base64 ? (
+                  <img
+                    src={`data:image/png;base64,${pixData.qr_code_base64}`}
+                    alt="QR Code PIX Mercado Pago"
+                    className="w-48 h-48 object-contain rounded-md border border-slate-200 p-1 bg-white"
+                  />
+                ) : pixData?.qr_code ? (
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                      pixData.qr_code,
+                    )}`}
+                    alt="QR Code PIX Mercado Pago"
+                    className="w-48 h-48 object-contain rounded-md border border-slate-200 p-1 bg-white"
+                  />
+                ) : (
+                  <div className="w-48 h-48 bg-slate-100 flex items-center justify-center text-xs text-muted-foreground text-center p-3 rounded-md">
+                    Chave PIX gerada abaixo.
+                  </div>
+                )}
+                <span className="text-xs text-muted-foreground font-medium">
+                  Abra o app do seu banco e escaneie o código acima
+                </span>
+              </div>
+
+              {/* Chave PIX Copia e Cola */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                  <span>Código PIX Copia e Cola:</span>
+                  {copiadoPix && (
+                    <span className="text-emerald-600 font-bold text-xs flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" /> Copiado!
+                    </span>
+                  )}
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={pixData?.qr_code || ''}
+                    className="flex-1 text-xs font-mono bg-slate-50 border rounded-lg px-3 py-2 text-slate-700 select-all truncate focus:outline-none"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleCopyPix}
+                    className={
+                      copiadoPix
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shrink-0'
+                        : 'bg-slate-900 hover:bg-slate-800 text-white text-xs gap-1.5 shrink-0'
+                    }
+                  >
+                    {copiadoPix ? (
+                      <Check className="w-3.5 h-3.5" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                    {copiadoPix ? 'Copiado!' : 'Copiar Código'}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Instruções de Pagamento */}
+              <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-lg text-xs text-blue-900 space-y-1">
+                <p className="font-semibold flex items-center gap-1.5">
+                  <Info className="w-4 h-4 text-blue-600 shrink-0" />
+                  Como concluir seu pagamento:
+                </p>
+                <ol className="list-decimal pl-5 space-y-0.5 text-blue-800 text-[11px]">
+                  <li>Abra o app do seu banco ou internet banking.</li>
+                  <li>
+                    Escolha a opção <strong>Pagar via Pix com QR Code</strong> ou{' '}
+                    <strong>Pix Copia e Cola</strong>.
+                  </li>
+                  <li>Cole o código copiado ou aponte a câmera para o QR Code.</li>
+                  <li>
+                    Confirme o pagamento. Esta página identificará a compensação automaticamente.
+                  </li>
+                </ol>
+              </div>
+
+              {/* Botões do Rodapé: Checar Novamente e Fechar */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleManualCheckPix}
+                  disabled={verificandoPix}
+                  className="w-full sm:w-auto text-xs gap-1.5"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${verificandoPix ? 'animate-spin' : ''}`} />
+                  {verificandoPix ? 'Verificando...' : 'Verificar novamente'}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsPixModalOpen(false)}
+                  className="w-full sm:w-auto text-xs text-muted-foreground"
+                >
+                  Fechar janela
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

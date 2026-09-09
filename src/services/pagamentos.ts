@@ -24,6 +24,7 @@ export interface LicencaStatusResponse {
   sem_condo?: boolean
   observacao?: string
 }
+
 export interface IniciarRenovacaoResponse {
   configured: boolean
   message?: string
@@ -32,6 +33,32 @@ export interface IniciarRenovacaoResponse {
   sandbox_init_point?: string
   valor?: number
   plano_nome?: string
+}
+
+export interface CriarPixResponse {
+  configured: boolean
+  message?: string
+  payment_id?: string
+  status?: string
+  status_detail?: string
+  qr_code?: string
+  qr_code_base64?: string
+  ticket_url?: string
+  date_of_expiration?: string
+  valor?: number
+  plano_nome?: string
+  condo_name?: string
+  licenca_id?: string
+}
+
+export interface PixStatusResponse {
+  payment_id: string
+  status: string // 'pending', 'approved', 'rejected', 'cancelled', etc.
+  status_detail?: string
+  licenca_id?: string
+  data_expiracao?: string | null
+  renovado?: boolean
+  error?: string
 }
 
 export const getLicencaStatus = async (): Promise<LicencaStatusResponse> => {
@@ -44,6 +71,20 @@ export const getLicencaStatus = async (): Promise<LicencaStatusResponse> => {
 export const iniciarRenovacao = async (): Promise<IniciarRenovacaoResponse> => {
   return await pb.send('/backend/v1/pagamento/renovar', {
     method: 'POST',
+    requestKey: null,
+  })
+}
+
+export const criarPixRenovacao = async (): Promise<CriarPixResponse> => {
+  return await pb.send('/backend/v1/pagamento/pix/criar', {
+    method: 'POST',
+    requestKey: null,
+  })
+}
+
+export const consultarPixStatus = async (paymentId: string): Promise<PixStatusResponse> => {
+  return await pb.send(`/backend/v1/pagamento/pix/status/${encodeURIComponent(paymentId)}`, {
+    method: 'GET',
     requestKey: null,
   })
 }
