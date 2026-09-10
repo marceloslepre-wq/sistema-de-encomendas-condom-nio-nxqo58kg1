@@ -204,8 +204,8 @@ export default function GestorUnidades() {
               <TableBody>
                 {filtered.map((u) => (
                   <TableRow key={u.id}>
-                    <TableCell className="font-medium">Torre {u.tower}</TableCell>
-                    <TableCell>Apto {u.apartment}</TableCell>
+                    <TableCell className="font-medium">{u.tower}</TableCell>
+                    <TableCell>{u.apartment}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button
@@ -290,7 +290,7 @@ export default function GestorUnidades() {
             <AlertDialogDescription>
               Tem certeza que deseja excluir a unidade{' '}
               <strong>
-                Torre {unitToDelete?.tower} - Apto {unitToDelete?.apartment}
+                {unitToDelete?.tower} - {unitToDelete?.apartment}
               </strong>
               ? Esta ação não pode ser desfeita e pode falhar se houver moradores ou encomendas
               vinculadas.
