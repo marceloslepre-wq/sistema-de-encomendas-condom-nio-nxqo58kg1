@@ -17,8 +17,18 @@ cronAdd('verificar_expiracao_licencas', '0 * * * *', () => {
       if (planoId) {
         try {
           const plano = $app.findRecordById('planos', planoId)
-          if (plano.getBool('exclusivo_master') || plano.getString('nome') === 'Plano no Master') {
-            continue // Não expira planos master
+          const nome = (plano.getString('nome') || '').trim()
+          const maxMoradores = plano.getInt('max_moradores')
+          const maxUnits = plano.getInt('max_units')
+          const preco = Number(plano.getInt('preco_mensal') || 0)
+
+          const isMasterVerdadeiro =
+            nome === 'Plano no Master' ||
+            nome === 'Plano Master' ||
+            (plano.getBool('exclusivo_master') && maxMoradores <= 0 && maxUnits <= 0 && preco === 0)
+
+          if (isMasterVerdadeiro) {
+            continue // Não expira o Plano Master vitalício
           }
         } catch (_) {}
       }

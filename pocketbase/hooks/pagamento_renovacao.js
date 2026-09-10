@@ -68,8 +68,17 @@ routerAdd(
       const plano = $app.findRecordById('planos', planoId)
       const condo = $app.findRecordById('condos', userCondoId)
 
-      // Bloquear cobrança para Plano no Master
-      if (plano.getBool('exclusivo_master') || plano.getString('nome') === 'Plano no Master') {
+      // Bloquear cobrança apenas para o Plano Master verdadeiro (gratuito e vitalício)
+      const planoNomeCheck = (plano.getString('nome') || '').trim()
+      const isPlanoMasterIsento =
+        planoNomeCheck === 'Plano no Master' ||
+        planoNomeCheck === 'Plano Master' ||
+        (plano.getBool('exclusivo_master') &&
+          plano.getInt('max_moradores') <= 0 &&
+          plano.getInt('max_units') <= 0 &&
+          Number(plano.getInt('preco_mensal') || 0) === 0)
+
+      if (isPlanoMasterIsento) {
         return e.badRequestError('Licenças no Plano Master são isentas e não requerem pagamento.')
       }
 
@@ -758,7 +767,16 @@ routerAdd(
       const plano = $app.findRecordById('planos', planoId)
       const condo = $app.findRecordById('condos', userCondoId)
 
-      if (plano.getBool('exclusivo_master') || plano.getString('nome') === 'Plano no Master') {
+      const planoNomeCheckLegado = (plano.getString('nome') || '').trim()
+      const isPlanoMasterIsentoLegado =
+        planoNomeCheckLegado === 'Plano no Master' ||
+        planoNomeCheckLegado === 'Plano Master' ||
+        (plano.getBool('exclusivo_master') &&
+          plano.getInt('max_moradores') <= 0 &&
+          plano.getInt('max_units') <= 0 &&
+          Number(plano.getInt('preco_mensal') || 0) === 0)
+
+      if (isPlanoMasterIsentoLegado) {
         return e.badRequestError('Licenças no Plano Master são isentas e não requerem pagamento.')
       }
 

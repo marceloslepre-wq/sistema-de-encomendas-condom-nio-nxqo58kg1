@@ -2,7 +2,8 @@
 // Valida limites de USUÁRIOS e UNIDADES no BACKEND antes de permitir novos cadastros
 // Apenas NOVOS cadastros são bloqueados se atingirem o limite do plano contratado.
 // A contagem de usuários engloba TODOS os perfis vinculados ao condomínio (morador, porteiro, portaria, triagem, gestor).
-// Se o plano for "Plano no Master", ilimitado (max_moradores <= 0 ou max_units <= 0) ou exclusivo_master, nenhum limite se aplica.
+// Se o plano for o "Plano Master" ilimitado (max_moradores <= 0 ou max_units <= 0), nenhum limite se aplica.
+// O flag 'exclusivo_master' sozinho NÃO torna o plano ilimitado.
 
 // 1. Validar limite de Usuários antes da criação na collection 'users' (todos os perfis: morador, porteiro, portaria, triagem, gestor)
 onRecordCreate((e) => {
@@ -51,7 +52,16 @@ onRecordCreate((e) => {
     return e.next()
   }
 
-  if (plano.getBool('exclusivo_master') || plano.getString('nome') === 'Plano no Master') {
+  const pNome = (plano.getString('nome') || '').trim()
+  const pMaxMoradores = plano.getInt('max_moradores')
+  const pMaxUnits = plano.getInt('max_units')
+  const pPreco = Number(plano.getInt('preco_mensal') || 0)
+  const isMasterIlimitado =
+    pNome === 'Plano no Master' ||
+    pNome === 'Plano Master' ||
+    (plano.getBool('exclusivo_master') && pMaxMoradores <= 0 && pMaxUnits <= 0 && pPreco === 0)
+
+  if (isMasterIlimitado) {
     return e.next()
   }
 
@@ -123,8 +133,19 @@ onRecordCreate((e) => {
     return e.next()
   }
 
-  // Se for exclusivo master ou chamado "Plano no Master", sem limites
-  if (plano.getBool('exclusivo_master') || plano.getString('nome') === 'Plano no Master') {
+  const pNomeMor = (plano.getString('nome') || '').trim()
+  const pMaxMoradoresMor = plano.getInt('max_moradores')
+  const pMaxUnitsMor = plano.getInt('max_units')
+  const pPrecoMor = Number(plano.getInt('preco_mensal') || 0)
+  const isMasterIlimitadoMor =
+    pNomeMor === 'Plano no Master' ||
+    pNomeMor === 'Plano Master' ||
+    (plano.getBool('exclusivo_master') &&
+      pMaxMoradoresMor <= 0 &&
+      pMaxUnitsMor <= 0 &&
+      pPrecoMor === 0)
+
+  if (isMasterIlimitadoMor) {
     return e.next()
   }
 
@@ -192,7 +213,19 @@ onRecordCreate((e) => {
     return e.next()
   }
 
-  if (plano.getBool('exclusivo_master') || plano.getString('nome') === 'Plano no Master') {
+  const pNomeUnit = (plano.getString('nome') || '').trim()
+  const pMaxMoradoresUnit = plano.getInt('max_moradores')
+  const pMaxUnitsUnit = plano.getInt('max_units')
+  const pPrecoUnit = Number(plano.getInt('preco_mensal') || 0)
+  const isMasterIlimitadoUnit =
+    pNomeUnit === 'Plano no Master' ||
+    pNomeUnit === 'Plano Master' ||
+    (plano.getBool('exclusivo_master') &&
+      pMaxMoradoresUnit <= 0 &&
+      pMaxUnitsUnit <= 0 &&
+      pPrecoUnit === 0)
+
+  if (isMasterIlimitadoUnit) {
     return e.next()
   }
 

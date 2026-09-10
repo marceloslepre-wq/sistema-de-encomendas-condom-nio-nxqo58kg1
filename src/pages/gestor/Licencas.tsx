@@ -345,11 +345,24 @@ export default function GestorLicencas() {
   }
 
   const plano = licencaData?.plano
-  const isMasterPlan =
-    licencaData?.sem_expiracao ||
-    plano?.exclusivo_master ||
-    plano?.nome === 'Plano no Master' ||
-    licencaData?.master
+
+  // Plano Master verdadeiro: plano ilimitado/vitalício exclusivo do master
+  // Critério: limites base <= 0 (ilimitado) ou nome do plano Master.
+  // Planos com exclusivo_master=true mas com limites > 0 (ex: plano Teste) NÃO são vitálicios nem ilimitados.
+  const isMasterPlan = (() => {
+    if (licencaData?.master && !plano) return true
+    const nome = plano?.nome?.trim()
+    if (nome === 'Plano Master' || nome === 'Plano no Master') return true
+
+    const baseMoradores = plano?.base_max_moradores ?? plano?.max_moradores ?? 0
+    const baseUnits = plano?.base_max_units ?? plano?.max_units ?? 0
+    const preco = Number(plano?.preco_mensal || 0)
+
+    if (plano?.exclusivo_master && baseMoradores <= 0 && baseUnits <= 0 && preco === 0) {
+      return true
+    }
+    return false
+  })()
 
   const diasRestantes = licencaData?.dias_restantes ?? null
 
@@ -439,7 +452,7 @@ export default function GestorLicencas() {
     )
   }
 
-  // Limites do plano
+  // Limites do plano (respeitando overrides que o usuário definiu na licença, mapeados pelo endpoint em plano.max_moradores/max_units)
   const maxUsuarios = isMasterPlan ? 0 : (plano?.max_moradores ?? 0)
   const maxUnits = isMasterPlan ? 0 : (plano?.max_units ?? 0)
 

@@ -96,15 +96,25 @@ routerAdd(
         }
       }
 
-      // Se o plano vinculado for "Plano no Master" ou exclusivo_master, nunca expira nem bloqueia
+      // Plano Master verdadeiro: plano com limites ilimitados (max_moradores <= 0 e max_units <= 0)
+      // e/ou especificamente denominado 'Plano no Master' / 'Plano Master'.
+      // Planos com exclusivo_master=true MAS com limites > 0 NÃO são ilimitados e NÃO são vitalícios.
       let isPlanoMaster = false
       const planoIdCheck = lic.getString('plano_id')
       if (planoIdCheck) {
         try {
           const pCheck = $app.findRecordById('planos', planoIdCheck)
+          const pNome = (pCheck.getString('nome') || '').trim()
+          const pMaxMoradores = pCheck.getInt('max_moradores')
+          const pMaxUnits = pCheck.getInt('max_units')
+          const pPreco = Number(pCheck.getInt('preco_mensal') || 0)
+
+          const isNomeMaster = pNome === 'Plano no Master' || pNome === 'Plano Master'
+          const isLimitesIlimitados = pMaxMoradores <= 0 && pMaxUnits <= 0
+
           if (
-            pCheck.getBool('exclusivo_master') ||
-            pCheck.getString('nome') === 'Plano no Master'
+            isNomeMaster ||
+            (pCheck.getBool('exclusivo_master') && isLimitesIlimitados && pPreco === 0)
           ) {
             isPlanoMaster = true
           }

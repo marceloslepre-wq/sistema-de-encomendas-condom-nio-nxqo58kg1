@@ -929,8 +929,17 @@ export default function MasterDashboard() {
                         const planoRecord =
                           licenca.expand?.plano_id || planos.find((p) => p.id === licenca.plano_id)
                         const planoName = planoRecord?.nome || 'Plano Padrão'
-                        const isMasterPlan =
-                          planoRecord?.exclusivo_master || planoRecord?.nome === 'Plano no Master'
+                        const isMasterPlan = (() => {
+                          if (!planoRecord) return false
+                          const nome = planoRecord.nome?.trim()
+                          if (nome === 'Plano Master' || nome === 'Plano no Master') return true
+                          const maxM = planoRecord.max_moradores ?? 0
+                          const maxU = planoRecord.max_units ?? 0
+                          const preco = Number(planoRecord.preco_mensal || 0)
+                          return (
+                            !!planoRecord.exclusivo_master && maxM <= 0 && maxU <= 0 && preco === 0
+                          )
+                        })()
 
                         // Limites efetivos (considerando overrides)
                         const hasUserOverride =
@@ -1632,14 +1641,25 @@ export default function MasterDashboard() {
                     <SelectValue placeholder="Selecione um plano" />
                   </SelectTrigger>
                   <SelectContent>
-                    {planos.map((p) => (
-                      <SelectItem key={p.id} value={p.id} className="text-xs">
-                        {p.nome}{' '}
-                        {p.exclusivo_master
-                          ? '(Master - Ilimitado)'
-                          : `(R$ ${Number(p.preco_mensal || 0).toFixed(2)}/mês)`}
-                      </SelectItem>
-                    ))}
+                    {planos.map((p) => {
+                      const isMasterPlano =
+                        p.nome === 'Plano Master' ||
+                        p.nome === 'Plano no Master' ||
+                        (p.exclusivo_master &&
+                          (p.max_moradores ?? 0) <= 0 &&
+                          (p.max_units ?? 0) <= 0 &&
+                          Number(p.preco_mensal || 0) === 0)
+                      return (
+                        <SelectItem key={p.id} value={p.id} className="text-xs">
+                          {p.nome}{' '}
+                          {isMasterPlano
+                            ? '(Master - Ilimitado)'
+                            : p.exclusivo_master
+                              ? `(Exclusivo Master - R$ ${Number(p.preco_mensal || 0).toFixed(2)}/mês)`
+                              : `(R$ ${Number(p.preco_mensal || 0).toFixed(2)}/mês)`}
+                        </SelectItem>
+                      )
+                    })}
                   </SelectContent>
                 </Select>
               </div>
