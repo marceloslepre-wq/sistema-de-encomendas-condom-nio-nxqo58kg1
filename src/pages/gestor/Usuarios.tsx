@@ -398,7 +398,20 @@ export default function GestorUsuarios() {
       }
       setFieldErrors(errors)
       const errorMsg =
-        Object.values(errors)[0] || err?.message || 'Falha ao salvar usuário. Verifique os dados.'
+        errors.plan_limit ||
+        err?.response?.data?.plan_limit?.message ||
+        (err?.response?.message &&
+        err.response.message !== 'Failed to create record.' &&
+        err.response.message !== 'Failed to update record.'
+          ? err.response.message
+          : null) ||
+        Object.values(errors)[0] ||
+        (err?.message &&
+        err.message !== 'Failed to create record.' &&
+        err.message !== 'Failed to update record.'
+          ? err.message
+          : null) ||
+        'Falha ao salvar usuário. Verifique os dados ou o limite do plano.'
       toast({ title: 'Erro', description: errorMsg, variant: 'destructive' })
     } finally {
       setIsSubmitting(false)

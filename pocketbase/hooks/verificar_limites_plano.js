@@ -82,9 +82,10 @@ onRecordCreate((e) => {
   // Contar TODOS os usuários existentes do condomínio (independentemente do perfil)
   const currentCount = $app.countRecords('users', `condo_id = '${condoId}'`)
   if (currentCount >= maxUsuarios) {
-    throw new BadRequestError(
-      `Limite da licença atingido (${maxUsuarios} usuários). Faça upgrade ou ajuste os limites para continuar cadastrando.`,
-    )
+    const errorMsg = `Limite do plano atingido (${maxUsuarios} usuários). Faça upgrade do plano para continuar cadastrando.`
+    throw new BadRequestError(errorMsg, {
+      plan_limit: new ValidationError('plan_limit_reached', errorMsg),
+    })
   }
 
   return e.next()
@@ -164,9 +165,10 @@ onRecordCreate((e) => {
   // A contagem dinâmica considera o total de usuários cadastrados no condomínio
   const currentCount = $app.countRecords('users', `condo_id = '${condoId}'`)
   if (currentCount >= maxUsuarios) {
-    throw new BadRequestError(
-      `Limite da licença atingido (${maxUsuarios} usuários). Faça upgrade ou ajuste os limites para continuar cadastrando.`,
-    )
+    const errorMsg = `Limite do plano atingido (${maxUsuarios} usuários). Faça upgrade do plano para continuar cadastrando.`
+    throw new BadRequestError(errorMsg, {
+      plan_limit: new ValidationError('plan_limit_reached', errorMsg),
+    })
   }
 
   return e.next()
@@ -243,9 +245,10 @@ onRecordCreate((e) => {
 
   const currentCount = $app.countRecords('units', `condo_id = '${condoId}'`)
   if (currentCount >= maxUnits) {
-    throw new BadRequestError(
-      `Limite da licença atingido (${maxUnits} unidades). Faça upgrade ou ajuste os limites para continuar cadastrando.`,
-    )
+    const errorMsg = `Limite do plano atingido (${maxUnits} unidades). Faça upgrade do plano para continuar cadastrando.`
+    throw new BadRequestError(errorMsg, {
+      plan_limit: new ValidationError('plan_limit_reached', errorMsg),
+    })
   }
 
   return e.next()
