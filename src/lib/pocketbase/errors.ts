@@ -8,9 +8,7 @@ export function extractFieldErrors(error: unknown): FieldErrors {
   if (!data || typeof data !== 'object') return {}
   const errors: FieldErrors = {}
   for (const [field, detail] of Object.entries(data)) {
-    if (typeof detail === 'string') {
-      errors[field] = detail
-    } else if (
+    if (
       detail &&
       typeof detail === 'object' &&
       'message' in detail &&

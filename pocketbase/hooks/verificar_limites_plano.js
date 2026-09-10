@@ -80,7 +80,7 @@ onRecordCreateRequest((e) => {
   }
 
   // Contar TODOS os usuários existentes do condomínio (independentemente do perfil)
-  const currentCount = $app.countRecords('users', `condo_id = '${condoId}'`)
+  const currentCount = $app.countRecords('users', $dbx.hashExp({ condo_id: condoId }))
   if (currentCount >= maxUsuarios) {
     const errorMsg = `Limite do plano atingido (${maxUsuarios} usuários). Faça upgrade do plano para continuar cadastrando.`
     return e.badRequestError(errorMsg, {
@@ -163,7 +163,7 @@ onRecordCreateRequest((e) => {
   }
 
   // A contagem dinâmica considera o total de usuários cadastrados no condomínio
-  const currentCount = $app.countRecords('users', `condo_id = '${condoId}'`)
+  const currentCount = $app.countRecords('users', $dbx.hashExp({ condo_id: condoId }))
   if (currentCount >= maxUsuarios) {
     const errorMsg = `Limite do plano atingido (${maxUsuarios} usuários). Faça upgrade do plano para continuar cadastrando.`
     return e.badRequestError(errorMsg, {
@@ -243,7 +243,7 @@ onRecordCreateRequest((e) => {
     return e.next()
   }
 
-  const currentCount = $app.countRecords('units', `condo_id = '${condoId}'`)
+  const currentCount = $app.countRecords('units', $dbx.hashExp({ condo_id: condoId }))
   if (currentCount >= maxUnits) {
     const errorMsg = `Limite do plano atingido (${maxUnits} unidades). Faça upgrade do plano para continuar cadastrando.`
     return e.badRequestError(errorMsg, {
