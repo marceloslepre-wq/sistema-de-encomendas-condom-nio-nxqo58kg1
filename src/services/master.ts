@@ -173,3 +173,62 @@ export const trocarPlanoGestor = async (planoId: string) => {
     requestKey: null,
   })
 }
+
+export type LicencaAgrupadaPorCondo = {
+  condo_id: string
+  vigente: Licenca
+  todas: Licenca[]
+  historico: Licenca[]
+  totalLicencas: number
+  numeroRenovacoes: number
+  isRenovada: boolean
+}
+
+/**
+ * Agrupa uma lista de licenças por condomínio, retornando a licença vigente
+ * (mais recente por data de criação / renovação) e o histórico de licenças anteriores.
+ */
+export const agruparLicencasPorCondo = (licencas: Licenca[]): LicencaAgrupadaPorCondo[] => {
+  const map = new Map<string, Licenca[]>()
+
+  // Agrupar todas as licenças por condo_id
+  for (const lic of licencas) {
+    if (!lic.condo_id) continue
+    const list = map.get(lic.condo_id) || []
+    list.push(lic)
+    map.set(lic.condo_id, list)
+  }
+
+  const agrupadas: LicencaAgrupadaPorCondo[] = []
+
+  map.forEach((list, condoId) => {
+    // Ordenar da mais recente para a mais antiga (created decrescente)
+    list.sort((a, b) => new Date(b.created || 0).getTime() - new Date(a.created || 0).getTime())
+
+    // A vigente é a primeira da lista ordenada (mais recente criada)
+    const vigente = list[0]
+    const historico = list.slice(1)
+    const totalLicencas = list.length
+    const numeroRenovacoes = totalLicencas - 1
+    const isRenovada =
+      numeroRenovacoes > 0 || list.some((l) => l.status === 'renovada' || l.status === 'Renovada')
+
+    agrupadas.push({
+      condo_id: condoId,
+      vigente,
+      todas: list,
+      historico,
+      totalLicencas,
+      numeroRenovacoes,
+      isRenovada,
+    })
+  })
+
+  // Ordenar condomínios pela data da licença vigente mais recente
+  agrupadas.sort(
+    (a, b) =>
+      new Date(b.vigente.created || 0).getTime() - new Date(a.vigente.created || 0).getTime(),
+  )
+
+  return agrupadas
+}

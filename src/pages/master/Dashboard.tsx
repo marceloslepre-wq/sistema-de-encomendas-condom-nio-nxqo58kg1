@@ -22,6 +22,7 @@ import {
   Sparkles,
   ExternalLink,
   ChevronRight,
+  History,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
@@ -36,6 +37,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,6 +75,8 @@ import { useRealtime } from '@/hooks/use-realtime'
 import {
   Plano,
   Licenca,
+  LicencaAgrupadaPorCondo,
+  agruparLicencasPorCondo,
   getPlanos,
   createPlano,
   updatePlano,
@@ -142,6 +152,11 @@ export default function MasterDashboard() {
   // Modal de Confirmação de Exclusão
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [licencaToDelete, setLicencaToDelete] = useState<Licenca | null>(null)
+
+  // Sheet Lateral: Histórico de Renovações do Cliente
+  const [isHistoricoSheetOpen, setIsHistoricoSheetOpen] = useState(false)
+  const [targetHistoricoAgrupado, setTargetHistoricoAgrupado] =
+    useState<LicencaAgrupadaPorCondo | null>(null)
 
   const [saving, setSaving] = useState(false)
 
@@ -577,6 +592,12 @@ export default function MasterDashboard() {
     setIsDeleteModalOpen(true)
   }
 
+  // Ação: Abrir Painel Lateral de Histórico de Renovações
+  const handleOpenHistorico = (agrupado: LicencaAgrupadaPorCondo) => {
+    setTargetHistoricoAgrupado(agrupado)
+    setIsHistoricoSheetOpen(true)
+  }
+
   const handleConfirmDeleteLicenca = async () => {
     if (!licencaToDelete) return
     setSaving(true)
@@ -644,105 +665,81 @@ export default function MasterDashboard() {
     }
   }
 
-  // Identificar a licença mais recente com status ativa por condomínio (vigente por condomínio)
-  const licencaMaisRecentePorCondo = useMemo(() => {
-    const map = new Map<string, Licenca>()
-    for (const lic of licencas) {
-      if (!lic.condo_id) continue
-      // Considerar apenas licenças com status 'ativa'
-      if ((lic.status as string) !== 'ativa' && (lic.status as string) !== 'ativo') continue
-      const existing = map.get(lic.condo_id)
-      if (!existing) {
-        map.set(lic.condo_id, lic)
-      } else {
-        const dExist = new Date(existing.created || 0).getTime()
-        const dCurrent = new Date(lic.created || 0).getTime()
-        if (dCurrent > dExist) {
-          map.set(lic.condo_id, lic)
-        }
-      }
-    }
-    return map
+  // Agrupar licenças por condomínio (uma linha por cliente, com licença vigente + histórico)
+  const licencasAgrupadas = useMemo(() => {
+    return agruparLicencasPorCondo(licencas)
   }, [licencas])
 
-  // Filtragem e busca de licenças
-  const filteredLicencas = useMemo(() => {
-    return licencas.filter((lic) => {
+  // Contadores calculados sobre a licença vigente de cada cliente
+  const countAtivas = useMemo(() => {
+    return licencasAgrupadas.filter((item) => {
+      const lic = item.vigente
       const isExpired =
         lic.status === 'expirada' ||
-        (lic.status !== 'Renovada' &&
-          lic.status !== 'renovada' &&
-          lic.data_expiracao &&
-          new Date(lic.data_expiracao) <= new Date())
+        (lic.data_expiracao && new Date(lic.data_expiracao) <= new Date())
+      return (lic.status === 'ativa' || (lic.status as string) === 'ativo') && !isExpired
+    }).length
+  }, [licencasAgrupadas])
+
+  // "Renovadas": clientes cuja licença vigente é fruto de renovação (possui licenças anteriores / status renovada)
+  const countRenovadas = useMemo(() => {
+    return licencasAgrupadas.filter((item) => item.isRenovada).length
+  }, [licencasAgrupadas])
+
+  const countExpiradas = useMemo(() => {
+    return licencasAgrupadas.filter((item) => {
+      const lic = item.vigente
+      return (
+        lic.status === 'expirada' ||
+        (lic.data_expiracao && new Date(lic.data_expiracao) <= new Date())
+      )
+    }).length
+  }, [licencasAgrupadas])
+
+  const countPausadas = useMemo(() => {
+    return licencasAgrupadas.filter((item) => item.vigente.status === 'pausada').length
+  }, [licencasAgrupadas])
+
+  // Filtragem e busca de clientes (operando sobre a licença vigente de cada condomínio)
+  const filteredAgrupadas = useMemo(() => {
+    return licencasAgrupadas.filter((item) => {
+      const lic = item.vigente
+      const isExpired =
+        lic.status === 'expirada' ||
+        (lic.data_expiracao && new Date(lic.data_expiracao) <= new Date())
 
       // Filtro de status
       if (filterStatus === 'expirada' && !isExpired) return false
       if (filterStatus === 'ativa' && (lic.status !== 'ativa' || isExpired)) return false
-      if (filterStatus === 'renovada' && lic.status !== 'Renovada' && lic.status !== 'renovada')
-        return false
+      if (filterStatus === 'renovada' && !item.isRenovada) return false
       if (filterStatus === 'pausada' && lic.status !== 'pausada') return false
       if (filterStatus === 'cancelada' && lic.status !== 'cancelada') return false
 
-      // Busca por texto
+      // Busca por texto (condomínio, CNPJ, plano ou ID)
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim()
-        const condoName = (
-          lic.expand?.condo_id?.name ||
-          condos.find((c) => c.id === lic.condo_id)?.name ||
-          ''
-        ).toLowerCase()
-        const condoCnpj = (
-          lic.expand?.condo_id?.cnpj ||
-          condos.find((c) => c.id === lic.condo_id)?.cnpj ||
-          ''
-        ).toLowerCase()
-        const planoName = (
-          lic.expand?.plano_id?.nome ||
-          planos.find((p) => p.id === lic.plano_id)?.nome ||
-          ''
-        ).toLowerCase()
+        const condoRecord = lic.expand?.condo_id || condos.find((c) => c.id === lic.condo_id)
+        const condoName = (condoRecord?.name || '').toLowerCase()
+        const condoCnpj = (condoRecord?.cnpj || '').toLowerCase()
+        const planoRecord = lic.expand?.plano_id || planos.find((p) => p.id === lic.plano_id)
+        const planoName = (planoRecord?.nome || '').toLowerCase()
         const licId = lic.id.toLowerCase()
+
+        // Permite buscar também pelos IDs de licenças anteriores do cliente
+        const idsHistorico = item.todas.map((l) => l.id.toLowerCase()).join(' ')
 
         return (
           condoName.includes(query) ||
           condoCnpj.includes(query) ||
           planoName.includes(query) ||
-          licId.includes(query)
+          licId.includes(query) ||
+          idsHistorico.includes(query)
         )
       }
 
       return true
     })
-  }, [licencas, filterStatus, searchQuery, condos, planos])
-
-  // Contadores
-  // Item 2: o contador "Licenças Ativas" deve contar apenas a licença vigente por cliente
-  // (a mais recente por condomínio com status ativa, que não esteja expirada/pausada/cancelada).
-  // Licenças com status 'renovada' não contam como ativas.
-  const countAtivas = useMemo(() => {
-    let count = 0
-    licencaMaisRecentePorCondo.forEach((lic) => {
-      const isExpired =
-        lic.status === 'expirada' ||
-        (lic.data_expiracao && new Date(lic.data_expiracao) <= new Date())
-      if (!isExpired) {
-        count++
-      }
-    })
-    return count
-  }, [licencaMaisRecentePorCondo])
-
-  const countRenovadas = licencas.filter(
-    (l) => l.status === 'Renovada' || l.status === 'renovada',
-  ).length
-
-  const countExpiradas = licencas.filter(
-    (l) =>
-      l.status !== 'Renovada' &&
-      l.status !== 'renovada' &&
-      (l.status === 'expirada' || (l.data_expiracao && new Date(l.data_expiracao) <= new Date())),
-  ).length
-  const countPausadas = licencas.filter((l) => l.status === 'pausada').length
+  }, [licencasAgrupadas, filterStatus, searchQuery, condos, planos])
 
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col">
@@ -834,7 +831,7 @@ export default function MasterDashboard() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-4">
             <TabsList className="bg-white border">
               <TabsTrigger value="licencas" className="gap-2">
-                <Building className="w-4 h-4" /> Licenças de Clientes ({licencas.length})
+                <Building className="w-4 h-4" /> Licenças de Clientes ({licencasAgrupadas.length})
               </TabsTrigger>
               <TabsTrigger value="planos" className="gap-2">
                 <Layers className="w-4 h-4" /> Catálogo de Planos ({planos.length})
@@ -879,7 +876,7 @@ export default function MasterDashboard() {
                   onClick={() => setFilterStatus('todos')}
                   className="h-8 text-xs"
                 >
-                  Todos ({licencas.length})
+                  Todos ({licencasAgrupadas.length})
                 </Button>
                 <Button
                   size="sm"
@@ -949,10 +946,10 @@ export default function MasterDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredLicencas.length === 0 ? (
+                    {filteredAgrupadas.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
-                          {licencas.length === 0 ? (
+                          {licencasAgrupadas.length === 0 ? (
                             <div className="py-6 space-y-2">
                               <Building className="w-10 h-10 mx-auto text-slate-400 opacity-60" />
                               <p className="font-medium text-sm text-slate-700">
@@ -979,7 +976,8 @@ export default function MasterDashboard() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredLicencas.map((licenca) => {
+                      filteredAgrupadas.map((item) => {
+                        const licenca = item.vigente
                         const isExpired =
                           licenca.status === 'expirada' ||
                           (licenca.data_expiracao && new Date(licenca.data_expiracao) <= new Date())
@@ -1162,8 +1160,21 @@ export default function MasterDashboard() {
                               </div>
                             </TableCell>
 
-                            {/* Status */}
-                            <TableCell>{getStatusBadge(licenca.status)}</TableCell>
+                            {/* Status + Badge discreto de Nª licença quando houver renovações */}
+                            <TableCell>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {getStatusBadge(licenca.status)}
+                                {item.totalLicencas > 1 && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] py-0 px-1.5 border-sky-300 text-sky-700 bg-sky-50 font-medium whitespace-nowrap"
+                                    title={`Cliente possui ${item.totalLicencas} licenças no total (${item.numeroRenovacoes} renovação${item.numeroRenovacoes > 1 ? 'ões' : ''}). Clique em Histórico de Renovações para detalhes.`}
+                                  >
+                                    {item.totalLicencas}ª licença
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
 
                             {/* Botão de Ações com TODOS os poderes */}
                             <TableCell className="text-right pr-4 whitespace-nowrap">
@@ -1201,10 +1212,29 @@ export default function MasterDashboard() {
                                       <span className="sr-only">Abrir menu de ações</span>
                                     </Button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-56 text-xs">
+                                  <DropdownMenuContent align="end" className="w-60 text-xs">
                                     <DropdownMenuLabel className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">
                                       Poderes da Licença
                                     </DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+
+                                    {/* Nova ação: Histórico de Renovações */}
+                                    <DropdownMenuItem
+                                      onClick={() => handleOpenHistorico(item)}
+                                      className="gap-2 cursor-pointer font-medium text-slate-800"
+                                    >
+                                      <History className="w-3.5 h-3.5 text-sky-600" />
+                                      <span>Histórico de Renovações</span>
+                                      {item.totalLicencas > 1 && (
+                                        <Badge
+                                          variant="secondary"
+                                          className="ml-auto text-[9px] py-0 px-1 bg-sky-100 text-sky-800"
+                                        >
+                                          {item.totalLicencas}
+                                        </Badge>
+                                      )}
+                                    </DropdownMenuItem>
+
                                     <DropdownMenuSeparator />
 
                                     {/* 1. Editar Limites Específicos (Overrides) */}
@@ -2061,6 +2091,200 @@ export default function MasterDashboard() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* SHEET LATERAL: HISTÓRICO DE RENOVAÇÕES DO CLIENTE */}
+      <Sheet open={isHistoricoSheetOpen} onOpenChange={setIsHistoricoSheetOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader className="pb-4 border-b">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center">
+                <History className="w-4 h-4" />
+              </div>
+              <div>
+                <SheetTitle className="text-base font-bold text-slate-900">
+                  Histórico de Renovações
+                </SheetTitle>
+                <SheetDescription className="text-xs text-slate-500">
+                  Todas as licenças (vigente e anteriores) deste condomínio.
+                </SheetDescription>
+              </div>
+            </div>
+          </SheetHeader>
+
+          {targetHistoricoAgrupado &&
+            (() => {
+              const condoRecord =
+                targetHistoricoAgrupado.vigente.expand?.condo_id ||
+                condos.find((c) => c.id === targetHistoricoAgrupado.condo_id)
+              const condoName = condoRecord?.name || 'Condomínio não identificado'
+              const condoCnpj = condoRecord?.cnpj || ''
+
+              return (
+                <div className="py-4 space-y-5 text-xs">
+                  {/* Resumo do Condomínio */}
+                  <div className="bg-slate-50 border rounded-lg p-3.5 space-y-1.5">
+                    <div className="flex items-baseline justify-between">
+                      <span className="font-bold text-slate-900 text-sm">{condoName}</span>
+                      <Badge variant="outline" className="text-[11px] font-semibold bg-white">
+                        {targetHistoricoAgrupado.totalLicencas} licença
+                        {targetHistoricoAgrupado.totalLicencas > 1 ? 's' : ''} no total
+                      </Badge>
+                    </div>
+                    {condoCnpj ? (
+                      <p className="text-slate-500 font-mono text-[11px]">CNPJ: {condoCnpj}</p>
+                    ) : (
+                      <p className="text-slate-400 font-mono text-[11px]">
+                        ID Condomínio: {targetHistoricoAgrupado.condo_id}
+                      </p>
+                    )}
+                    {targetHistoricoAgrupado.numeroRenovacoes > 0 && (
+                      <p className="text-sky-700 font-medium text-[11px] pt-1 border-t">
+                        ✓ Cliente realizou {targetHistoricoAgrupado.numeroRenovacoes} renovação
+                        {targetHistoricoAgrupado.numeroRenovacoes > 1 ? 'ões' : ''}.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Lista completa de licenças ordenadas da mais recente para a mais antiga */}
+                  <div className="space-y-3">
+                    <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                      Linha do Tempo de Licenças:
+                    </span>
+
+                    {targetHistoricoAgrupado.todas.map((lic, index) => {
+                      const isVigente = lic.id === targetHistoricoAgrupado.vigente.id
+                      const planoRecord =
+                        lic.expand?.plano_id || planos.find((p) => p.id === lic.plano_id)
+                      const planoName = planoRecord?.nome || 'Plano Padrão'
+
+                      const createdDate = lic.created
+                        ? new Date(lic.created).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'Data não informada'
+
+                      const expDate = lic.data_expiracao
+                        ? new Date(lic.data_expiracao).toLocaleDateString('pt-BR')
+                        : 'Vitalícia / Indeterminada'
+
+                      const hasUserOverride =
+                        lic.override_max_usuarios !== undefined &&
+                        lic.override_max_usuarios !== null &&
+                        lic.override_max_usuarios > 0
+                      const hasUnitOverride =
+                        lic.override_max_unidades !== undefined &&
+                        lic.override_max_unidades !== null &&
+                        lic.override_max_unidades > 0
+
+                      const effectiveUsers = hasUserOverride
+                        ? lic.override_max_usuarios!
+                        : (planoRecord?.max_moradores ?? 0)
+                      const effectiveUnits = hasUnitOverride
+                        ? lic.override_max_unidades!
+                        : (planoRecord?.max_units ?? 0)
+
+                      return (
+                        <div
+                          key={lic.id}
+                          className={`rounded-lg border p-3.5 space-y-2.5 transition-colors ${
+                            isVigente
+                              ? 'bg-emerald-50/40 border-emerald-300 ring-1 ring-emerald-200'
+                              : 'bg-white border-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-slate-800 text-xs bg-slate-100 px-2 py-0.5 rounded border">
+                                  {lic.id}
+                                </span>
+                                {isVigente && (
+                                  <Badge className="bg-emerald-600 text-white text-[10px] py-0 px-1.5 font-semibold">
+                                    Vigente
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-500">
+                                Criada/Ativada em:{' '}
+                                <span className="font-medium text-slate-700">{createdDate}</span>
+                              </p>
+                            </div>
+                            <div>{getStatusBadge(lic.status)}</div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 pt-2 border-t text-[11px]">
+                            <div>
+                              <span className="text-slate-400 block">Plano Contratado:</span>
+                              <span className="font-semibold text-slate-800">{planoName}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block">Validade / Expiração:</span>
+                              <span className="font-semibold text-slate-800">{expDate}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block">Usuários Permitidos:</span>
+                              <span className="font-semibold text-slate-800">
+                                {effectiveUsers <= 0 ? 'Ilimitado' : effectiveUsers}
+                                {hasUserOverride && (
+                                  <span className="ml-1 text-[10px] text-indigo-600 font-bold">
+                                    (Custom)
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block">Unidades Permitidas:</span>
+                              <span className="font-semibold text-slate-800">
+                                {effectiveUnits <= 0 ? 'Ilimitado' : effectiveUnits}
+                                {hasUnitOverride && (
+                                  <span className="ml-1 text-[10px] text-indigo-600 font-bold">
+                                    (Custom)
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Atalhos para a licença (se for a vigente) */}
+                          {isVigente && (
+                            <div className="pt-2 border-t flex items-center justify-end gap-1.5">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setIsHistoricoSheetOpen(false)
+                                  handleReativar30Dias(lic)
+                                }}
+                                className="h-7 text-[11px] text-emerald-700 border-emerald-300 hover:bg-emerald-50 gap-1"
+                              >
+                                <RefreshCw className="w-3 h-3" /> Reativar +30d
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setIsHistoricoSheetOpen(false)
+                                  handleOpenLimitesModal(lic)
+                                }}
+                                className="h-7 text-[11px] text-indigo-700 border-indigo-300 hover:bg-indigo-50 gap-1"
+                              >
+                                <Sliders className="w-3 h-3" /> Limites
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })()}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
