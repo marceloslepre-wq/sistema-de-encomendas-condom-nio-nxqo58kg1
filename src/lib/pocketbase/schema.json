@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T10:54:16.876Z",
+  "generatedAt": "2026-09-10T11:20:55.341Z",
   "collections": [
     {
       "name": "users",
@@ -1170,6 +1170,18 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "override_max_usuarios",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "override_max_unidades",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []

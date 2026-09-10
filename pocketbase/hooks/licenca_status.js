@@ -127,17 +127,27 @@ routerAdd(
       // Buscar dados do plano para caso precise de renovação
       let planoData = null
       const planoId = lic.getString('plano_id')
+      const overrideMaxUsuarios = lic.getInt('override_max_usuarios') || null
+      const overrideMaxUnidades = lic.getInt('override_max_unidades') || null
+
       if (planoId) {
         try {
           const plano = $app.findRecordById('planos', planoId)
+          const baseMoradores = plano.getInt('max_moradores')
+          const baseUnits = plano.getInt('max_units')
+
           planoData = {
             id: plano.id,
             nome: plano.getString('nome'),
             preco_mensal: plano.getInt('preco_mensal'),
             descricao: plano.getString('descricao'),
             exclusivo_master: plano.getBool('exclusivo_master'),
-            max_moradores: plano.getInt('max_moradores'),
-            max_units: plano.getInt('max_units'),
+            max_moradores:
+              overrideMaxUsuarios && overrideMaxUsuarios > 0 ? overrideMaxUsuarios : baseMoradores,
+            max_units:
+              overrideMaxUnidades && overrideMaxUnidades > 0 ? overrideMaxUnidades : baseUnits,
+            base_max_moradores: baseMoradores,
+            base_max_units: baseUnits,
             recursos_liberados: plano.get('recursos_liberados'),
           }
         } catch (_) {}
@@ -159,6 +169,8 @@ routerAdd(
         licenca_id: lic.id,
         condo_id: condoId,
         condo_name: condoName,
+        override_max_usuarios: overrideMaxUsuarios,
+        override_max_unidades: overrideMaxUnidades,
         plano: planoData,
         role: role,
       })

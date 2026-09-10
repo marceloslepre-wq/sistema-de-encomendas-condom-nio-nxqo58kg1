@@ -28,6 +28,7 @@ onRecordCreate((e) => {
     return e.next()
   }
 
+  let licenca = null
   let plano = null
   try {
     const licencas = $app.findRecordsByFilter(
@@ -38,7 +39,8 @@ onRecordCreate((e) => {
       0,
     )
     if (licencas && licencas.length > 0) {
-      const planoId = licencas[0].getString('plano_id')
+      licenca = licencas[0]
+      const planoId = licenca.getString('plano_id')
       if (planoId) {
         plano = $app.findRecordById('planos', planoId)
       }
@@ -53,8 +55,16 @@ onRecordCreate((e) => {
     return e.next()
   }
 
-  const maxUsuarios = plano.getInt('max_moradores')
-  // Se max_moradores for 0 ou menor, significa ilimitado
+  // Verifica se a licença possui override específico de limite de usuários (> 0)
+  let maxUsuarios = 0
+  const overrideUsuarios = licenca ? licenca.getInt('override_max_usuarios') : 0
+  if (overrideUsuarios > 0) {
+    maxUsuarios = overrideUsuarios
+  } else {
+    maxUsuarios = plano.getInt('max_moradores')
+  }
+
+  // Se maxUsuarios for 0 ou menor, significa ilimitado
   if (maxUsuarios <= 0) {
     return e.next()
   }
@@ -63,7 +73,7 @@ onRecordCreate((e) => {
   const currentCount = $app.countRecords('users', `condo_id = '${condoId}'`)
   if (currentCount >= maxUsuarios) {
     throw new BadRequestError(
-      `Limite do plano atingido (${maxUsuarios} usuários). Faça upgrade do plano para continuar cadastrando.`,
+      `Limite da licença atingido (${maxUsuarios} usuários). Faça upgrade ou ajuste os limites para continuar cadastrando.`,
     )
   }
 
@@ -90,6 +100,7 @@ onRecordCreate((e) => {
   }
 
   // Buscar licença ativa do condomínio
+  let licenca = null
   let plano = null
   try {
     const licencas = $app.findRecordsByFilter(
@@ -100,7 +111,8 @@ onRecordCreate((e) => {
       0,
     )
     if (licencas && licencas.length > 0) {
-      const planoId = licencas[0].getString('plano_id')
+      licenca = licencas[0]
+      const planoId = licenca.getString('plano_id')
       if (planoId) {
         plano = $app.findRecordById('planos', planoId)
       }
@@ -116,7 +128,14 @@ onRecordCreate((e) => {
     return e.next()
   }
 
-  const maxUsuarios = plano.getInt('max_moradores')
+  let maxUsuarios = 0
+  const overrideUsuarios = licenca ? licenca.getInt('override_max_usuarios') : 0
+  if (overrideUsuarios > 0) {
+    maxUsuarios = overrideUsuarios
+  } else {
+    maxUsuarios = plano.getInt('max_moradores')
+  }
+
   if (maxUsuarios <= 0) {
     return e.next()
   }
@@ -125,7 +144,7 @@ onRecordCreate((e) => {
   const currentCount = $app.countRecords('users', `condo_id = '${condoId}'`)
   if (currentCount >= maxUsuarios) {
     throw new BadRequestError(
-      `Limite do plano atingido (${maxUsuarios} usuários). Faça upgrade do plano para continuar cadastrando.`,
+      `Limite da licença atingido (${maxUsuarios} usuários). Faça upgrade ou ajuste os limites para continuar cadastrando.`,
     )
   }
 
@@ -150,6 +169,7 @@ onRecordCreate((e) => {
     return e.next()
   }
 
+  let licenca = null
   let plano = null
   try {
     const licencas = $app.findRecordsByFilter(
@@ -160,7 +180,8 @@ onRecordCreate((e) => {
       0,
     )
     if (licencas && licencas.length > 0) {
-      const planoId = licencas[0].getString('plano_id')
+      licenca = licencas[0]
+      const planoId = licenca.getString('plano_id')
       if (planoId) {
         plano = $app.findRecordById('planos', planoId)
       }
@@ -175,7 +196,14 @@ onRecordCreate((e) => {
     return e.next()
   }
 
-  const maxUnits = plano.getInt('max_units')
+  let maxUnits = 0
+  const overrideUnits = licenca ? licenca.getInt('override_max_unidades') : 0
+  if (overrideUnits > 0) {
+    maxUnits = overrideUnits
+  } else {
+    maxUnits = plano.getInt('max_units')
+  }
+
   if (maxUnits <= 0) {
     return e.next()
   }
@@ -183,7 +211,7 @@ onRecordCreate((e) => {
   const currentCount = $app.countRecords('units', `condo_id = '${condoId}'`)
   if (currentCount >= maxUnits) {
     throw new BadRequestError(
-      `Limite do plano atingido (${maxUnits} unidades). Faça upgrade do plano para continuar cadastrando.`,
+      `Limite da licença atingido (${maxUnits} unidades). Faça upgrade ou ajuste os limites para continuar cadastrando.`,
     )
   }
 

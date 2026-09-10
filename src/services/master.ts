@@ -17,8 +17,10 @@ export type Licenca = RecordModel & {
   plano_id: string
   status: 'ativa' | 'pausada' | 'cancelada' | 'expirada'
   data_expiracao?: string
+  override_max_usuarios?: number | null
+  override_max_unidades?: number | null
   expand?: {
-    condo_id?: RecordModel & { name: string; cnpj?: string }
+    condo_id?: RecordModel & { name: string; cnpj?: string; address?: string }
     plano_id?: Plano
   }
 }

@@ -9,6 +9,8 @@ export interface LicencaStatusResponse {
   licenca_id?: string
   condo_id?: string
   condo_name?: string
+  override_max_usuarios?: number | null
+  override_max_unidades?: number | null
   plano?: {
     id: string
     nome: string
@@ -17,6 +19,8 @@ export interface LicencaStatusResponse {
     exclusivo_master?: boolean
     max_moradores?: number
     max_units?: number
+    base_max_moradores?: number
+    base_max_units?: number
     recursos_liberados?: any
   } | null
   role?: string
