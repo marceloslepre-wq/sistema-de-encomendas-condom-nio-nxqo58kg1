@@ -607,6 +607,16 @@ export default function MasterDashboard() {
             <CheckCircle2 className="w-3 h-3" /> Ativa
           </Badge>
         )
+      case 'Renovada':
+      case 'renovada':
+        return (
+          <Badge
+            variant="outline"
+            className="text-sky-700 border-sky-300 bg-sky-50 gap-1 font-medium"
+          >
+            <RefreshCw className="w-3 h-3" /> Renovada
+          </Badge>
+        )
       case 'pausada':
         return (
           <Badge
@@ -634,16 +644,40 @@ export default function MasterDashboard() {
     }
   }
 
+  // Identificar a licença mais recente por condomínio (vigente por condomínio)
+  const licencaMaisRecentePorCondo = useMemo(() => {
+    const map = new Map<string, Licenca>()
+    for (const lic of licencas) {
+      if (!lic.condo_id) continue
+      const existing = map.get(lic.condo_id)
+      if (!existing) {
+        map.set(lic.condo_id, lic)
+      } else {
+        const dExist = new Date(existing.created || 0).getTime()
+        const dCurrent = new Date(lic.created || 0).getTime()
+        if (dCurrent > dExist) {
+          map.set(lic.condo_id, lic)
+        }
+      }
+    }
+    return map
+  }, [licencas])
+
   // Filtragem e busca de licenças
   const filteredLicencas = useMemo(() => {
     return licencas.filter((lic) => {
       const isExpired =
         lic.status === 'expirada' ||
-        (lic.data_expiracao && new Date(lic.data_expiracao) <= new Date())
+        (lic.status !== 'Renovada' &&
+          lic.status !== 'renovada' &&
+          lic.data_expiracao &&
+          new Date(lic.data_expiracao) <= new Date())
 
       // Filtro de status
       if (filterStatus === 'expirada' && !isExpired) return false
       if (filterStatus === 'ativa' && (lic.status !== 'ativa' || isExpired)) return false
+      if (filterStatus === 'renovada' && lic.status !== 'Renovada' && lic.status !== 'renovada')
+        return false
       if (filterStatus === 'pausada' && lic.status !== 'pausada') return false
       if (filterStatus === 'cancelada' && lic.status !== 'cancelada') return false
 
@@ -680,12 +714,38 @@ export default function MasterDashboard() {
   }, [licencas, filterStatus, searchQuery, condos, planos])
 
   // Contadores
-  const countAtivas = licencas.filter(
-    (l) => l.status === 'ativa' && (!l.data_expiracao || new Date(l.data_expiracao) > new Date()),
+  // Item 2: o contador "Licenças Ativas" deve contar apenas a licença vigente por cliente
+  // (a mais recente por condomínio, que não esteja pausada/excluída). Licenças 'Renovada' não contam como ativas.
+  const countAtivas = useMemo(() => {
+    let count = 0
+    licencaMaisRecentePorCondo.forEach((lic) => {
+      const isExpired =
+        lic.status === 'expirada' ||
+        (lic.data_expiracao && new Date(lic.data_expiracao) <= new Date())
+      if (
+        lic.status === 'ativa' &&
+        lic.status !== 'Renovada' &&
+        lic.status !== 'renovada' &&
+        lic.status !== 'pausada' &&
+        lic.status !== 'cancelada' &&
+        !isExpired
+      ) {
+        count++
+      }
+    })
+    return count
+  }, [licencaMaisRecentePorCondo])
+
+  const countRenovadas = licencas.filter(
+    (l) => l.status === 'Renovada' || l.status === 'renovada',
   ).length
+
   const countExpiradas = licencas.filter(
     (l) =>
-      l.status === 'expirada' || (l.data_expiracao && new Date(l.data_expiracao) <= new Date()),
+      l.status !== 'Renovada' &&
+      l.status !== 'renovada' &&
+      (l.status === 'expirada' ||
+        (l.data_expiracao && new Date(l.data_expiracao) <= new Date())),
   ).length
   const countPausadas = licencas.filter((l) => l.status === 'pausada').length
 
@@ -833,6 +893,14 @@ export default function MasterDashboard() {
                   className="h-8 text-xs text-emerald-700 hover:text-emerald-800"
                 >
                   Ativas ({countAtivas})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={filterStatus === 'renovada' ? 'default' : 'outline'}
+                  onClick={() => setFilterStatus('renovada')}
+                  className="h-8 text-xs text-sky-700 hover:text-sky-800"
+                >
+                  Renovadas ({countRenovadas})
                 </Button>
                 <Button
                   size="sm"
@@ -1791,6 +1859,7 @@ export default function MasterDashboard() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ativa">Ativa</SelectItem>
+                      <SelectItem value="Renovada">Renovada</SelectItem>
                       <SelectItem value="pausada">Pausada</SelectItem>
                       <SelectItem value="cancelada">Cancelada</SelectItem>
                       <SelectItem value="expirada">Expirada</SelectItem>

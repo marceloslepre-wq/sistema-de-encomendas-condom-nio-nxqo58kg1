@@ -15,7 +15,7 @@ export type Plano = RecordModel & {
 export type Licenca = RecordModel & {
   condo_id: string
   plano_id: string
-  status: 'ativa' | 'pausada' | 'cancelada' | 'expirada'
+  status: 'ativa' | 'pausada' | 'cancelada' | 'expirada' | 'Renovada'
   data_expiracao?: string
   override_max_usuarios?: number | null
   override_max_unidades?: number | null
@@ -48,23 +48,75 @@ export const updateLicenca = (id: string, data: Partial<Licenca>) =>
   pb.collection('licencas').update<Licenca>(id, data, { requestKey: null })
 
 export const reativarLicenca30Dias = async (id: string, currentExpDate?: string) => {
+  // Buscar licença existente para copiar condo_id, plano_id e overrides
+  const licencaAtual = await pb.collection('licencas').getOne<Licenca>(id, { requestKey: null })
+
   const now = new Date()
   let baseDate = now
-  if (currentExpDate) {
-    const cur = new Date(currentExpDate)
+  const expDateStr = currentExpDate || licencaAtual.data_expiracao
+  if (expDateStr) {
+    const cur = new Date(expDateStr)
     if (cur.getTime() > now.getTime()) {
       baseDate = cur
     }
   }
   const novaExp = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000)
-  return await pb.collection('licencas').update<Licenca>(
-    id,
+
+  // 1. Criar a nova licença ativa
+  const novaLicenca = await pb.collection('licencas').create<Licenca>(
     {
+      condo_id: licencaAtual.condo_id,
+      plano_id: licencaAtual.plano_id,
       status: 'ativa',
       data_expiracao: novaExp.toISOString(),
+      override_max_usuarios: licencaAtual.override_max_usuarios || 0,
+      override_max_unidades: licencaAtual.override_max_unidades || 0,
     },
     { requestKey: null },
   )
+
+  // 2. Marcar a licença anterior (e quaisquer outras ativas deste condomínio) como 'Renovada'
+  try {
+    const anteriores = await pb.collection('licencas').getFullList<Licenca>({
+      filter: `condo_id = "${licencaAtual.condo_id}" && id != "${novaLicenca.id}" && status = "ativa"`,
+      requestKey: null,
+    })
+    for (const ant of anteriores) {
+      await pb.collection('licencas').update(ant.id, { status: 'Renovada' }, { requestKey: null })
+    }
+  } catch (_) {
+    // Fallback garantido para a licença clicada
+    try {
+      await pb.collection('licencas').update(id, { status: 'Renovada' }, { requestKey: null })
+    } catch { /* intentionally ignored */ }
+  }
+
+  // 3. Registrar no histórico de licenças
+  try {
+    let planoNome = 'Plano'
+    if (licencaAtual.plano_id) {
+      try {
+        const plano = await pb.collection('planos').getOne<Plano>(licencaAtual.plano_id, { requestKey: null })
+        planoNome = plano.nome || planoNome
+      } catch { /* intentionally ignored */ }
+    }
+
+    await pb.collection('historico_licencas').create(
+      {
+        condo_id: licencaAtual.condo_id,
+        licenca_id: novaLicenca.id,
+        plano_id: licencaAtual.plano_id,
+        tipo_evento: 'reativacao_30d',
+        plano_nome: planoNome,
+        data_expiracao: novaExp.toISOString(),
+        descricao: `Reativação +30 dias pelo painel master. Nova licença ${novaLicenca.id} criada; licença anterior ${id} marcada como Renovada.`,
+        alterado_por: 'Administrador Master',
+      },
+      { requestKey: null },
+    )
+  } catch { /* intentionally ignored */ }
+
+  return novaLicenca
 }
 
 export const deleteLicenca = (id: string) =>

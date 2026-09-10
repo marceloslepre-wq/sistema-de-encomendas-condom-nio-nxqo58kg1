@@ -521,11 +521,19 @@ routerAdd(
               $app.saveNoValidate(novaLic)
               novaLicId = novaLic.id
 
-              if (licAntiga && licAntiga.id !== novaLicId) {
-                licAntiga.set('status', 'ativa')
-                licAntiga.set('data_expiracao', novaExpISO)
-                $app.saveNoValidate(licAntiga)
-              }
+              // Marcar licença(s) anterior(es) do mesmo condomínio como 'Renovada'
+              try {
+                const anteriores = $app.findRecordsByFilter(
+                  'licencas',
+                  `condo_id = '${effCondoId}' && id != '${novaLicId}' && status = 'ativa'`,
+                  '-created',
+                  50,
+                )
+                for (let k = 0; k < anteriores.length; k++) {
+                  anteriores[k].set('status', 'Renovada')
+                  $app.saveNoValidate(anteriores[k])
+                }
+              } catch (_) {}
             } catch (errLic) {
               if (licAntiga) {
                 licAntiga.set('status', 'ativa')
@@ -756,13 +764,19 @@ routerAdd('POST', '/backend/v1/pagamento/webhook', (e) => {
               $app.saveNoValidate(novaLicenca)
               novaLicencaId = novaLicenca.id
 
-              if (licencaAntiga && licencaAntiga.id !== novaLicencaId) {
-                try {
-                  licencaAntiga.set('status', 'ativa')
-                  licencaAntiga.set('data_expiracao', novaExpISO)
-                  $app.saveNoValidate(licencaAntiga)
-                } catch (_) {}
-              }
+              // Marcar licença(s) anterior(es) do mesmo condomínio como 'Renovada'
+              try {
+                const anteriores = $app.findRecordsByFilter(
+                  'licencas',
+                  `condo_id = '${effectiveCondoId}' && id != '${novaLicencaId}' && status = 'ativa'`,
+                  '-created',
+                  50,
+                )
+                for (let k = 0; k < anteriores.length; k++) {
+                  anteriores[k].set('status', 'Renovada')
+                  $app.saveNoValidate(anteriores[k])
+                }
+              } catch (_) {}
             } catch (errLic) {
               if (licencaAntiga) {
                 licencaAntiga.set('status', 'ativa')
