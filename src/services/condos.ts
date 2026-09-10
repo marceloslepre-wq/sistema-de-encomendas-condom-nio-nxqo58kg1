@@ -27,6 +27,7 @@ export interface WhatsAppConnectResponse {
   instanceName: string
   status: string
   qrcode?: string
+  error?: string
 }
 
 export interface WhatsAppStatusResponse {

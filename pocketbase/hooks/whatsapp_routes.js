@@ -1,11 +1,13 @@
 /*
   ====================================================================================================
-  ROUTAS DE GESTÃO MULTI-INSTÂNCIA DO WHATSAPP (EVOLUTION API v2)
+  ROTAS DE GESTÃO MULTI-INSTÂNCIA DO WHATSAPP (EVOLUTION API v2)
   ====================================================================================================
   Rotas registradas:
   1. POST   /backend/v1/whatsapp/conectar   - Cria ou reaproveita instância, busca QR Code e retorna ao gestor
   2. GET    /backend/v1/whatsapp/status     - Consulta connectionState na Evolution e atualiza condomínio
   3. POST   /backend/v1/whatsapp/desconectar- Executa logout da instância na Evolution
+  ====================================================================================================
+  ATENÇÃO: Toda a lógica e helpers ficam INLINE dentro de cada callback de rota (PocketBase JSVM pool).
   ====================================================================================================
 */
 
@@ -14,6 +16,114 @@ routerAdd(
   'POST',
   '/backend/v1/whatsapp/conectar',
   (e) => {
+    // Helper inline: normalizar URL
+    var normalizeUrl = function (url) {
+      var u = String(url || '').trim()
+      if (u && !/^https?:\/\//i.test(u)) {
+        u = 'https://' + u
+      }
+      while (u.endsWith('/')) {
+        u = u.slice(0, -1)
+      }
+      return u
+    }
+
+    // Helper inline: decode seguro de resposta http
+    var decodeHttp = function (res) {
+      var rawText = ''
+      try {
+        if (res && res.body !== undefined && res.body !== null) {
+          if (typeof res.body === 'string') {
+            rawText = res.body
+          } else {
+            try {
+              rawText = new TextDecoder().decode(res.body)
+            } catch (_) {
+              if (Array.isArray(res.body)) {
+                rawText = String.fromCharCode.apply(null, res.body)
+              } else {
+                rawText = String(res.body)
+              }
+            }
+          }
+        }
+      } catch (_) {
+        rawText = ''
+      }
+
+      var json = null
+      if (res && res.json && typeof res.json === 'object') {
+        json = res.json
+      } else if (rawText) {
+        try {
+          json = JSON.parse(rawText)
+        } catch (_) {
+          json = null
+        }
+      }
+
+      return {
+        statusCode: res ? res.statusCode : null,
+        raw: rawText,
+        json: json,
+      }
+    }
+
+    // Helper inline: extrair QR code
+    var extractQr = function (parsed) {
+      if (!parsed || !parsed.json) return ''
+      var j = parsed.json
+
+      if (j.qrcode && typeof j.qrcode === 'object' && j.qrcode.base64) {
+        return j.qrcode.base64
+      }
+      if (j.base64 && typeof j.base64 === 'string') {
+        return j.base64
+      }
+      if (j.qrcode && typeof j.qrcode === 'string' && j.qrcode.indexOf('data:image') === 0) {
+        return j.qrcode
+      }
+      if (j.code && typeof j.code === 'string' && j.code.indexOf('data:image') === 0) {
+        return j.code
+      }
+      return ''
+    }
+
+    // Helper inline: formatar mensagem de erro
+    var formatError = function (parsed, fallback) {
+      if (!parsed) return fallback || 'Falha de comunicação com a Evolution API.'
+      var status = parsed.statusCode || 'Erro'
+      if (status === 401 || status === 403) {
+        return (
+          'Evolution API rejeitou a autenticação (HTTP ' +
+          status +
+          '): verifique se a EVOLUTION_API_KEY configurada é a GLOBAL (manager) e não de uma instância específica.'
+        )
+      }
+      var json = parsed.json
+      if (json) {
+        if (json.response && typeof json.response === 'string') {
+          return json.response + ' (HTTP ' + status + ')'
+        }
+        if (json.response && json.response.message) {
+          var m = json.response.message
+          return (Array.isArray(m) ? m.join(', ') : String(m)) + ' (HTTP ' + status + ')'
+        }
+        if (json.message) {
+          var msg = json.message
+          return (Array.isArray(msg) ? msg.join(', ') : String(msg)) + ' (HTTP ' + status + ')'
+        }
+        if (json.error) {
+          return String(json.error) + ' (HTTP ' + status + ')'
+        }
+      }
+      if (parsed.raw && parsed.raw.length < 200) {
+        return parsed.raw + ' (HTTP ' + status + ')'
+      }
+      return fallback || 'Evolution API retornou status HTTP ' + status
+    }
+
+    // Autenticação
     var auth = e.auth || e.requestInfo().auth || e.requestInfo().authRecord
     if (!auth) {
       try {
@@ -54,44 +164,38 @@ routerAdd(
       return e.notFoundError('Condomínio não encontrado: ' + targetCondoId)
     }
 
-    var apiUrl = $secrets.get('EVOLUTION_API_URL') || ''
-    if (apiUrl && apiUrl.endsWith('/')) {
-      apiUrl = apiUrl.slice(0, -1)
-    }
-    var apiKey = $secrets.get('EVOLUTION_API_KEY') || ''
+    var rawUrl = $secrets.get('EVOLUTION_API_URL') || $os.getenv('EVOLUTION_API_URL') || ''
+    var apiUrl = normalizeUrl(rawUrl)
+    var apiKey = ($secrets.get('EVOLUTION_API_KEY') || $os.getenv('EVOLUTION_API_KEY') || '').trim()
 
     if (!apiUrl || !apiKey) {
-      return e.internalServerError(
-        'Evolution API não configurada no servidor (EVOLUTION_API_URL ou EVOLUTION_API_KEY ausente).',
-      )
+      $app
+        .logger()
+        .error('WhatsApp Conectar: credenciais ausentes', 'hasUrl', !!apiUrl, 'hasKey', !!apiKey)
+      return e.json(500, {
+        success: false,
+        error:
+          'Evolution API não configurada no servidor (EVOLUTION_API_URL ou EVOLUTION_API_KEY ausente).',
+      })
     }
 
     var instanceName = 'condo-' + targetCondoId
+    var qrCodeData = ''
+    var lastErrorReason = ''
 
-    // Helper interno para ler corpo http
-    var decodeBody = function (res) {
-      var rawText = ''
-      try {
-        if (res && res.body) {
-          rawText = new TextDecoder().decode(res.body)
-        }
-      } catch (decodeErr) {
-        if (res && Array.isArray(res.body)) {
-          rawText = String.fromCharCode.apply(null, res.body)
-        } else {
-          rawText = String((res && res.body) || '')
-        }
-      }
-      var json = null
-      try {
-        json = JSON.parse(rawText)
-      } catch (_) {
-        json = null
-      }
-      return { raw: rawText, json: json }
-    }
+    $app
+      .logger()
+      .info(
+        'WhatsApp Conectar: iniciando fluxo',
+        'condoId',
+        targetCondoId,
+        'instanceName',
+        instanceName,
+        'apiUrl',
+        apiUrl,
+      )
 
-    // 1. Criar a instância (idempotente: se já existir ou retornar 403, segue para connect)
+    // 1. Criar a instância na Evolution API (/instance/create)
     var createUrl = apiUrl + '/instance/create'
     var createPayload = {
       instanceName: instanceName,
@@ -99,7 +203,7 @@ routerAdd(
       integration: 'WHATSAPP-BAILEYS',
     }
 
-    var qrCodeData = ''
+    var parsedCreate = null
     try {
       var createRes = $http.send({
         url: createUrl,
@@ -112,28 +216,41 @@ routerAdd(
         timeout: 15,
       })
 
-      var parsedCreate = decodeBody(createRes)
-      if (parsedCreate.json) {
-        if (parsedCreate.json.qrcode && parsedCreate.json.qrcode.base64) {
-          qrCodeData = parsedCreate.json.qrcode.base64
-        } else if (parsedCreate.json.base64) {
-          qrCodeData = parsedCreate.json.base64
-        }
+      parsedCreate = decodeHttp(createRes)
+      $app
+        .logger()
+        .info(
+          'Evolution /instance/create resposta',
+          'status',
+          parsedCreate.statusCode,
+          'body',
+          parsedCreate.raw.substring(0, 300),
+        )
+
+      if (parsedCreate.statusCode >= 200 && parsedCreate.statusCode < 300) {
+        qrCodeData = extractQr(parsedCreate)
+      } else {
+        lastErrorReason = formatError(
+          parsedCreate,
+          'Falha ao criar instância (/instance/create HTTP ' + parsedCreate.statusCode + ')',
+        )
       }
     } catch (createErr) {
+      lastErrorReason = createErr.message || String(createErr)
       $app
         .logger()
         .warn(
-          'Evolution /instance/create erro (tentando connect)',
+          'Evolution /instance/create exceção (tentará fallback para connect)',
           'error',
-          createErr.message || String(createErr),
+          lastErrorReason,
         )
     }
 
     // 2. Se não pegou QR Code no create, chamar /instance/connect/{instanceName}
     if (!qrCodeData) {
+      var connectUrl = apiUrl + '/instance/connect/' + encodeURIComponent(instanceName)
+      var parsedConnect = null
       try {
-        var connectUrl = apiUrl + '/instance/connect/' + encodeURIComponent(instanceName)
         var connectRes = $http.send({
           url: connectUrl,
           method: 'GET',
@@ -143,28 +260,48 @@ routerAdd(
           timeout: 15,
         })
 
-        var parsedConnect = decodeBody(connectRes)
-        if (parsedConnect.json) {
-          if (parsedConnect.json.base64) {
-            qrCodeData = parsedConnect.json.base64
-          } else if (parsedConnect.json.qrcode && parsedConnect.json.qrcode.base64) {
-            qrCodeData = parsedConnect.json.qrcode.base64
-          } else if (parsedConnect.json.code) {
-            qrCodeData = parsedConnect.json.code
+        parsedConnect = decodeHttp(connectRes)
+        $app
+          .logger()
+          .info(
+            'Evolution /instance/connect resposta',
+            'status',
+            parsedConnect.statusCode,
+            'body',
+            parsedConnect.raw.substring(0, 300),
+          )
+
+        if (parsedConnect.statusCode >= 200 && parsedConnect.statusCode < 300) {
+          qrCodeData = extractQr(parsedConnect)
+        } else {
+          var connErr = formatError(
+            parsedConnect,
+            'Falha ao obter QR Code (/instance/connect HTTP ' + parsedConnect.statusCode + ')',
+          )
+          // Se create já tinha dado erro de autenticação (401/403), preserva-o
+          if (
+            !lastErrorReason ||
+            parsedConnect.statusCode === 401 ||
+            parsedConnect.statusCode === 403
+          ) {
+            lastErrorReason = connErr
           }
         }
       } catch (connErr) {
+        if (!lastErrorReason) {
+          lastErrorReason = connErr.message || String(connErr)
+        }
         $app
           .logger()
-          .warn('Evolution /instance/connect erro', 'error', connErr.message || String(connErr))
+          .warn('Evolution /instance/connect exceção', 'error', connErr.message || String(connErr))
       }
     }
 
-    // 3. Atualizar o condomínio com status "connecting" e qrcode
+    // 3. Atualizar o condomínio no banco
     try {
       condo.set('whatsapp_instance_name', instanceName)
-      condo.set('whatsapp_status', 'connecting')
       if (qrCodeData) {
+        condo.set('whatsapp_status', 'connecting')
         condo.set('whatsapp_qrcode', qrCodeData)
       }
       condo.set('whatsapp_updated_at', new Date().toISOString())
@@ -177,6 +314,30 @@ routerAdd(
           'error',
           saveErr.message || String(saveErr),
         )
+    }
+
+    // 4. Se ainda assim não obtivemos QR Code, retornar erro descritivo ao invés de success: true vazio
+    if (!qrCodeData) {
+      var friendlyError =
+        lastErrorReason ||
+        'A Evolution API não retornou o QR Code. Verifique se o serviço está ativo e se a chave global é válida.'
+
+      $app
+        .logger()
+        .error(
+          'WhatsApp Conectar FALHOU: QR Code vazio',
+          'condoId',
+          targetCondoId,
+          'error',
+          friendlyError,
+        )
+
+      return e.json(400, {
+        success: false,
+        instanceName: instanceName,
+        status: condo.getString('whatsapp_status') || 'disconnected',
+        error: friendlyError,
+      })
     }
 
     return e.json(200, {
@@ -194,6 +355,59 @@ routerAdd(
   'GET',
   '/backend/v1/whatsapp/status',
   (e) => {
+    // Helper inline: normalizar URL
+    var normalizeUrl = function (url) {
+      var u = String(url || '').trim()
+      if (u && !/^https?:\/\//i.test(u)) {
+        u = 'https://' + u
+      }
+      while (u.endsWith('/')) {
+        u = u.slice(0, -1)
+      }
+      return u
+    }
+
+    // Helper inline: decode seguro de resposta http
+    var decodeHttp = function (res) {
+      var rawText = ''
+      try {
+        if (res && res.body !== undefined && res.body !== null) {
+          if (typeof res.body === 'string') {
+            rawText = res.body
+          } else {
+            try {
+              rawText = new TextDecoder().decode(res.body)
+            } catch (_) {
+              if (Array.isArray(res.body)) {
+                rawText = String.fromCharCode.apply(null, res.body)
+              } else {
+                rawText = String(res.body)
+              }
+            }
+          }
+        }
+      } catch (_) {
+        rawText = ''
+      }
+
+      var json = null
+      if (res && res.json && typeof res.json === 'object') {
+        json = res.json
+      } else if (rawText) {
+        try {
+          json = JSON.parse(rawText)
+        } catch (_) {
+          json = null
+        }
+      }
+
+      return {
+        statusCode: res ? res.statusCode : null,
+        raw: rawText,
+        json: json,
+      }
+    }
+
     var auth = e.auth || e.requestInfo().auth || e.requestInfo().authRecord
     if (!auth) {
       try {
@@ -233,11 +447,9 @@ routerAdd(
       return e.notFoundError('Condomínio não encontrado: ' + targetCondoId)
     }
 
-    var apiUrl = $secrets.get('EVOLUTION_API_URL') || ''
-    if (apiUrl && apiUrl.endsWith('/')) {
-      apiUrl = apiUrl.slice(0, -1)
-    }
-    var apiKey = $secrets.get('EVOLUTION_API_KEY') || ''
+    var rawUrl = $secrets.get('EVOLUTION_API_URL') || $os.getenv('EVOLUTION_API_URL') || ''
+    var apiUrl = normalizeUrl(rawUrl)
+    var apiKey = ($secrets.get('EVOLUTION_API_KEY') || $os.getenv('EVOLUTION_API_KEY') || '').trim()
 
     var instanceName = (condo.getString('whatsapp_instance_name') || '').trim()
     if (!instanceName) {
@@ -260,30 +472,9 @@ routerAdd(
       })
     }
 
-    var decodeBody = function (res) {
-      var rawText = ''
-      try {
-        if (res && res.body) {
-          rawText = new TextDecoder().decode(res.body)
-        }
-      } catch (decodeErr) {
-        if (res && Array.isArray(res.body)) {
-          rawText = String.fromCharCode.apply(null, res.body)
-        } else {
-          rawText = String((res && res.body) || '')
-        }
-      }
-      var json = null
-      try {
-        json = JSON.parse(rawText)
-      } catch (_) {
-        json = null
-      }
-      return { raw: rawText, json: json }
-    }
-
     var evolutionState = null
     var detectedPhone = currentPhone
+    var stateHttpCode = null
 
     // Consultar Evolution GET /instance/connectionState/{instance}
     try {
@@ -297,7 +488,9 @@ routerAdd(
         timeout: 10,
       })
 
-      var parsedState = decodeBody(stateRes)
+      var parsedState = decodeHttp(stateRes)
+      stateHttpCode = parsedState.statusCode
+
       if (parsedState.json && parsedState.json.instance) {
         evolutionState = parsedState.json.instance.state
       } else if (parsedState.json && parsedState.json.state) {
@@ -308,9 +501,30 @@ routerAdd(
         .logger()
         .warn(
           'Evolution /instance/connectionState erro',
+          'instance',
+          instanceName,
           'error',
           stateErr.message || String(stateErr),
         )
+    }
+
+    // Se a instância não existe na Evolution (HTTP 404), não deve manter status 'connecting' infinito sem QR
+    if (stateHttpCode === 404 && !currentQrcode && !currentConnected) {
+      try {
+        condo.set('whatsapp_status', 'disconnected')
+        condo.set('whatsapp_connected', false)
+        condo.set('whatsapp_updated_at', new Date().toISOString())
+        $app.saveNoValidate(condo)
+      } catch (_) {}
+
+      return e.json(200, {
+        instanceName: instanceName,
+        status: 'disconnected',
+        connected: false,
+        phone: currentPhone,
+        qrcode: '',
+        evolutionState: 'not_found',
+      })
     }
 
     // Se estiver conectado / open, tentar obter o número pelo fetchInstances
@@ -326,7 +540,7 @@ routerAdd(
           },
           timeout: 10,
         })
-        var parsedFetch = decodeBody(fetchRes)
+        var parsedFetch = decodeHttp(fetchRes)
         var list = Array.isArray(parsedFetch.json)
           ? parsedFetch.json
           : parsedFetch.json && parsedFetch.json.instances
@@ -405,6 +619,59 @@ routerAdd(
   'POST',
   '/backend/v1/whatsapp/desconectar',
   (e) => {
+    // Helper inline: normalizar URL
+    var normalizeUrl = function (url) {
+      var u = String(url || '').trim()
+      if (u && !/^https?:\/\//i.test(u)) {
+        u = 'https://' + u
+      }
+      while (u.endsWith('/')) {
+        u = u.slice(0, -1)
+      }
+      return u
+    }
+
+    // Helper inline: decode seguro de resposta http
+    var decodeHttp = function (res) {
+      var rawText = ''
+      try {
+        if (res && res.body !== undefined && res.body !== null) {
+          if (typeof res.body === 'string') {
+            rawText = res.body
+          } else {
+            try {
+              rawText = new TextDecoder().decode(res.body)
+            } catch (_) {
+              if (Array.isArray(res.body)) {
+                rawText = String.fromCharCode.apply(null, res.body)
+              } else {
+                rawText = String(res.body)
+              }
+            }
+          }
+        }
+      } catch (_) {
+        rawText = ''
+      }
+
+      var json = null
+      if (res && res.json && typeof res.json === 'object') {
+        json = res.json
+      } else if (rawText) {
+        try {
+          json = JSON.parse(rawText)
+        } catch (_) {
+          json = null
+        }
+      }
+
+      return {
+        statusCode: res ? res.statusCode : null,
+        raw: rawText,
+        json: json,
+      }
+    }
+
     var auth = e.auth || e.requestInfo().auth || e.requestInfo().authRecord
     if (!auth) {
       try {
@@ -444,11 +711,9 @@ routerAdd(
       return e.notFoundError('Condomínio não encontrado: ' + targetCondoId)
     }
 
-    var apiUrl = $secrets.get('EVOLUTION_API_URL') || ''
-    if (apiUrl && apiUrl.endsWith('/')) {
-      apiUrl = apiUrl.slice(0, -1)
-    }
-    var apiKey = $secrets.get('EVOLUTION_API_KEY') || ''
+    var rawUrl = $secrets.get('EVOLUTION_API_URL') || $os.getenv('EVOLUTION_API_URL') || ''
+    var apiUrl = normalizeUrl(rawUrl)
+    var apiKey = ($secrets.get('EVOLUTION_API_KEY') || $os.getenv('EVOLUTION_API_KEY') || '').trim()
 
     var instanceName = (condo.getString('whatsapp_instance_name') || '').trim()
     if (!instanceName) {
@@ -459,7 +724,7 @@ routerAdd(
     if (apiUrl && apiKey) {
       try {
         var logoutUrl = apiUrl + '/instance/logout/' + encodeURIComponent(instanceName)
-        $http.send({
+        var logoutRes = $http.send({
           url: logoutUrl,
           method: 'DELETE',
           headers: {
@@ -467,11 +732,23 @@ routerAdd(
           },
           timeout: 10,
         })
+        var parsedLogout = decodeHttp(logoutRes)
+        $app
+          .logger()
+          .info(
+            'Evolution /instance/logout resposta',
+            'instance',
+            instanceName,
+            'status',
+            parsedLogout.statusCode,
+          )
       } catch (logoutErr) {
         $app
           .logger()
           .warn(
             'Evolution /instance/logout erro (ignorado)',
+            'instance',
+            instanceName,
             'error',
             logoutErr.message || String(logoutErr),
           )

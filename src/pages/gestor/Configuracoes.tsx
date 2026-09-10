@@ -88,6 +88,7 @@ export default function GestorConfiguracoes() {
   const [waQrCode, setWaQrCode] = useState('')
   const [waLoading, setWaLoading] = useState(false)
   const [waModalOpen, setWaModalOpen] = useState(false)
+  const [waError, setWaError] = useState<string | null>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollingCountRef = useRef<number>(0)
 
@@ -165,6 +166,7 @@ export default function GestorConfiguracoes() {
           setWaStatus('connected')
           if (res.phone) setWaPhone(res.phone)
           setWaQrCode('')
+          setWaError(null)
           stopPolling()
           setWaModalOpen(false)
           toast({
@@ -173,9 +175,13 @@ export default function GestorConfiguracoes() {
           })
         } else if (res.qrcode && !waConnected) {
           setWaQrCode(res.qrcode)
+          setWaError(null)
+        } else if (res.status === 'disconnected' && !res.qrcode) {
+          // Se a instância foi finalizada ou não existe
+          setWaStatus('disconnected')
         }
       } catch (err) {
-        // Polling silencioso
+        // Erro no polling: se falhar continuamente, não trava a tela
       }
     }, 5000)
   }
@@ -183,18 +189,38 @@ export default function GestorConfiguracoes() {
   const handleConectarWhatsApp = async () => {
     if (!condoId) return
     setWaLoading(true)
+    setWaError(null)
+    setWaModalOpen(true)
     try {
       const res = await conectarWhatsAppCondo(condoId)
       if (res.qrcode) {
         setWaQrCode(res.qrcode)
+        setWaError(null)
+        setWaStatus('connecting')
+        startPollingStatus(condoId)
+      } else {
+        stopPolling()
+        const errMsg =
+          res.error ||
+          'A Evolution API não gerou o QR Code. Verifique a chave de API global e o status do serviço.'
+        setWaError(errMsg)
+        toast({
+          title: 'Não foi possível gerar o QR Code',
+          description: errMsg,
+          variant: 'destructive',
+        })
       }
-      setWaStatus('connecting')
-      setWaModalOpen(true)
-      startPollingStatus(condoId)
     } catch (err: any) {
+      stopPolling()
+      const errMsg =
+        err?.data?.error ||
+        err?.response?.error ||
+        err.message ||
+        'Falha ao iniciar conexão com a Evolution API.'
+      setWaError(errMsg)
       toast({
         title: 'Erro ao conectar WhatsApp',
-        description: err.message || 'Falha ao iniciar conexão com a Evolution API.',
+        description: errMsg,
         variant: 'destructive',
       })
     } finally {
@@ -879,7 +905,7 @@ export default function GestorConfiguracoes() {
         onOpenChange={(open) => {
           setWaModalOpen(open)
           if (!open) {
-            // Mantém polling se status ainda for connecting
+            stopPolling()
           }
         }}
       >
@@ -906,6 +932,12 @@ export default function GestorConfiguracoes() {
                   className="w-64 h-64 object-contain"
                 />
               </div>
+            ) : waError ? (
+              <div className="w-full p-4 border-2 border-rose-200 rounded-xl bg-rose-50 text-rose-800 flex flex-col items-center text-center gap-2">
+                <XCircle className="w-10 h-10 text-rose-500" />
+                <p className="font-semibold text-sm">Não foi possível gerar o QR Code</p>
+                <p className="text-xs text-rose-700 leading-relaxed max-w-sm">{waError}</p>
+              </div>
             ) : (
               <div className="w-64 h-64 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl bg-white text-slate-400 gap-2">
                 <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
@@ -914,33 +946,48 @@ export default function GestorConfiguracoes() {
             )}
 
             <div className="text-center space-y-1">
-              <div className="inline-flex items-center gap-2 text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Aguardando leitura do QR Code...
-              </div>
-              <p className="text-[11px] text-slate-400">
-                Esta tela atualiza automaticamente assim que a conexão for estabelecida.
-              </p>
+              {waQrCode ? (
+                <>
+                  <div className="inline-flex items-center gap-2 text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Aguardando leitura do QR Code...
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Esta tela atualiza automaticamente assim que a conexão for estabelecida.
+                  </p>
+                </>
+              ) : waError ? (
+                <p className="text-[11px] text-slate-500">
+                  Clique em &quot;Tentar novamente&quot; abaixo para tentar reconectar.
+                </p>
+              ) : (
+                <p className="text-[11px] text-slate-400">
+                  Comunicando com o servidor da Evolution API...
+                </p>
+              )}
             </div>
           </div>
 
           <div className="flex justify-between items-center gap-2 pt-2">
             <Button
               type="button"
-              variant="outline"
+              variant={waError ? 'default' : 'outline'}
               size="sm"
               onClick={handleConectarWhatsApp}
               disabled={waLoading}
-              className="gap-1.5 text-xs"
+              className={`gap-1.5 text-xs ${waError ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${waLoading ? 'animate-spin' : ''}`} />
-              Gerar Novo QR Code
+              {waError ? 'Tentar novamente' : 'Gerar Novo QR Code'}
             </Button>
             <Button
               type="button"
               variant="secondary"
               size="sm"
-              onClick={() => setWaModalOpen(false)}
+              onClick={() => {
+                stopPolling()
+                setWaModalOpen(false)
+              }}
             >
               Fechar
             </Button>

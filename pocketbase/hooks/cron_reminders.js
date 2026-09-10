@@ -7,8 +7,11 @@ cronAdd('send_reminders', '0 * * * *', () => {
 
   if (!globalUrl || !globalApiKey) return
 
-  let baseUrl = globalUrl
-  if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1)
+  let baseUrl = String(globalUrl).trim()
+  if (baseUrl && !/^https?:\/\//i.test(baseUrl)) {
+    baseUrl = 'https://' + baseUrl
+  }
+  while (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1)
 
   // Helper para resolver instância de um condo_id
   const resolveCondoInstance = (condoId) => {
@@ -211,8 +214,7 @@ cronAdd('send_reminders', '0 * * * *', () => {
         const waLog = new Record(waLogCol)
         waLog.set('phone', phoneNum)
         waLog.set('message', message)
-        waLog.set('tipo', 'lembrete')
-        waLog.set('status', logStatus)
+        waLog.set('status_code', success ? 200 : 500)
         waLog.set('success', success)
         if (recordCondoId) waLog.set('condo_id', recordCondoId)
         if (parsedJson) waLog.set('response_body', parsedJson)
