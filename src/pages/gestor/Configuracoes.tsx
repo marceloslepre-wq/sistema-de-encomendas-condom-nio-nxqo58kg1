@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import {
   Card,
   CardContent,
@@ -10,7 +10,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
@@ -21,7 +20,7 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Trash2, Plus, Pencil, Info } from 'lucide-react'
+import { Trash2, Plus, Pencil, Info, Upload, Image as ImageIcon, Check } from 'lucide-react'
 import { getCondo, updateCondo } from '@/services/condos'
 import {
   getTemplatesNotificacao,
@@ -29,19 +28,47 @@ import {
   updateTemplateNotificacao,
   deleteTemplateNotificacao,
 } from '@/services/templates_notificacao'
+import pb from '@/lib/pocketbase/client'
 
 export default function GestorConfiguracoes() {
   const [condoId, setCondoId] = useState('')
+  const [condoRecord, setCondoRecord] = useState<any>(null)
   const [formData, setFormData] = useState({
     name: '',
-    address: '',
     cnpj: '',
+    email: '',
+    cidade: '',
+    estado: '',
+    responsavel: '',
     phone: '',
+    address: '',
     shifts: '',
     guards: 0,
   })
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  // Máscaras
+  const maskCNPJ = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d)/, '$1-$2')
+      .substring(0, 18)
+  }
+
+  const maskPhone = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/^(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{5})(\d{4})$/, '$1-$2')
+      .substring(0, 15)
+  }
 
   const [templates, setTemplates] = useState<any[]>([])
   const [newTemplateStatus, setNewTemplateStatus] = useState('')
@@ -66,14 +93,22 @@ export default function GestorConfiguracoes() {
       .then(([condo, tmpls]) => {
         if (condo) {
           setCondoId(condo.id)
+          setCondoRecord(condo)
           setFormData({
             name: condo.name || '',
+            cnpj: condo.cnpj ? maskCNPJ(condo.cnpj) : '',
+            email: (condo as any).email || '',
+            cidade: (condo as any).cidade || '',
+            estado: (condo as any).estado || '',
+            responsavel: (condo as any).responsavel || '',
+            phone: condo.phone ? maskPhone(condo.phone) : '',
             address: condo.address || '',
-            cnpj: condo.cnpj || '',
-            phone: condo.phone || '',
             shifts: condo.janitor_settings?.shifts || '',
             guards: condo.janitor_settings?.guards || 0,
           })
+          if ((condo as any).logo) {
+            setLogoPreview(pb.files.getURL(condo, (condo as any).logo))
+          }
         }
         setTemplates(tmpls)
         setLoading(false)
@@ -88,21 +123,68 @@ export default function GestorConfiguracoes() {
       })
   }, [])
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Formato inválido',
+        description: 'Por favor, selecione uma imagem (PNG, JPG, WebP).',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: 'Arquivo muito grande',
+        description: 'A imagem deve ter no máximo 2MB.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setLogoFile(file)
+    setLogoPreview(URL.createObjectURL(file))
+  }
+
   const handleSaveCondo = async () => {
     setSaving(true)
     try {
-      await updateCondo(condoId, {
-        name: formData.name,
-        address: formData.address,
-        cnpj: formData.cnpj,
-        phone: formData.phone,
-        janitor_settings: { shifts: formData.shifts, guards: Number(formData.guards) },
-      })
+      const data = new FormData()
+      data.append('name', formData.name)
+      data.append('cnpj', formData.cnpj)
+      data.append('email', formData.email)
+      data.append('cidade', formData.cidade)
+      data.append('estado', formData.estado.toUpperCase())
+      data.append('responsavel', formData.responsavel)
+      data.append('phone', formData.phone)
+      data.append('address', formData.address)
+      data.append(
+        'janitor_settings',
+        JSON.stringify({ shifts: formData.shifts, guards: Number(formData.guards) }),
+      )
+
+      if (logoFile) {
+        data.append('logo', logoFile)
+      }
+
+      const updated = await updateCondo(condoId, data)
+      setCondoRecord(updated)
+      if ((updated as any).logo) {
+        setLogoPreview(pb.files.getURL(updated, (updated as any).logo))
+      }
+      setLogoFile(null)
+
+      // Disparar evento para atualizar o cabeçalho imediatamente
+      window.dispatchEvent(new CustomEvent('condo-updated', { detail: updated }))
+
       toast({ title: 'Sucesso', description: 'Configurações atualizadas com sucesso!' })
-    } catch (e) {
+    } catch (e: any) {
       toast({
         title: 'Erro',
-        description: 'Falha ao salvar as configurações.',
+        description: e.message || 'Falha ao salvar as configurações.',
         variant: 'destructive',
       })
     } finally {
@@ -195,40 +277,151 @@ export default function GestorConfiguracoes() {
           <Card>
             <CardHeader>
               <CardTitle>Dados Gerais</CardTitle>
+              <CardDescription>
+                Informações cadastrais e identidade visual da empresa ou condomínio.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-5">
+              {/* Upload da Logomarca */}
+              <div className="p-4 border rounded-lg bg-slate-50/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-lg border bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
+                    {logoPreview ? (
+                      <img
+                        src={logoPreview}
+                        alt="Logomarca do condomínio"
+                        className="w-full h-full object-contain p-1"
+                      />
+                    ) : (
+                      <ImageIcon className="w-8 h-8 text-slate-400" />
+                    )}
+                  </div>
+                  <div>
+                    <Label className="text-sm font-semibold text-slate-800 block">
+                      Logomarca do Condomínio
+                    </Label>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Exibida no cabeçalho de todas as páginas do sistema. PNG ou JPG de até 2MB.
+                    </p>
+                    {logoFile && (
+                      <p className="text-xs text-blue-600 font-medium flex items-center gap-1 mt-1">
+                        <Check className="w-3.5 h-3.5" /> Arquivo selecionado: {logoFile.name}{' '}
+                        (salve as alterações)
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="gap-1.5"
+                  >
+                    <Upload className="w-4 h-4" />
+                    {logoPreview ? 'Trocar Logo' : 'Enviar Logo'}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Razão Social / Nome do Condomínio */}
               <div className="space-y-2">
-                <Label>Nome do Condomínio</Label>
+                <Label>Razão Social / Nome do Condomínio</Label>
                 <Input
+                  placeholder="Sua Empresa LTDA ou Condomínio Residencial"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
+
+              {/* CNPJ e Email Corporativo */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>CNPJ</Label>
                   <Input
+                    placeholder="00.000.000/0000-00"
+                    maxLength={18}
                     value={formData.cnpj}
-                    onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, cnpj: maskCNPJ(e.target.value) })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Telefone / Contato</Label>
+                  <Label>Email Corporativo</Label>
                   <Input
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    type="email"
+                    placeholder="gestor@email.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   />
                 </div>
               </div>
+
+              {/* Cidade e Estado */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Cidade</Label>
+                  <Input
+                    placeholder="Ex: São Paulo"
+                    value={formData.cidade}
+                    onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Estado</Label>
+                  <Input
+                    placeholder="EX: SP"
+                    maxLength={2}
+                    className="uppercase"
+                    value={formData.estado}
+                    onChange={(e) =>
+                      setFormData({ ...formData, estado: e.target.value.toUpperCase() })
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Nome do Responsável / Gestor e Telefone / WhatsApp */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Nome do Responsável / Gestor</Label>
+                  <Input
+                    placeholder="Ex: Marcelo Silva"
+                    value={formData.responsavel}
+                    onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Telefone / WhatsApp</Label>
+                  <Input
+                    placeholder="(00) 00000-0000"
+                    maxLength={15}
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: maskPhone(e.target.value) })}
+                  />
+                </div>
+              </div>
+
+              {/* Endereço Completo */}
               <div className="space-y-2">
                 <Label>Endereço Completo</Label>
                 <Input
+                  placeholder="Rua, número, bairro, complemento, CEP"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 />
               </div>
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Operação da Portaria</CardTitle>

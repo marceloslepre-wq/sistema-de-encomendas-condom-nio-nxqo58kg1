@@ -1,4 +1,5 @@
-import { Bell, LogOut, User } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Bell, LogOut, User, Building2 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,10 +12,45 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useNavigate } from 'react-router-dom'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+import { getCondo, CondoRecord } from '@/services/condos'
+import pb from '@/lib/pocketbase/client'
 
 export function Header() {
   const { user, role, logout } = useAuth()
   const navigate = useNavigate()
+  const [condo, setCondo] = useState<CondoRecord | null>(null)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadCondoData = async () => {
+      try {
+        const c = await getCondo()
+        if (isMounted && c) {
+          setCondo(c)
+        }
+      } catch (err) {
+        console.error('Erro ao carregar dados do condomínio no Header:', err)
+      }
+    }
+
+    loadCondoData()
+
+    const handleCondoUpdated = (e: any) => {
+      if (e.detail) {
+        setCondo(e.detail)
+      } else {
+        loadCondoData()
+      }
+    }
+
+    window.addEventListener('condo-updated', handleCondoUpdated)
+
+    return () => {
+      isMounted = false
+      window.removeEventListener('condo-updated', handleCondoUpdated)
+    }
+  }, [user?.condo_id])
 
   const handleLogout = () => {
     logout()
@@ -23,11 +59,30 @@ export function Header() {
 
   if (!role) return null
 
+  const condoName = condo?.name || 'Condomínio Residencial Parque'
+  const logoUrl = condo?.logo ? pb.files.getURL(condo, condo.logo) : null
+
   return (
     <header className="h-16 border-b bg-white flex items-center justify-between px-4 md:px-6 sticky top-0 z-40">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <SidebarTrigger className="md:hidden" />
-        <h1 className="font-semibold text-lg hidden md:block">Condomínio Residencial Parque</h1>
+
+        <div className="flex items-center gap-3">
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={condoName}
+              className="h-9 w-9 max-h-9 max-w-9 object-contain rounded-md border border-slate-200 bg-white p-0.5 shadow-2xs"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 hidden sm:flex">
+              <Building2 className="w-4 h-4" />
+            </div>
+          )}
+          <h1 className="font-semibold text-base sm:text-lg text-slate-800 line-clamp-1">
+            {condoName}
+          </h1>
+        </div>
       </div>
 
       <div className="flex items-center gap-4">

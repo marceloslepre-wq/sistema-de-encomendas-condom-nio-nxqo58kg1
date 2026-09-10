@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T09:59:58.122Z",
+  "generatedAt": "2026-09-10T10:54:16.876Z",
   "collections": [
     {
       "name": "users",
@@ -137,6 +137,36 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "email",
+          "type": "email",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cidade",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "estado",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "responsavel",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "logo",
+          "type": "file",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []

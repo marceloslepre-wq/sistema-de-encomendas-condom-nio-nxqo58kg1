@@ -147,6 +147,16 @@ export default function Cadastro() {
       return
     }
 
+    const phoneDigits = phone.replace(/\D/g, '')
+    if (!phone.trim() || phoneDigits.length < 10) {
+      toast({
+        variant: 'destructive',
+        title: 'Campo obrigatório',
+        description: 'Informe um WhatsApp válido para envio de mensagens (ex: (11) 99999-9999).',
+      })
+      return
+    }
+
     if (!password) {
       toast({
         variant: 'destructive',
@@ -560,7 +570,8 @@ export default function Cadastro() {
 
                           <div className="space-y-2">
                             <Label htmlFor="phone" className="text-slate-700 font-medium text-sm">
-                              Telefone / WhatsApp (Opcional)
+                              Whatsapp para envio de mensagens{' '}
+                              <span className="text-rose-500">*</span>
                             </Label>
                             <Input
                               id="phone"
@@ -568,6 +579,7 @@ export default function Cadastro() {
                               value={phone}
                               onChange={(e) => setPhone(maskPhone(e.target.value))}
                               maxLength={15}
+                              required
                               className="h-11 bg-slate-50/50 border-slate-300 focus:bg-white"
                             />
                           </div>

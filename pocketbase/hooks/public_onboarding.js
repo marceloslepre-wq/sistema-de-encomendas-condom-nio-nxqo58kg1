@@ -6,6 +6,7 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
   const cidade = (body.cidade || '').trim()
   const estado = (body.estado || '').trim()
   const responsavel = (body.responsavel || body.name || '').trim()
+  const phone = (body.phone || body.whatsapp || '').trim()
   const planoId = (body.planoId || '').trim()
   const password = (body.password || '').trim()
 
@@ -24,6 +25,13 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
   }
   if (!estado) {
     return e.badRequestError('O Estado é obrigatório.')
+  }
+
+  const phoneDigits = phone.replace(/\D/g, '')
+  if (!phone || phoneDigits.length < 10) {
+    return e.badRequestError(
+      'O Whatsapp para envio de mensagens é obrigatório e deve ter formato válido.',
+    )
   }
 
   // Validação da senha definida pelo próprio gestor (mínimo 8 caracteres)
@@ -99,8 +107,12 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
       const condoRecord = new Record(condosCol)
       condoRecord.set('name', razaoSocial)
       condoRecord.set('cnpj', cnpj)
+      condoRecord.set('email', email)
+      condoRecord.set('cidade', cidade)
+      condoRecord.set('estado', estado)
+      condoRecord.set('responsavel', responsavel)
       condoRecord.set('address', cidade + (estado ? ' - ' + estado : ''))
-      condoRecord.set('phone', body.phone || '')
+      condoRecord.set('phone', phone)
       txApp.save(condoRecord)
       createdCondoId = condoRecord.id
 
@@ -123,8 +135,8 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
       userRecord.setVerified(true)
       userRecord.set('role', 'gestor')
       userRecord.set('condo_id', createdCondoId)
-      if (body.phone) {
-        userRecord.set('phone', body.phone)
+      if (phone) {
+        userRecord.set('phone', phone)
       }
       txApp.save(userRecord)
       createdUserId = userRecord.id
