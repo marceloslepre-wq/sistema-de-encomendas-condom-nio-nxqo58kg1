@@ -23,7 +23,10 @@ import {
   ExternalLink,
   ChevronRight,
   History,
+  Smartphone,
+  Unplug,
 } from 'lucide-react'
+import { desconectarWhatsAppCondo } from '@/services/condos'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -158,6 +161,7 @@ export default function MasterDashboard() {
   const [targetHistoricoAgrupado, setTargetHistoricoAgrupado] =
     useState<LicencaAgrupadaPorCondo | null>(null)
 
+  const [disconnectingWaId, setDisconnectingWaId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   const loadData = async (silent = false) => {
@@ -264,6 +268,34 @@ export default function MasterDashboard() {
       })
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleDesconectarWhatsAppMaster = async (condoId: string, condoName: string) => {
+    if (
+      !confirm(
+        `Deseja realmente desconectar a instância de WhatsApp do condomínio "${condoName}"? Ele voltará a usar o envio padrão de fallback.`,
+      )
+    ) {
+      return
+    }
+
+    setDisconnectingWaId(condoId)
+    try {
+      await desconectarWhatsAppCondo(condoId)
+      toast({
+        title: 'WhatsApp desconectado',
+        description: `A instância de WhatsApp de "${condoName}" foi desconectada.`,
+      })
+      await loadData(true)
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao desconectar WhatsApp',
+        description: err.message || 'Falha ao desconectar instância na Evolution API.',
+        variant: 'destructive',
+      })
+    } finally {
+      setDisconnectingWaId(null)
     }
   }
 
@@ -940,6 +972,9 @@ export default function MasterDashboard() {
                         Expiração / Validade
                       </TableHead>
                       <TableHead className="font-semibold text-xs text-slate-700">Status</TableHead>
+                      <TableHead className="font-semibold text-xs text-slate-700">
+                        WhatsApp
+                      </TableHead>
                       <TableHead className="font-semibold text-xs text-slate-700 text-right pr-4">
                         Ações
                       </TableHead>
@@ -948,7 +983,7 @@ export default function MasterDashboard() {
                   <TableBody>
                     {filteredAgrupadas.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
+                        <TableCell colSpan={10} className="h-32 text-center text-muted-foreground">
                           {licencasAgrupadas.length === 0 ? (
                             <div className="py-6 space-y-2">
                               <Building className="w-10 h-10 mx-auto text-slate-400 opacity-60" />
@@ -1176,6 +1211,35 @@ export default function MasterDashboard() {
                               </div>
                             </TableCell>
 
+                            {/* Indicador WhatsApp por Condomínio */}
+                            <TableCell className="min-w-[130px]">
+                              {condoRecord?.whatsapp_connected ? (
+                                <div className="space-y-0.5">
+                                  <Badge
+                                    variant="outline"
+                                    className="border-emerald-300 text-emerald-700 bg-emerald-50 text-[10px] py-0 px-1.5 gap-1 font-semibold"
+                                  >
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                    WhatsApp conectado ✓
+                                  </Badge>
+                                  {condoRecord.whatsapp_phone && (
+                                    <span className="block text-[10px] font-mono text-slate-500">
+                                      {condoRecord.whatsapp_phone}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <Badge
+                                  variant="outline"
+                                  className="border-slate-200 text-slate-500 bg-slate-50 text-[10px] py-0 px-1.5 gap-1 font-medium"
+                                  title="Utiliza a instância padrão global (Encomenda)"
+                                >
+                                  <XCircle className="w-3 h-3 text-slate-400" />
+                                  Desconectado ✗
+                                </Badge>
+                              )}
+                            </TableCell>
+
                             {/* Botão de Ações com TODOS os poderes */}
                             <TableCell className="text-right pr-4 whitespace-nowrap">
                               <div className="flex items-center justify-end gap-1">
@@ -1291,9 +1355,26 @@ export default function MasterDashboard() {
                                       <span>Editar dados gerais</span>
                                     </DropdownMenuItem>
 
+                                    {/* 6. Desconectar WhatsApp (quando conectado) */}
+                                    {condoRecord?.whatsapp_connected && (
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          handleDesconectarWhatsAppMaster(
+                                            licenca.condo_id,
+                                            condoName,
+                                          )
+                                        }
+                                        disabled={disconnectingWaId === licenca.condo_id}
+                                        className="gap-2 cursor-pointer text-amber-700 focus:text-amber-800 focus:bg-amber-50"
+                                      >
+                                        <Unplug className="w-3.5 h-3.5 text-amber-600" />
+                                        <span>Desconectar WhatsApp</span>
+                                      </DropdownMenuItem>
+                                    )}
+
                                     <DropdownMenuSeparator />
 
-                                    {/* 6. Excluir com confirmação */}
+                                    {/* 7. Excluir com confirmação */}
                                     <DropdownMenuItem
                                       onClick={() => handlePromptDeleteLicenca(licenca)}
                                       className="gap-2 cursor-pointer text-rose-600 focus:text-rose-600 focus:bg-rose-50"

@@ -20,8 +20,36 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Trash2, Plus, Pencil, Info, Upload, Image as ImageIcon, Check } from 'lucide-react'
-import { getCondo, updateCondo } from '@/services/condos'
+import {
+  Trash2,
+  Plus,
+  Pencil,
+  Info,
+  Upload,
+  Image as ImageIcon,
+  Check,
+  QrCode,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Smartphone,
+  Unplug,
+  RefreshCw,
+} from 'lucide-react'
+import {
+  getCondo,
+  updateCondo,
+  conectarWhatsAppCondo,
+  consultarWhatsAppStatus,
+  desconectarWhatsAppCondo,
+} from '@/services/condos'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   getTemplatesNotificacao,
   createTemplateNotificacao,
@@ -50,6 +78,18 @@ export default function GestorConfiguracoes() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  // Estados de WhatsApp da Instância Própria
+  const [waConnected, setWaConnected] = useState(false)
+  const [waStatus, setWaStatus] = useState<'disconnected' | 'connecting' | 'connected' | string>(
+    'disconnected',
+  )
+  const [waPhone, setWaPhone] = useState('')
+  const [waQrCode, setWaQrCode] = useState('')
+  const [waLoading, setWaLoading] = useState(false)
+  const [waModalOpen, setWaModalOpen] = useState(false)
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollingCountRef = useRef<number>(0)
 
   // Máscaras
   const maskCNPJ = (value: string) => {
@@ -88,6 +128,136 @@ export default function GestorConfiguracoes() {
 
   const { toast } = useToast()
 
+  // Limpeza de polling ao desmontar
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current)
+      }
+    }
+  }, [])
+
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current)
+      pollingRef.current = null
+    }
+    pollingCountRef.current = 0
+  }
+
+  const startPollingStatus = (targetCondoId: string) => {
+    stopPolling()
+    pollingCountRef.current = 0
+
+    pollingRef.current = setInterval(async () => {
+      pollingCountRef.current += 1
+
+      // Parar após ~2 minutos (24 x 5s = 120s)
+      if (pollingCountRef.current > 24) {
+        stopPolling()
+        return
+      }
+
+      try {
+        const res = await consultarWhatsAppStatus(targetCondoId)
+        if (res.connected || res.status === 'connected') {
+          setWaConnected(true)
+          setWaStatus('connected')
+          if (res.phone) setWaPhone(res.phone)
+          setWaQrCode('')
+          stopPolling()
+          setWaModalOpen(false)
+          toast({
+            title: 'WhatsApp Conectado!',
+            description: 'Seu WhatsApp foi conectado com sucesso para envios do condomínio.',
+          })
+        } else if (res.qrcode && !waConnected) {
+          setWaQrCode(res.qrcode)
+        }
+      } catch (err) {
+        // Polling silencioso
+      }
+    }, 5000)
+  }
+
+  const handleConectarWhatsApp = async () => {
+    if (!condoId) return
+    setWaLoading(true)
+    try {
+      const res = await conectarWhatsAppCondo(condoId)
+      if (res.qrcode) {
+        setWaQrCode(res.qrcode)
+      }
+      setWaStatus('connecting')
+      setWaModalOpen(true)
+      startPollingStatus(condoId)
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao conectar WhatsApp',
+        description: err.message || 'Falha ao iniciar conexão com a Evolution API.',
+        variant: 'destructive',
+      })
+    } finally {
+      setWaLoading(false)
+    }
+  }
+
+  const handleConsultarStatusManual = async () => {
+    if (!condoId) return
+    setWaLoading(true)
+    try {
+      const res = await consultarWhatsAppStatus(condoId)
+      setWaConnected(res.connected)
+      setWaStatus(res.status)
+      if (res.phone) setWaPhone(res.phone)
+      if (res.qrcode) setWaQrCode(res.qrcode)
+      toast({
+        title: 'Status atualizado',
+        description: res.connected ? 'WhatsApp está Conectado ✓' : 'WhatsApp está ' + res.status,
+      })
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao consultar status',
+        description: err.message || 'Não foi possível verificar status na Evolution API.',
+        variant: 'destructive',
+      })
+    } finally {
+      setWaLoading(false)
+    }
+  }
+
+  const handleDesconectarWhatsApp = async () => {
+    if (!condoId) return
+    if (
+      !confirm(
+        'Deseja realmente desconectar o seu número de WhatsApp? O sistema voltará a usar o envio padrão.',
+      )
+    ) {
+      return
+    }
+    setWaLoading(true)
+    stopPolling()
+    try {
+      await desconectarWhatsAppCondo(condoId)
+      setWaConnected(false)
+      setWaStatus('disconnected')
+      setWaQrCode('')
+      setWaModalOpen(false)
+      toast({
+        title: 'WhatsApp Desconectado',
+        description: 'Sua instância foi desconectada. Os envios usarão o fallback seguro.',
+      })
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao desconectar',
+        description: err.message || 'Falha ao desconectar instância.',
+        variant: 'destructive',
+      })
+    } finally {
+      setWaLoading(false)
+    }
+  }
+
   useEffect(() => {
     Promise.all([getCondo(), getTemplatesNotificacao()])
       .then(([condo, tmpls]) => {
@@ -109,6 +279,12 @@ export default function GestorConfiguracoes() {
           if ((condo as any).logo) {
             setLogoPreview(pb.files.getURL(condo, (condo as any).logo))
           }
+          setWaConnected(!!condo.whatsapp_connected)
+          setWaStatus(
+            condo.whatsapp_status || (condo.whatsapp_connected ? 'connected' : 'disconnected'),
+          )
+          setWaPhone(condo.whatsapp_phone || '')
+          setWaQrCode(condo.whatsapp_qrcode || '')
         }
         setTemplates(tmpls)
         setLoading(false)
@@ -330,6 +506,105 @@ export default function GestorConfiguracoes() {
                     <Upload className="w-4 h-4" />
                     {logoPreview ? 'Trocar Logo' : 'Enviar Logo'}
                   </Button>
+                </div>
+              </div>
+
+              {/* Card de Conexão WhatsApp Próprio do Condomínio */}
+              <div className="p-4 border rounded-lg bg-emerald-50/40 border-emerald-200/80 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Smartphone className="w-5 h-5 text-emerald-700" />
+                      <Label className="text-base font-semibold text-emerald-950">
+                        WhatsApp Próprio do Condomínio
+                      </Label>
+                      {waConnected || waStatus === 'connected' ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Conectado ✓
+                        </span>
+                      ) : waStatus === 'connecting' ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />{' '}
+                          Conectando...
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300">
+                          <XCircle className="w-3.5 h-3.5 text-slate-500" /> Desconectado ✗
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-600">
+                      Envie mensagens de encomendas e notificações com o número de WhatsApp do
+                      próprio condomínio. Se desconectado, o sistema continuará enviando
+                      automaticamente pelo número padrão com segurança.
+                    </p>
+                    {waPhone && (
+                      <p className="text-xs font-medium text-emerald-900 mt-1">
+                        Número conectado: <span className="font-mono">{maskPhone(waPhone)}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {waConnected || waStatus === 'connected' ? (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleConsultarStatusManual}
+                          disabled={waLoading}
+                          className="gap-1.5"
+                          title="Atualizar status"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${waLoading ? 'animate-spin' : ''}`} />
+                          Verificar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDesconectarWhatsApp}
+                          disabled={waLoading}
+                          className="gap-1.5 text-rose-600 border-rose-200 hover:bg-rose-50"
+                        >
+                          <Unplug className="w-4 h-4" />
+                          Desconectar
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          variant="default"
+                          size="sm"
+                          onClick={handleConectarWhatsApp}
+                          disabled={waLoading}
+                          className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                        >
+                          {waLoading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <QrCode className="w-4 h-4" />
+                          )}
+                          {waStatus === 'connecting'
+                            ? 'Reconectar / Ver QR Code'
+                            : 'Conectar meu WhatsApp'}
+                        </Button>
+                        {waStatus === 'connecting' && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setWaModalOpen(true)}
+                            className="gap-1 text-xs"
+                          >
+                            Abrir QR Code
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -597,6 +872,81 @@ export default function GestorConfiguracoes() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Modal de Conexão WhatsApp / Exibição de QR Code */}
+      <Dialog
+        open={waModalOpen}
+        onOpenChange={(open) => {
+          setWaModalOpen(open)
+          if (!open) {
+            // Mantém polling se status ainda for connecting
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-emerald-800">
+              <Smartphone className="w-5 h-5 text-emerald-600" />
+              Conectar WhatsApp do Condomínio
+            </DialogTitle>
+            <DialogDescription>
+              Abra o WhatsApp no celular do condomínio, vá em <strong>Aparelhos conectados</strong>{' '}
+              e aponte a câmera para o QR Code abaixo.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center justify-center p-4 bg-slate-50 border rounded-lg space-y-4">
+            {waQrCode ? (
+              <div className="p-3 bg-white border-2 border-emerald-500 rounded-xl shadow-md">
+                <img
+                  src={
+                    waQrCode.startsWith('data:') ? waQrCode : `data:image/png;base64,${waQrCode}`
+                  }
+                  alt="QR Code WhatsApp"
+                  className="w-64 h-64 object-contain"
+                />
+              </div>
+            ) : (
+              <div className="w-64 h-64 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl bg-white text-slate-400 gap-2">
+                <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+                <span className="text-xs font-medium text-slate-500">Gerando QR Code...</span>
+              </div>
+            )}
+
+            <div className="text-center space-y-1">
+              <div className="inline-flex items-center gap-2 text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Aguardando leitura do QR Code...
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Esta tela atualiza automaticamente assim que a conexão for estabelecida.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleConectarWhatsApp}
+              disabled={waLoading}
+              className="gap-1.5 text-xs"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${waLoading ? 'animate-spin' : ''}`} />
+              Gerar Novo QR Code
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setWaModalOpen(false)}
+            >
+              Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

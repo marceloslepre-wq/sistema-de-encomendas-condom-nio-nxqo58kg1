@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T19:31:32.793Z",
+  "generatedAt": "2026-09-10T20:40:53.337Z",
   "collections": [
     {
       "name": "users",
@@ -165,6 +165,43 @@
         {
           "name": "logo",
           "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "whatsapp_instance_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "whatsapp_connected",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "whatsapp_phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "whatsapp_status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["disconnected", "connecting", "connected"]
+        },
+        {
+          "name": "whatsapp_qrcode",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "whatsapp_updated_at",
+          "type": "date",
           "required": false,
           "system": false
         }

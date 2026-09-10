@@ -37,12 +37,12 @@ routerAdd(
         message = `Seu código de validação: ${codigo}`
       }
 
-      const apiUrl = $secrets.get('EVOLUTION_API_URL')
-      const instance = $secrets.get('EVOLUTION_INSTANCE')
-      const apikey = $secrets.get('EVOLUTION_API_KEY')
-      const senderNumber = $secrets.get('EVOLUTION_NUMBER_SEND') || ''
+      const globalApiUrl = $secrets.get('EVOLUTION_API_URL') || ''
+      const globalInstance = $secrets.get('EVOLUTION_INSTANCE') || 'Encomenda'
+      const globalApiKey = $secrets.get('EVOLUTION_API_KEY') || ''
+      const globalSender = $secrets.get('EVOLUTION_NUMBER_SEND') || ''
 
-      if (!apiUrl || !instance || !apikey) {
+      if (!globalApiUrl || !globalApiKey) {
         $app.logger().error('Missing WhatsApp secrets')
         return e.json(200, {
           success: false,
@@ -52,15 +52,39 @@ routerAdd(
         })
       }
 
-      let baseUrl = apiUrl
+      // Identificar condomínio do contexto ou do corpo
+      let condoId = body.condo_id || ''
+      const auth = e.auth || e.requestInfo().auth || e.requestInfo().authRecord
+      if (!condoId && auth) {
+        condoId = auth.getString('condo_id') || ''
+      }
+
+      // Resolução dinâmica da instância com fallback
+      let targetInstance = globalInstance
+      let senderNumber = globalSender
+      if (condoId) {
+        try {
+          const condo = $app.findRecordById('condos', condoId)
+          if (condo && condo.getBool('whatsapp_connected')) {
+            const inst = (condo.getString('whatsapp_instance_name') || '').trim()
+            const cPhone = (condo.getString('whatsapp_phone') || '').trim()
+            if (inst) {
+              targetInstance = inst
+              if (cPhone) senderNumber = cPhone
+            }
+          }
+        } catch (_) {}
+      }
+
+      let baseUrl = globalApiUrl
       if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1)
-      const url = `${baseUrl}/message/sendText/${instance}`
+      const url = `${baseUrl}/message/sendText/${targetInstance}`
 
       console.log(`URL: ${url}`)
 
       const headers = {
         'Content-Type': 'application/json',
-        apikey: apikey,
+        apikey: globalApiKey,
       }
 
       // Limpar formatações e adicionar o prefixo 55 (Brasil) ao número de telefone
@@ -82,6 +106,7 @@ routerAdd(
         verifRecord.set('expires', expires.toISOString())
         verifRecord.set('verified', false)
         verifRecord.set('attempts', 0)
+        if (condoId) verifRecord.set('condo_id', condoId)
 
         $app.save(verifRecord)
       } catch (err) {
@@ -147,6 +172,7 @@ routerAdd(
         logRecord.set('message', message)
         logRecord.set('status_code', statusCode)
         logRecord.set('success', isSuccess)
+        if (condoId) logRecord.set('condo_id', condoId)
         logRecord.set('response_body', isSuccess ? { ...parsedJson, successUrl: url } : parsedJson)
 
         $app.save(logRecord)
@@ -164,6 +190,7 @@ routerAdd(
         notif.set('sucesso', isSuccess)
         notif.set('sender_match', true)
         notif.set('sender_number', senderNumber)
+        if (condoId) notif.set('condo_id', condoId)
         $app.save(notif)
       } catch (err) {
         $app

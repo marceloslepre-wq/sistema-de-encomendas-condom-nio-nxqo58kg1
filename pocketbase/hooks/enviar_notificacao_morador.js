@@ -10,13 +10,13 @@ routerAdd(
       return e.badRequestError('Phone and message are required. Unable to send notification.')
     }
 
-    let url = $secrets.get('EVOLUTION_API_URL')
-    const instance = $secrets.get('EVOLUTION_INSTANCE')
-    const apikey = $secrets.get('EVOLUTION_API_KEY')
-    const senderNumber = $secrets.get('EVOLUTION_NUMBER_SEND') || ''
+    const globalUrl = $secrets.get('EVOLUTION_API_URL') || ''
+    const globalInstance = $secrets.get('EVOLUTION_INSTANCE') || 'Encomenda'
+    const globalApiKey = $secrets.get('EVOLUTION_API_KEY') || ''
+    const globalSender = $secrets.get('EVOLUTION_NUMBER_SEND') || ''
 
-    if (!url || !instance || !apikey || !senderNumber) {
-      const errorMsg = 'Evolution API not fully configured, missing EVOLUTION_NUMBER_SEND or others'
+    if (!globalUrl || !globalApiKey) {
+      const errorMsg = 'Evolution API not fully configured, missing EVOLUTION_API_KEY or URL'
       $app.logger().error(errorMsg)
       try {
         const waLogCol = $app.findCollectionByNameOrId('whatsapp_logs')
@@ -31,11 +31,34 @@ routerAdd(
       return e.internalServerError(errorMsg)
     }
 
+    let condoId = body.condo_id || ''
+    const auth = e.auth || e.requestInfo().auth || e.requestInfo().authRecord
+    if (!condoId && auth) {
+      condoId = auth.getString('condo_id') || ''
+    }
+
+    let targetInstance = globalInstance
+    let senderNumber = globalSender
+    if (condoId) {
+      try {
+        const condo = $app.findRecordById('condos', condoId)
+        if (condo && condo.getBool('whatsapp_connected')) {
+          const inst = (condo.getString('whatsapp_instance_name') || '').trim()
+          const cPhone = (condo.getString('whatsapp_phone') || '').trim()
+          if (inst) {
+            targetInstance = inst
+            if (cPhone) senderNumber = cPhone
+          }
+        }
+      } catch (_) {}
+    }
+
+    let url = globalUrl
     if (url.endsWith('/')) {
       url = url.slice(0, -1)
     }
 
-    const endpoint = `${url}/message/sendText/${instance}`
+    const endpoint = `${url}/message/sendText/${targetInstance}`
 
     let digits = String(phone || '').replace(/\D/g, '')
     digits = digits.replace(/^0+/, '')
@@ -56,7 +79,7 @@ routerAdd(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          apikey: apikey,
+          apikey: globalApiKey,
         },
         body: JSON.stringify({
           number: phoneNum,
@@ -100,6 +123,7 @@ routerAdd(
       waLog.set('message', message)
       waLog.set('status_code', responseStatus)
       waLog.set('success', success)
+      if (condoId) waLog.set('condo_id', condoId)
       if (parsedJson) {
         waLog.set('response_body', parsedJson)
       } else {
@@ -118,6 +142,7 @@ routerAdd(
       log.set('sucesso', success)
       log.set('sender_match', true)
       log.set('sender_number', senderNumber)
+      if (condoId) log.set('condo_id', condoId)
       $app.saveNoValidate(log)
     } catch (err) {}
 

@@ -4,13 +4,6 @@
   ====================================================================================================
   Esta rota é mantida por compatibilidade para clientes que ainda chamam:
   POST /backend/v1/whatsapp/send
-
-  Secrets obrigatórias no Skip Cloud:
-  - EVOLUTION_API_URL (ex.: https://api.sholver.com.br)
-  - EVOLUTION_API_KEY (apikey da Evolution)
-
-  Endpoint final utilizado:
-  - ${EVOLUTION_API_URL}/message/sendText/Encomenda
   ====================================================================================================
 */
 
@@ -38,35 +31,15 @@ routerAdd(
       return e.badRequestError('Phone is required')
     }
 
-    // Secrets configuradas no Skip Cloud (aba "Segredos")
-    const apiUrl = $secrets.get('EVOLUTION_API_URL')
+    // Secrets configuradas no Skip Cloud
+    const globalUrl = $secrets.get('EVOLUTION_API_URL')
     const apiKey = $secrets.get('EVOLUTION_API_KEY')
-    const instance = $secrets.get('EVOLUTION_INSTANCE')
-    const senderNumber = $secrets.get('EVOLUTION_NUMBER_SEND')
+    const globalInstance = $secrets.get('EVOLUTION_INSTANCE') || 'Encomenda'
+    const globalSender = $secrets.get('EVOLUTION_NUMBER_SEND') || ''
 
-    if (
-      !apiUrl ||
-      !String(apiUrl).trim() ||
-      !apiKey ||
-      !String(apiKey).trim() ||
-      !instance ||
-      !senderNumber
-    ) {
-      const errorMsg =
-        'Missing Skip Cloud configuration for WhatsApp (URL, API_KEY, INSTANCE or NUMBER_SEND)'
-      $app
-        .logger()
-        .error(
-          'Missing WhatsApp secrets',
-          'apiUrl',
-          !!apiUrl,
-          'apiKey',
-          !!apiKey,
-          'instance',
-          !!instance,
-          'senderNumber',
-          !!senderNumber,
-        )
+    if (!globalUrl || !String(globalUrl).trim() || !apiKey || !String(apiKey).trim()) {
+      const errorMsg = 'Missing Skip Cloud configuration for WhatsApp (URL or API_KEY)'
+      $app.logger().error('Missing WhatsApp secrets', 'apiUrl', !!globalUrl, 'apiKey', !!apiKey)
 
       try {
         const phoneNum = normalizeBrazilianNumber(body.phone || '')
@@ -83,8 +56,31 @@ routerAdd(
       return e.internalServerError(errorMsg)
     }
 
-    const baseUrl = String(apiUrl).replace(/\/+$/, '')
-    const url = `${baseUrl}/message/sendText/${instance}`
+    // Identificar condomínio para resolução dinâmica
+    let condoId = body.condo_id || ''
+    const auth = e.auth || e.requestInfo().auth || e.requestInfo().authRecord
+    if (!condoId && auth) {
+      condoId = auth.getString('condo_id') || ''
+    }
+
+    let targetInstance = globalInstance
+    let senderNumber = globalSender
+    if (condoId) {
+      try {
+        const condo = $app.findRecordById('condos', condoId)
+        if (condo && condo.getBool('whatsapp_connected')) {
+          const inst = (condo.getString('whatsapp_instance_name') || '').trim()
+          const cPhone = (condo.getString('whatsapp_phone') || '').trim()
+          if (inst) {
+            targetInstance = inst
+            if (cPhone) senderNumber = cPhone
+          }
+        }
+      } catch (_) {}
+    }
+
+    const baseUrl = String(globalUrl).replace(/\/+$/, '')
+    const url = `${baseUrl}/message/sendText/${targetInstance}`
 
     const phoneNum = normalizeBrazilianNumber(body.phone)
     if (phoneNum.length < 12 || phoneNum.length > 13) {
@@ -99,7 +95,6 @@ routerAdd(
     if (tipo === 'codigo') {
       code = $security.randomStringWithAlphabet(6, '0123456789')
       originalMessage = `Seu código de validação é: ${code}`
-      // Changed to 15 minutes to match the system update and ensure consistency
       const expires = new Date()
       expires.setMinutes(expires.getMinutes() + 15)
 
@@ -111,6 +106,7 @@ routerAdd(
         verif.set('expires_at', expires.toISOString().replace('T', ' '))
         verif.set('used', false)
         verif.set('attempts', 0)
+        if (condoId) verif.set('condo_id', condoId)
         $app.save(verif)
       } catch (err) {
         $app
@@ -171,6 +167,7 @@ routerAdd(
         log.set('message', originalMessage)
         log.set('status_code', res.statusCode)
         log.set('success', isSuccess)
+        if (condoId) log.set('condo_id', condoId)
         if (parsedJson) {
           log.set('response_body', parsedJson)
         } else {
@@ -193,6 +190,7 @@ routerAdd(
         notif.set('sucesso', isSuccess)
         notif.set('sender_match', true)
         notif.set('sender_number', senderNumber)
+        if (condoId) notif.set('condo_id', condoId)
         $app.save(notif)
       } catch (notifErr) {
         $app

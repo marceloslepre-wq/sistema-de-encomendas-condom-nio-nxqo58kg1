@@ -1,14 +1,47 @@
 // @deps date-fns@4.1.0
 cronAdd('send_reminders', '0 * * * *', () => {
-  let url = $secrets.get('EVOLUTION_API_URL')
-  const instance = $secrets.get('EVOLUTION_INSTANCE')
-  const apikey = $secrets.get('EVOLUTION_API_KEY')
-  const senderNumber = $secrets.get('EVOLUTION_NUMBER_SEND') || ''
+  const globalUrl = $secrets.get('EVOLUTION_API_URL') || ''
+  const globalInstance = $secrets.get('EVOLUTION_INSTANCE') || 'Encomenda'
+  const globalApiKey = $secrets.get('EVOLUTION_API_KEY') || ''
+  const globalSender = $secrets.get('EVOLUTION_NUMBER_SEND') || ''
 
-  if (!url || !instance || !apikey) return
+  if (!globalUrl || !globalApiKey) return
 
-  if (url.endsWith('/')) url = url.slice(0, -1)
-  const endpoint = `${url}/message/sendText/${instance}`
+  let baseUrl = globalUrl
+  if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1)
+
+  // Helper para resolver instância de um condo_id
+  const resolveCondoInstance = (condoId) => {
+    if (!condoId) {
+      return {
+        instanceName: globalInstance,
+        apiKey: globalApiKey,
+        apiUrl: baseUrl,
+        senderNumber: globalSender,
+      }
+    }
+    try {
+      const c = $app.findRecordById('condos', condoId)
+      if (c && c.getBool('whatsapp_connected')) {
+        const inst = (c.getString('whatsapp_instance_name') || '').trim()
+        const phone = (c.getString('whatsapp_phone') || '').trim()
+        if (inst) {
+          return {
+            instanceName: inst,
+            apiKey: globalApiKey,
+            apiUrl: baseUrl,
+            senderNumber: phone || globalSender,
+          }
+        }
+      }
+    } catch (_) {}
+    return {
+      instanceName: globalInstance,
+      apiKey: globalApiKey,
+      apiUrl: baseUrl,
+      senderNumber: globalSender,
+    }
+  }
 
   const templates = $app.findRecordsByFilter(
     'templates_notificacao',
@@ -51,11 +84,22 @@ cronAdd('send_reminders', '0 * * * *', () => {
       let unidade = record.getString('unidade') || ''
       let torre = ''
       let condoName = ''
+      let recordCondoId = record.getString('condo_id') || ''
 
-      try {
-        const condo = $app.findRecordsByFilter('condos', '', '', 1)[0]
-        if (condo) condoName = condo.getString('name')
-      } catch (_) {}
+      if (recordCondoId) {
+        try {
+          const condo = $app.findRecordById('condos', recordCondoId)
+          if (condo) condoName = condo.getString('name')
+        } catch (_) {}
+      } else {
+        try {
+          const condo = $app.findRecordsByFilter('condos', '', '', 1)[0]
+          if (condo) {
+            condoName = condo.getString('name')
+            recordCondoId = condo.id
+          }
+        } catch (_) {}
+      }
 
       const moradorId = record.getString('morador_id')
       if (moradorId) {
@@ -65,6 +109,9 @@ cronAdd('send_reminders', '0 * * * *', () => {
           name = user.getString('name') || name
           unidade = user.getString('unidade') || unidade
           torre = user.getString('torre') || torre
+          if (!recordCondoId) {
+            recordCondoId = user.getString('condo_id') || ''
+          }
         } catch (_) {}
       }
 
@@ -72,6 +119,9 @@ cronAdd('send_reminders', '0 * * * *', () => {
         try {
           const moradorRecord = $app.findFirstRecordByData('moradores', 'nome', name)
           phone = moradorRecord.getString('telefone') || phone
+          if (!recordCondoId) {
+            recordCondoId = moradorRecord.getString('condo_id') || ''
+          }
         } catch (_) {}
       }
 
@@ -84,10 +134,14 @@ cronAdd('send_reminders', '0 * * * *', () => {
           log.set('mensagem', 'Falha: Celular não encontrado ou ausente')
           log.set('celular', 'N/A')
           log.set('sucesso', false)
+          if (recordCondoId) log.set('condo_id', recordCondoId)
           $app.saveNoValidate(log)
         } catch (err) {}
         continue
       }
+
+      const waInst = resolveCondoInstance(recordCondoId)
+      const endpoint = `${waInst.apiUrl}/message/sendText/${waInst.instanceName}`
 
       const message = template
         .getString('mensagem_template')
@@ -117,7 +171,7 @@ cronAdd('send_reminders', '0 * * * *', () => {
         const res = $http.send({
           url: endpoint,
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', apikey: apikey },
+          headers: { 'Content-Type': 'application/json', apikey: waInst.apiKey },
           body: JSON.stringify({ number: phoneNum, text: message }),
           timeout: 15,
         })
@@ -160,6 +214,7 @@ cronAdd('send_reminders', '0 * * * *', () => {
         waLog.set('tipo', 'lembrete')
         waLog.set('status', logStatus)
         waLog.set('success', success)
+        if (recordCondoId) waLog.set('condo_id', recordCondoId)
         if (parsedJson) waLog.set('response_body', parsedJson)
         $app.saveNoValidate(waLog)
       } catch (err) {}
@@ -173,7 +228,8 @@ cronAdd('send_reminders', '0 * * * *', () => {
         log.set('celular', phoneNum)
         log.set('sucesso', success)
         log.set('sender_match', true)
-        log.set('sender_number', senderNumber)
+        log.set('sender_number', waInst.senderNumber)
+        if (recordCondoId) log.set('condo_id', recordCondoId)
         $app.saveNoValidate(log)
       } catch (err) {}
 

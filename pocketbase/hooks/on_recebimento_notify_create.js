@@ -35,13 +35,21 @@ onRecordAfterCreateSuccess((e) => {
 
     if (!flowStage) return e.next()
 
+    let recordCondoId = record.getString('condo_id') || ''
+    let templateFilter = 'flow_stage = {:stage} && ativo = true'
+    let templateBind = { stage: flowStage }
+    if (recordCondoId) {
+      templateFilter += ' && (condo_id = {:condoId} || condo_id = "" || condo_id = null)'
+      templateBind.condoId = recordCondoId
+    }
+
     const templates = $app.findRecordsByFilter(
       'templates_notificacao',
-      'flow_stage = {:stage} && ativo = true',
+      templateFilter,
       '-created',
       1,
       0,
-      { stage: flowStage },
+      templateBind,
     )
 
     if (templates.length === 0) return e.next()
@@ -51,15 +59,23 @@ onRecordAfterCreateSuccess((e) => {
     const code = record.getString('codigo_retirada') || ''
 
     let condoName = ''
+    let condoRecord = null
     try {
-      const units = $app.findRecordsByFilter('units', 'id = {:id}', '', 1, 0, {
-        id: record.getString('unidade_id'),
-      })
-      if (units.length > 0) {
-        const condos = $app.findRecordsByFilter('condos', 'id = {:id}', '', 1, 0, {
-          id: units[0].getString('condo_id'),
+      if (recordCondoId) {
+        condoRecord = $app.findRecordById('condos', recordCondoId)
+      } else {
+        const units = $app.findRecordsByFilter('units', 'id = {:id}', '', 1, 0, {
+          id: record.getString('unidade_id'),
         })
-        if (condos.length > 0) condoName = condos[0].getString('name')
+        if (units.length > 0) {
+          recordCondoId = units[0].getString('condo_id')
+          if (recordCondoId) {
+            condoRecord = $app.findRecordById('condos', recordCondoId)
+          }
+        }
+      }
+      if (condoRecord) {
+        condoName = condoRecord.getString('name')
       }
     } catch (_) {}
 
@@ -71,11 +87,11 @@ onRecordAfterCreateSuccess((e) => {
 
     const evolutionApiUrl = $secrets.get('EVOLUTION_API_URL') || ''
     const evolutionApiKey = $secrets.get('EVOLUTION_API_KEY') || ''
-    const evolutionInstance = $secrets.get('EVOLUTION_INSTANCE') || ''
-    const senderNumber = $secrets.get('EVOLUTION_NUMBER_SEND') || ''
+    const globalInstance = $secrets.get('EVOLUTION_INSTANCE') || 'Encomenda'
+    const globalSender = $secrets.get('EVOLUTION_NUMBER_SEND') || ''
 
-    if (!evolutionApiUrl || !evolutionApiKey || !evolutionInstance || !senderNumber) {
-      console.log('Evolution API not fully configured, missing EVOLUTION_NUMBER_SEND or others')
+    if (!evolutionApiUrl || !evolutionApiKey) {
+      console.log('Evolution API not fully configured, missing EVOLUTION_API_KEY or URL')
       try {
         const logs = $app.findCollectionByNameOrId('whatsapp_logs')
         const logRecord = new Record(logs)
@@ -86,12 +102,25 @@ onRecordAfterCreateSuccess((e) => {
         logRecord.set('message', message)
         logRecord.set('status_code', 500)
         logRecord.set('response_body', {
-          error: 'Missing EVOLUTION_NUMBER_SEND or other configuration',
+          error: 'Missing EVOLUTION_API_KEY or URL configuration',
         })
         logRecord.set('success', false)
+        if (recordCondoId) logRecord.set('condo_id', recordCondoId)
         $app.saveNoValidate(logRecord)
       } catch (_) {}
       return e.next()
+    }
+
+    // Resolução dinâmica de instância do condomínio
+    let targetInstance = globalInstance
+    let senderNumber = globalSender
+    if (condoRecord && condoRecord.getBool('whatsapp_connected')) {
+      const cInst = (condoRecord.getString('whatsapp_instance_name') || '').trim()
+      const cPhone = (condoRecord.getString('whatsapp_phone') || '').trim()
+      if (cInst) {
+        targetInstance = cInst
+        if (cPhone) senderNumber = cPhone
+      }
     }
 
     let cleanPhone = phone.replace(/\D/g, '')
@@ -106,7 +135,7 @@ onRecordAfterCreateSuccess((e) => {
 
     let url = evolutionApiUrl
     if (url.endsWith('/')) url = url.slice(0, -1)
-    const endpoint = `${url}/message/sendText/${evolutionInstance}`
+    const endpoint = `${url}/message/sendText/${targetInstance}`
 
     let success = false
     let responseBody = null
@@ -145,6 +174,7 @@ onRecordAfterCreateSuccess((e) => {
       logRecord.set('status_code', statusCode)
       logRecord.set('response_body', responseBody)
       logRecord.set('success', success)
+      if (recordCondoId) logRecord.set('condo_id', recordCondoId)
       $app.saveNoValidate(logRecord)
     } catch (_) {}
 
@@ -158,6 +188,7 @@ onRecordAfterCreateSuccess((e) => {
       notifRecord.set('sucesso', success)
       notifRecord.set('sender_match', true)
       notifRecord.set('sender_number', senderNumber)
+      if (recordCondoId) notifRecord.set('condo_id', recordCondoId)
       $app.saveNoValidate(notifRecord)
     } catch (_) {}
   } catch (err) {
