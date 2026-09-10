@@ -695,10 +695,10 @@ export default function MasterDashboard() {
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Limite de Moradores:</span>
+                            <span className="text-muted-foreground">Limite de Usuários:</span>
                             <span className="font-semibold">
                               {plano.max_moradores
-                                ? `${plano.max_moradores} moradores`
+                                ? `${plano.max_moradores} usuários`
                                 : 'Ilimitado'}
                             </span>
                           </div>
@@ -805,7 +805,7 @@ export default function MasterDashboard() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="plano-moradores">Máx. Moradores</Label>
+                  <Label htmlFor="plano-moradores">Máx. Usuários</Label>
                   <Input
                     id="plano-moradores"
                     type="number"

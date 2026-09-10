@@ -52,7 +52,8 @@ import {
   getHistoricoLicencas,
   trocarPlanoGestor,
 } from '@/services/master'
-import { getMoradores, getUnits } from '@/services/api'
+import { getUnits } from '@/services/api'
+import { useRealtime } from '@/hooks/use-realtime'
 import pb from '@/lib/pocketbase/client'
 
 export default function GestorLicencas() {
@@ -61,7 +62,7 @@ export default function GestorLicencas() {
 
   const [loading, setLoading] = useState(true)
   const [licencaData, setLicencaData] = useState<LicencaStatusResponse | null>(null)
-  const [totalMoradores, setTotalMoradores] = useState(0)
+  const [totalUsuarios, setTotalUsuarios] = useState(0)
   const [totalUnidades, setTotalUnidades] = useState(0)
   const [historico, setHistorico] = useState<HistoricoLicenca[]>([])
 
@@ -92,13 +93,14 @@ export default function GestorLicencas() {
 
       const condoId = user?.condo_id || statusRes.condo_id
 
-      const [moradoresList, unitsList, histList] = await Promise.all([
-        getMoradores(),
+      const usersFilter = condoId ? `condo_id = "${condoId}"` : ''
+      const [usersList, unitsList, histList] = await Promise.all([
+        pb.collection('users').getFullList({ filter: usersFilter, requestKey: null }),
         getUnits(),
         getHistoricoLicencas(condoId),
       ])
 
-      setTotalMoradores(moradoresList.length)
+      setTotalUsuarios(usersList.length)
       setTotalUnidades(unitsList.length)
       setHistorico(histList)
     } catch (err: any) {
@@ -115,6 +117,17 @@ export default function GestorLicencas() {
   useEffect(() => {
     loadData()
   }, [])
+
+  // Atualização em tempo real quando usuário ou licença mudar
+  useRealtime('users', () => {
+    loadData()
+  })
+  useRealtime('units', () => {
+    loadData()
+  })
+  useRealtime('licencas', () => {
+    loadData()
+  })
 
   // Iniciar fluxo de pagamento PIX
   const handleOpenPixRenovacao = async () => {
@@ -427,10 +440,10 @@ export default function GestorLicencas() {
   }
 
   // Limites do plano
-  const maxMoradores = isMasterPlan ? 0 : (plano?.max_moradores ?? 0)
+  const maxUsuarios = isMasterPlan ? 0 : (plano?.max_moradores ?? 0)
   const maxUnits = isMasterPlan ? 0 : (plano?.max_units ?? 0)
 
-  const moradorPct = maxMoradores > 0 ? Math.min(100, (totalMoradores / maxMoradores) * 100) : 0
+  const usuarioPct = maxUsuarios > 0 ? Math.min(100, (totalUsuarios / maxUsuarios) * 100) : 0
   const unitPct = maxUnits > 0 ? Math.min(100, (totalUnidades / maxUnits) * 100) : 0
 
   return (
@@ -598,36 +611,36 @@ export default function GestorLicencas() {
             </CardHeader>
 
             <CardContent className="space-y-6">
-              {/* Moradores */}
+              {/* Usuários */}
               <div className="space-y-2 p-4 rounded-xl border bg-slate-50/60">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-semibold flex items-center gap-1.5">
                     <Users className="w-4 h-4 text-muted-foreground" />
-                    Moradores Cadastrados
+                    Usuários Cadastrados
                   </span>
                   <span className="font-mono font-bold text-foreground">
-                    {maxMoradores <= 0
-                      ? `${totalMoradores} / Ilimitado`
-                      : `${totalMoradores} / ${maxMoradores}`}
+                    {maxUsuarios <= 0
+                      ? `${totalUsuarios} / Ilimitado`
+                      : `${totalUsuarios} / ${maxUsuarios}`}
                   </span>
                 </div>
-                {maxMoradores <= 0 ? (
+                {maxUsuarios <= 0 ? (
                   <div className="w-full h-2.5 bg-emerald-100 rounded-full overflow-hidden">
                     <div className="h-full bg-emerald-500 w-full" />
                   </div>
                 ) : (
                   <Progress
-                    value={moradorPct}
-                    className={`h-2.5 ${moradorPct >= 100 ? '[&>div]:bg-rose-600' : moradorPct >= 80 ? '[&>div]:bg-amber-500' : '[&>div]:bg-indigo-600'}`}
+                    value={usuarioPct}
+                    className={`h-2.5 ${usuarioPct >= 100 ? '[&>div]:bg-rose-600' : usuarioPct >= 80 ? '[&>div]:bg-amber-500' : '[&>div]:bg-indigo-600'}`}
                   />
                 )}
                 <div className="flex justify-between items-center text-[11px] text-muted-foreground pt-1">
                   <span>
-                    {maxMoradores <= 0
+                    {maxUsuarios <= 0
                       ? 'Sem restrição de cadastros'
-                      : `${Math.max(0, maxMoradores - totalMoradores)} vagas restantes`}
+                      : `${Math.max(0, maxUsuarios - totalUsuarios)} vagas restantes`}
                   </span>
-                  {maxMoradores > 0 && <span>{moradorPct.toFixed(0)}% ocupado</span>}
+                  {maxUsuarios > 0 && <span>{usuarioPct.toFixed(0)}% ocupado</span>}
                 </div>
               </div>
 
@@ -668,7 +681,7 @@ export default function GestorLicencas() {
               <div className="p-3 bg-blue-50/80 border border-blue-100 rounded-lg flex items-start gap-2.5 text-xs text-blue-800">
                 <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-600" />
                 <p>
-                  Precisa de mais capacidade para cadastrar novos moradores ou apartamentos? Você
+                  Precisa de mais capacidade para cadastrar novos usuários ou apartamentos? Você
                   pode mudar para um plano superior a qualquer momento.
                 </p>
               </div>
@@ -805,7 +818,7 @@ export default function GestorLicencas() {
             </DialogTitle>
             <DialogDescription>
               Selecione o plano desejado para o seu condomínio. O upgrade ou downgrade tem efeito
-              imediato sobre a capacidade de novos moradores e unidades.
+              imediato sobre a capacidade de novos usuários e unidades.
             </DialogDescription>
           </DialogHeader>
 
@@ -857,7 +870,7 @@ export default function GestorLicencas() {
 
                         <div className="pt-2 border-t space-y-1 text-xs">
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Moradores:</span>
+                            <span className="text-muted-foreground">Usuários:</span>
                             <span className="font-semibold text-foreground">
                               {p.max_moradores ? `Até ${p.max_moradores}` : 'Ilimitado'}
                             </span>
