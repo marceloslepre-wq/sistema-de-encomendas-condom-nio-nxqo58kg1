@@ -98,11 +98,39 @@ routerAdd(
       const notificationUrl = `${siteUrl}/backend/v1/pagamento/webhook`
 
       // Payer info
-      let payerEmail = auth.getString('email') || ''
+      let payerEmail = (auth.getString('email') || '').trim()
+      if (!payerEmail || !payerEmail.includes('@')) {
+        payerEmail = (condo.getString('email') || '').trim()
+      }
       if (!payerEmail || !payerEmail.includes('@')) {
         payerEmail = 'gestor@condominio.com.br'
       }
-      const payerName = auth.getString('name') || condoName
+
+      let payerRawName = (auth.getString('name') || condoName || 'Gestor').trim()
+      let nameParts = payerRawName.split(/\s+/).filter(Boolean)
+      let firstName = nameParts[0] || 'Gestor'
+      let lastName = nameParts.slice(1).join(' ') || 'Condomínio'
+
+      const payerObj = {
+        email: payerEmail,
+        first_name: firstName,
+        last_name: lastName,
+      }
+
+      // Se o usuário ou o condomínio tiverem CPF/CNPJ, incluir identification
+      const userCpf = (auth.getString('cpf') || '').replace(/\D/g, '')
+      const condoCnpj = (condo.getString('cnpj') || '').replace(/\D/g, '')
+      if (userCpf && (userCpf.length === 11 || userCpf.length === 14)) {
+        payerObj.identification = {
+          type: userCpf.length === 11 ? 'CPF' : 'CNPJ',
+          number: userCpf,
+        }
+      } else if (condoCnpj && (condoCnpj.length === 11 || condoCnpj.length === 14)) {
+        payerObj.identification = {
+          type: condoCnpj.length === 14 ? 'CNPJ' : 'CPF',
+          number: condoCnpj,
+        }
+      }
 
       // Montar payload estritamente para PIX: POST /v1/payments
       const paymentPayload = {
@@ -110,10 +138,7 @@ routerAdd(
         description: `Renovação 30 dias - ${planoNome} (${condoName})`,
         payment_method_id: 'pix',
         notification_url: notificationUrl,
-        payer: {
-          email: payerEmail,
-          first_name: payerName,
-        },
+        payer: payerObj,
         external_reference: JSON.stringify({
           condo_id: userCondoId,
           licenca_id: licenca.id,
@@ -124,30 +149,68 @@ routerAdd(
       // Gerar idempotency key para evitar requisição duplicada instantânea
       const idempotencyKey = `pix_${licenca.id}_${Date.now()}`
 
-      const response = $http.send({
-        url: 'https://api.mercadopago.com/v1/payments',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${mpToken}`,
-          'X-Idempotency-Key': idempotencyKey,
-        },
-        body: JSON.stringify(paymentPayload),
-        timeout: 25,
-      })
-
-      let rawBody = ''
+      let response = null
       try {
-        if (response.body) {
-          rawBody = new TextDecoder().decode(response.body)
-        }
-      } catch (_) {
-        rawBody = String(response.body || '')
+        response = $http.send({
+          url: 'https://api.mercadopago.com/v1/payments',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${mpToken}`,
+            'X-Idempotency-Key': idempotencyKey,
+          },
+          body: JSON.stringify(paymentPayload),
+          timeout: 25,
+        })
+      } catch (httpErr) {
+        $app
+          .logger()
+          .error(
+            'Falha de rede ao conectar à API do Mercado Pago:',
+            'error',
+            httpErr.message || String(httpErr),
+          )
+        return e.badRequestError(
+          'Falha de conexão com o Mercado Pago: ' + (httpErr.message || String(httpErr)),
+        )
       }
 
-      const resJson = JSON.parse(rawBody || '{}')
+      let rawBody = ''
+      if (response && response.raw) {
+        rawBody = String(response.raw || '').trim()
+      } else if (response && response.body !== undefined && response.body !== null) {
+        try {
+          rawBody = new TextDecoder().decode(response.body).trim()
+        } catch (_) {
+          if (Array.isArray(response.body)) {
+            rawBody = String.fromCharCode.apply(null, response.body).trim()
+          } else {
+            rawBody = String(response.body || '').trim()
+          }
+        }
+      }
 
-      if (response.statusCode >= 200 && response.statusCode < 300 && resJson.id) {
+      let resJson = {}
+      if (response && response.json && typeof response.json === 'object') {
+        resJson = response.json
+      } else if (rawBody && (rawBody.startsWith('{') || rawBody.startsWith('['))) {
+        try {
+          resJson = JSON.parse(rawBody)
+        } catch (parseErr) {
+          $app
+            .logger()
+            .error(
+              'Falha ao parsear JSON do Mercado Pago:',
+              'body',
+              rawBody,
+              'error',
+              parseErr.message || String(parseErr),
+            )
+          resJson = {}
+        }
+      }
+
+      if (response && response.statusCode >= 200 && response.statusCode < 300 && resJson.id) {
         const paymentId = String(resJson.id)
         const txData =
           resJson.point_of_interaction && resJson.point_of_interaction.transaction_data
@@ -198,19 +261,39 @@ routerAdd(
           licenca_id: licenca.id,
         })
       } else {
+        const mpStatusCode = response ? response.statusCode : 0
         $app
           .logger()
           .error(
             'Erro retornado pela API do Mercado Pago (PIX):',
             'statusCode',
-            response.statusCode,
+            mpStatusCode,
             'body',
             rawBody,
           )
-        return e.badRequestError(
-          'Erro ao comunicar com Mercado Pago: ' +
-            (resJson.message || resJson.error || 'Falha ao gerar cobrança PIX.'),
-        )
+
+        let friendlyError = 'Falha ao gerar cobrança PIX.'
+        if (mpStatusCode === 401 || mpStatusCode === 403) {
+          friendlyError =
+            'Credencial do Mercado Pago inválida ou não autorizada. Verifique o Access Token com o administrador.'
+        } else if (resJson.message) {
+          friendlyError = resJson.message
+          if (Array.isArray(resJson.cause) && resJson.cause.length > 0) {
+            const causes = resJson.cause
+              .map((c) => c.description || c.code || '')
+              .filter(Boolean)
+              .join('; ')
+            if (causes) {
+              friendlyError += ` (${causes})`
+            }
+          }
+        } else if (resJson.error) {
+          friendlyError = String(resJson.error)
+        } else if (rawBody) {
+          friendlyError = rawBody.substring(0, 150)
+        }
+
+        return e.badRequestError('Erro ao comunicar com Mercado Pago: ' + friendlyError)
       }
     } catch (err) {
       return e.badRequestError('Erro ao processar cobrança PIX: ' + (err.message || err))
@@ -314,27 +397,58 @@ routerAdd(
     }
 
     try {
-      const payRes = $http.send({
-        url: `https://api.mercadopago.com/v1/payments/${paymentId}`,
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${mpToken}`,
-        },
-        timeout: 15,
-      })
-
-      let payRaw = ''
+      let payRes = null
       try {
-        if (payRes.body) {
-          payRaw = new TextDecoder().decode(payRes.body)
-        }
-      } catch (_) {
-        payRaw = String(payRes.body || '')
+        payRes = $http.send({
+          url: `https://api.mercadopago.com/v1/payments/${paymentId}`,
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${mpToken}`,
+          },
+          timeout: 15,
+        })
+      } catch (httpErr) {
+        $app
+          .logger()
+          .error(
+            'Falha de rede ao consultar status PIX:',
+            'error',
+            httpErr.message || String(httpErr),
+          )
+        return e.json(200, {
+          payment_id: paymentId,
+          status: localPag ? localPag.getString('status') : 'pending',
+          renovado: false,
+        })
       }
 
-      const payJson = JSON.parse(payRaw || '{}')
+      let payRaw = ''
+      if (payRes && payRes.raw) {
+        payRaw = String(payRes.raw || '').trim()
+      } else if (payRes && payRes.body !== undefined && payRes.body !== null) {
+        try {
+          payRaw = new TextDecoder().decode(payRes.body).trim()
+        } catch (_) {
+          if (Array.isArray(payRes.body)) {
+            payRaw = String.fromCharCode.apply(null, payRes.body).trim()
+          } else {
+            payRaw = String(payRes.body || '').trim()
+          }
+        }
+      }
 
-      if (payRes.statusCode === 200 && payJson.id) {
+      let payJson = {}
+      if (payRes && payRes.json && typeof payRes.json === 'object') {
+        payJson = payRes.json
+      } else if (payRaw && (payRaw.startsWith('{') || payRaw.startsWith('['))) {
+        try {
+          payJson = JSON.parse(payRaw)
+        } catch (_) {
+          payJson = {}
+        }
+      }
+
+      if (payRes && payRes.statusCode === 200 && payJson.id) {
         const mpStatus = payJson.status // 'approved', 'pending', 'in_process', 'rejected', 'cancelled'
 
         if (mpStatus === 'approved') {
@@ -515,27 +629,54 @@ routerAdd('POST', '/backend/v1/pagamento/webhook', (e) => {
       $secrets.get('MERCADO_PAGO_ACCESS_TOKEN') || $os.getenv('MERCADO_PAGO_ACCESS_TOKEN') || ''
     if (mpToken) {
       try {
-        const payRes = $http.send({
-          url: `https://api.mercadopago.com/v1/payments/${paymentId}`,
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${mpToken}`,
-          },
-          timeout: 15,
-        })
-
-        let payRaw = ''
+        let payRes = null
         try {
-          if (payRes.body) {
-            payRaw = new TextDecoder().decode(payRes.body)
-          }
-        } catch (_) {
-          payRaw = String(payRes.body || '')
+          payRes = $http.send({
+            url: `https://api.mercadopago.com/v1/payments/${paymentId}`,
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${mpToken}`,
+            },
+            timeout: 15,
+          })
+        } catch (httpErr) {
+          $app
+            .logger()
+            .error(
+              'Falha de rede ao consultar pagamento no Webhook:',
+              'error',
+              httpErr.message || String(httpErr),
+            )
+          return e.json(200, { received: true })
         }
 
-        const payJson = JSON.parse(payRaw || '{}')
+        let payRaw = ''
+        if (payRes && payRes.raw) {
+          payRaw = String(payRes.raw || '').trim()
+        } else if (payRes && payRes.body !== undefined && payRes.body !== null) {
+          try {
+            payRaw = new TextDecoder().decode(payRes.body).trim()
+          } catch (_) {
+            if (Array.isArray(payRes.body)) {
+              payRaw = String.fromCharCode.apply(null, payRes.body).trim()
+            } else {
+              payRaw = String(payRes.body || '').trim()
+            }
+          }
+        }
 
-        if (payRes.statusCode === 200 && payJson.status === 'approved') {
+        let payJson = {}
+        if (payRes && payRes.json && typeof payRes.json === 'object') {
+          payJson = payRes.json
+        } else if (payRaw && (payRaw.startsWith('{') || payRaw.startsWith('['))) {
+          try {
+            payJson = JSON.parse(payRaw)
+          } catch (_) {
+            payJson = {}
+          }
+        }
+
+        if (payRes && payRes.statusCode === 200 && payJson.status === 'approved') {
           // Processar aprovação inline
           let extRef = null
           try {
@@ -822,29 +963,54 @@ routerAdd(
         }),
       }
 
-      const response = $http.send({
-        url: 'https://api.mercadopago.com/checkout/preferences',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${mpToken}`,
-        },
-        body: JSON.stringify(preferencePayload),
-        timeout: 20,
-      })
-
-      let rawBody = ''
+      let response = null
       try {
-        if (response.body) {
-          rawBody = new TextDecoder().decode(response.body)
-        }
-      } catch (_) {
-        rawBody = String(response.body || '')
+        response = $http.send({
+          url: 'https://api.mercadopago.com/checkout/preferences',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${mpToken}`,
+          },
+          body: JSON.stringify(preferencePayload),
+          timeout: 20,
+        })
+      } catch (httpErr) {
+        $app
+          .logger()
+          .error('Falha de rede ao criar preference:', 'error', httpErr.message || String(httpErr))
+        return e.badRequestError(
+          'Falha de conexão com o Mercado Pago: ' + (httpErr.message || String(httpErr)),
+        )
       }
 
-      const resJson = JSON.parse(rawBody || '{}')
+      let rawBody = ''
+      if (response && response.raw) {
+        rawBody = String(response.raw || '').trim()
+      } else if (response && response.body !== undefined && response.body !== null) {
+        try {
+          rawBody = new TextDecoder().decode(response.body).trim()
+        } catch (_) {
+          if (Array.isArray(response.body)) {
+            rawBody = String.fromCharCode.apply(null, response.body).trim()
+          } else {
+            rawBody = String(response.body || '').trim()
+          }
+        }
+      }
 
-      if (response.statusCode >= 200 && response.statusCode < 300 && resJson.id) {
+      let resJson = {}
+      if (response && response.json && typeof response.json === 'object') {
+        resJson = response.json
+      } else if (rawBody && (rawBody.startsWith('{') || rawBody.startsWith('['))) {
+        try {
+          resJson = JSON.parse(rawBody)
+        } catch (_) {
+          resJson = {}
+        }
+      }
+
+      if (response && response.statusCode >= 200 && response.statusCode < 300 && resJson.id) {
         try {
           const pagCol = $app.findCollectionByNameOrId('pagamentos_renovacao')
           const pagRecord = new Record(pagCol)
