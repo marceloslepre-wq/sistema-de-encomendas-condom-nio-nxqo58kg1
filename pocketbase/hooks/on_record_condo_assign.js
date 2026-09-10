@@ -20,7 +20,7 @@ const collectionsWithCondo = [
 ]
 
 for (const colName of collectionsWithCondo) {
-  onRecordCreate((e) => {
+  onRecordCreateRequest((e) => {
     const record = e.record
     const existingCondoId = record.getString('condo_id')
 
@@ -29,7 +29,7 @@ for (const colName of collectionsWithCondo) {
       return e.next()
     }
 
-    const auth = e.requestInfo().auth
+    const auth = e.auth || (e.requestInfo && e.requestInfo().auth)
     if (auth) {
       const authCondoId = auth.getString('condo_id')
       if (authCondoId) {

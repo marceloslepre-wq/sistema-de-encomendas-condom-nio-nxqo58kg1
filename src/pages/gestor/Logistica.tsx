@@ -13,6 +13,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { Plus, Trash2, Loader2 } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
+import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Dialog,
@@ -44,7 +45,11 @@ export default function GestorLogistica() {
       setVolumeTypes(vTypes)
       setShelfLocations(sLocs)
     } catch (err) {
-      toast({ title: 'Erro', description: 'Falha ao carregar dados.', variant: 'destructive' })
+      toast({
+        title: 'Erro',
+        description: getErrorMessage(err) || 'Falha ao carregar dados.',
+        variant: 'destructive',
+      })
     }
   }
 
@@ -53,7 +58,8 @@ export default function GestorLogistica() {
   }, [])
 
   const handleAddVolumeType = async () => {
-    if (!newVolumeType.trim()) {
+    const trimmed = newVolumeType.trim()
+    if (!trimmed) {
       toast({
         title: 'Aviso',
         description: 'Digite um nome para o tipo de volume.',
@@ -63,13 +69,26 @@ export default function GestorLogistica() {
     }
     setLoading(true)
     try {
-      await pb.collection('volume_types').create({ name: newVolumeType })
+      const authCondoId = pb.authStore.record?.condo_id
+      const payload: Record<string, any> = { name: trimmed }
+      if (authCondoId) {
+        payload.condo_id = authCondoId
+      }
+      await pb.collection('volume_types').create(payload)
       setNewVolumeType('')
       setIsVolumeModalOpen(false)
       loadData()
       toast({ title: 'Sucesso', description: 'Tipo de volume adicionado.' })
-    } catch (err) {
-      toast({ title: 'Erro', description: 'Falha ao adicionar.', variant: 'destructive' })
+    } catch (err: any) {
+      const msg = getErrorMessage(err)
+      toast({
+        title: 'Erro ao adicionar',
+        description:
+          msg && msg !== 'Failed to create record.'
+            ? msg
+            : 'Falha ao adicionar tipo de volume. Verifique os dados.',
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
     }
@@ -82,24 +101,42 @@ export default function GestorLogistica() {
       loadData()
       toast({ title: 'Sucesso', description: 'Item removido.' })
     } catch (err) {
-      toast({ title: 'Erro', description: 'Falha ao excluir.', variant: 'destructive' })
+      toast({
+        title: 'Erro ao excluir',
+        description: getErrorMessage(err) || 'Falha ao excluir.',
+        variant: 'destructive',
+      })
     }
   }
 
   const handleAddShelfLocation = async () => {
-    if (!newShelfLocation.trim()) {
+    const trimmed = newShelfLocation.trim()
+    if (!trimmed) {
       toast({ title: 'Aviso', description: 'Digite um nome para o local.', variant: 'destructive' })
       return
     }
     setLoading(true)
     try {
-      await pb.collection('shelf_locations').create({ name: newShelfLocation })
+      const authCondoId = pb.authStore.record?.condo_id
+      const payload: Record<string, any> = { name: trimmed }
+      if (authCondoId) {
+        payload.condo_id = authCondoId
+      }
+      await pb.collection('shelf_locations').create(payload)
       setNewShelfLocation('')
       setIsLocationModalOpen(false)
       loadData()
       toast({ title: 'Sucesso', description: 'Localização adicionada.' })
-    } catch (err) {
-      toast({ title: 'Erro', description: 'Falha ao adicionar.', variant: 'destructive' })
+    } catch (err: any) {
+      const msg = getErrorMessage(err)
+      toast({
+        title: 'Erro ao adicionar',
+        description:
+          msg && msg !== 'Failed to create record.'
+            ? msg
+            : 'Falha ao adicionar localização. Verifique os dados.',
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
     }
@@ -112,7 +149,11 @@ export default function GestorLogistica() {
       loadData()
       toast({ title: 'Sucesso', description: 'Item removido.' })
     } catch (err) {
-      toast({ title: 'Erro', description: 'Falha ao excluir.', variant: 'destructive' })
+      toast({
+        title: 'Erro ao excluir',
+        description: getErrorMessage(err) || 'Falha ao excluir.',
+        variant: 'destructive',
+      })
     }
   }
 
