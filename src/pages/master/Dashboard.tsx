@@ -111,7 +111,7 @@ export default function MasterDashboard() {
   const [licencaForm, setLicencaForm] = useState({
     condo_id: '',
     plano_id: '',
-    status: 'ativa' as 'ativa' | 'pausada' | 'cancelada' | 'expirada',
+    status: 'ativa' as 'ativa' | 'pausada' | 'cancelada' | 'expirada' | 'renovada' | 'Renovada',
     data_expiracao: '',
     override_max_usuarios: '',
     override_max_unidades: '',
@@ -644,11 +644,13 @@ export default function MasterDashboard() {
     }
   }
 
-  // Identificar a licença mais recente por condomínio (vigente por condomínio)
+  // Identificar a licença mais recente com status ativa por condomínio (vigente por condomínio)
   const licencaMaisRecentePorCondo = useMemo(() => {
     const map = new Map<string, Licenca>()
     for (const lic of licencas) {
       if (!lic.condo_id) continue
+      // Considerar apenas licenças com status 'ativa'
+      if ((lic.status as string) !== 'ativa' && (lic.status as string) !== 'ativo') continue
       const existing = map.get(lic.condo_id)
       if (!existing) {
         map.set(lic.condo_id, lic)
@@ -715,21 +717,15 @@ export default function MasterDashboard() {
 
   // Contadores
   // Item 2: o contador "Licenças Ativas" deve contar apenas a licença vigente por cliente
-  // (a mais recente por condomínio, que não esteja pausada/excluída). Licenças 'Renovada' não contam como ativas.
+  // (a mais recente por condomínio com status ativa, que não esteja expirada/pausada/cancelada).
+  // Licenças com status 'renovada' não contam como ativas.
   const countAtivas = useMemo(() => {
     let count = 0
     licencaMaisRecentePorCondo.forEach((lic) => {
       const isExpired =
         lic.status === 'expirada' ||
         (lic.data_expiracao && new Date(lic.data_expiracao) <= new Date())
-      if (
-        lic.status === 'ativa' &&
-        lic.status !== 'Renovada' &&
-        lic.status !== 'renovada' &&
-        lic.status !== 'pausada' &&
-        lic.status !== 'cancelada' &&
-        !isExpired
-      ) {
+      if (!isExpired) {
         count++
       }
     })
@@ -744,8 +740,7 @@ export default function MasterDashboard() {
     (l) =>
       l.status !== 'Renovada' &&
       l.status !== 'renovada' &&
-      (l.status === 'expirada' ||
-        (l.data_expiracao && new Date(l.data_expiracao) <= new Date())),
+      (l.status === 'expirada' || (l.data_expiracao && new Date(l.data_expiracao) <= new Date())),
   ).length
   const countPausadas = licencas.filter((l) => l.status === 'pausada').length
 
@@ -1859,7 +1854,7 @@ export default function MasterDashboard() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ativa">Ativa</SelectItem>
-                      <SelectItem value="Renovada">Renovada</SelectItem>
+                      <SelectItem value="renovada">Renovada</SelectItem>
                       <SelectItem value="pausada">Pausada</SelectItem>
                       <SelectItem value="cancelada">Cancelada</SelectItem>
                       <SelectItem value="expirada">Expirada</SelectItem>

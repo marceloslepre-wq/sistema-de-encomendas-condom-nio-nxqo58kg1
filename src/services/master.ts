@@ -15,7 +15,7 @@ export type Plano = RecordModel & {
 export type Licenca = RecordModel & {
   condo_id: string
   plano_id: string
-  status: 'ativa' | 'pausada' | 'cancelada' | 'expirada' | 'Renovada'
+  status: 'ativa' | 'pausada' | 'cancelada' | 'expirada' | 'renovada' | 'Renovada'
   data_expiracao?: string
   override_max_usuarios?: number | null
   override_max_unidades?: number | null
@@ -75,20 +75,22 @@ export const reativarLicenca30Dias = async (id: string, currentExpDate?: string)
     { requestKey: null },
   )
 
-  // 2. Marcar a licença anterior (e quaisquer outras ativas deste condomínio) como 'Renovada'
+  // 2. Marcar a licença anterior (e quaisquer outras ativas deste condomínio) como 'renovada'
   try {
     const anteriores = await pb.collection('licencas').getFullList<Licenca>({
-      filter: `condo_id = "${licencaAtual.condo_id}" && id != "${novaLicenca.id}" && status = "ativa"`,
+      filter: `condo_id = "${licencaAtual.condo_id}" && id != "${novaLicenca.id}" && (status = "ativa" || status = "ativo")`,
       requestKey: null,
     })
     for (const ant of anteriores) {
-      await pb.collection('licencas').update(ant.id, { status: 'Renovada' }, { requestKey: null })
+      await pb.collection('licencas').update(ant.id, { status: 'renovada' }, { requestKey: null })
     }
   } catch (_) {
     // Fallback garantido para a licença clicada
     try {
-      await pb.collection('licencas').update(id, { status: 'Renovada' }, { requestKey: null })
-    } catch { /* intentionally ignored */ }
+      await pb.collection('licencas').update(id, { status: 'renovada' }, { requestKey: null })
+    } catch {
+      /* intentionally ignored */
+    }
   }
 
   // 3. Registrar no histórico de licenças
@@ -96,9 +98,13 @@ export const reativarLicenca30Dias = async (id: string, currentExpDate?: string)
     let planoNome = 'Plano'
     if (licencaAtual.plano_id) {
       try {
-        const plano = await pb.collection('planos').getOne<Plano>(licencaAtual.plano_id, { requestKey: null })
+        const plano = await pb
+          .collection('planos')
+          .getOne<Plano>(licencaAtual.plano_id, { requestKey: null })
         planoNome = plano.nome || planoNome
-      } catch { /* intentionally ignored */ }
+      } catch {
+        /* intentionally ignored */
+      }
     }
 
     await pb.collection('historico_licencas').create(
@@ -109,12 +115,14 @@ export const reativarLicenca30Dias = async (id: string, currentExpDate?: string)
         tipo_evento: 'reativacao_30d',
         plano_nome: planoNome,
         data_expiracao: novaExp.toISOString(),
-        descricao: `Reativação +30 dias pelo painel master. Nova licença ${novaLicenca.id} criada; licença anterior ${id} marcada como Renovada.`,
+        descricao: `Reativação +30 dias pelo painel master. Nova licença ${novaLicenca.id} criada; licença anterior ${id} marcada como renovada.`,
         alterado_por: 'Administrador Master',
       },
       { requestKey: null },
     )
-  } catch { /* intentionally ignored */ }
+  } catch {
+    /* intentionally ignored */
+  }
 
   return novaLicenca
 }

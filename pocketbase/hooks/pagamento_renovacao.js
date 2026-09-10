@@ -521,16 +521,16 @@ routerAdd(
               $app.saveNoValidate(novaLic)
               novaLicId = novaLic.id
 
-              // Marcar licença(s) anterior(es) do mesmo condomínio como 'Renovada'
+              // Marcar licença(s) anterior(es) do mesmo condomínio como 'renovada'
               try {
                 const anteriores = $app.findRecordsByFilter(
                   'licencas',
-                  `condo_id = '${effCondoId}' && id != '${novaLicId}' && status = 'ativa'`,
+                  `condo_id = '${effCondoId}' && id != '${novaLicId}' && (status = 'ativa' || status = 'ativo')`,
                   '-created',
                   50,
                 )
                 for (let k = 0; k < anteriores.length; k++) {
-                  anteriores[k].set('status', 'Renovada')
+                  anteriores[k].set('status', 'renovada')
                   $app.saveNoValidate(anteriores[k])
                 }
               } catch (_) {}
@@ -764,16 +764,16 @@ routerAdd('POST', '/backend/v1/pagamento/webhook', (e) => {
               $app.saveNoValidate(novaLicenca)
               novaLicencaId = novaLicenca.id
 
-              // Marcar licença(s) anterior(es) do mesmo condomínio como 'Renovada'
+              // Marcar licença(s) anterior(es) do mesmo condomínio como 'renovada'
               try {
                 const anteriores = $app.findRecordsByFilter(
                   'licencas',
-                  `condo_id = '${effectiveCondoId}' && id != '${novaLicencaId}' && status = 'ativa'`,
+                  `condo_id = '${effectiveCondoId}' && id != '${novaLicencaId}' && (status = 'ativa' || status = 'ativo')`,
                   '-created',
                   50,
                 )
                 for (let k = 0; k < anteriores.length; k++) {
-                  anteriores[k].set('status', 'Renovada')
+                  anteriores[k].set('status', 'renovada')
                   $app.saveNoValidate(anteriores[k])
                 }
               } catch (_) {}
