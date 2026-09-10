@@ -392,14 +392,29 @@ export default function GestorUsuarios() {
       const errors = extractFieldErrors(err)
       if (
         err?.response?.data?.cpf?.code === 'validation_not_unique' ||
-        errors.cpf === 'Value must be unique.'
+        errors.cpf === 'Value must be unique.' ||
+        errors.cpf === 'validation_not_unique'
       ) {
         errors.cpf = 'Este CPF já está cadastrado.'
+      }
+      if (
+        err?.response?.data?.email?.code === 'validation_not_unique' ||
+        errors.email === 'Value must be unique.' ||
+        errors.email === 'validation_not_unique'
+      ) {
+        errors.email = 'Este e-mail já está em uso.'
       }
       setFieldErrors(errors)
       const errorMsg =
         errors.plan_limit ||
-        err?.response?.data?.plan_limit?.message ||
+        (typeof err?.response?.data?.plan_limit === 'string'
+          ? err.response.data.plan_limit
+          : err?.response?.data?.plan_limit?.message) ||
+        (err?.response?.data?.message &&
+        err.response.data.message !== 'Failed to create record.' &&
+        err.response.data.message !== 'Failed to update record.'
+          ? err.response.data.message
+          : null) ||
         (err?.response?.message &&
         err.response.message !== 'Failed to create record.' &&
         err.response.message !== 'Failed to update record.'

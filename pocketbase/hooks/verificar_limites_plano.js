@@ -6,7 +6,7 @@
 // O flag 'exclusivo_master' sozinho NÃO torna o plano ilimitado.
 
 // 1. Validar limite de Usuários antes da criação na collection 'users' (todos os perfis: morador, porteiro, portaria, triagem, gestor)
-onRecordCreate((e) => {
+onRecordCreateRequest((e) => {
   const record = e.record
   const role = record.getString('role')
 
@@ -15,7 +15,7 @@ onRecordCreate((e) => {
     return e.next()
   }
 
-  const auth = e.requestInfo().auth
+  const auth = e.auth
   if (auth && (auth.getString('role') === 'master' || auth.getString('role') === 'admin')) {
     return e.next()
   }
@@ -83,7 +83,7 @@ onRecordCreate((e) => {
   const currentCount = $app.countRecords('users', `condo_id = '${condoId}'`)
   if (currentCount >= maxUsuarios) {
     const errorMsg = `Limite do plano atingido (${maxUsuarios} usuários). Faça upgrade do plano para continuar cadastrando.`
-    throw new BadRequestError(errorMsg, {
+    return e.badRequestError(errorMsg, {
       plan_limit: new ValidationError('plan_limit_reached', errorMsg),
     })
   }
@@ -92,9 +92,9 @@ onRecordCreate((e) => {
 }, 'users')
 
 // 2. Validar limite antes da criação na collection 'moradores' (caso ocorra cadastro direto ou fluxo legado)
-onRecordCreate((e) => {
+onRecordCreateRequest((e) => {
   const record = e.record
-  const auth = e.requestInfo().auth
+  const auth = e.auth
 
   // Se for superuser / master / admin, não bloqueia
   if (auth && (auth.getString('role') === 'master' || auth.getString('role') === 'admin')) {
@@ -166,7 +166,7 @@ onRecordCreate((e) => {
   const currentCount = $app.countRecords('users', `condo_id = '${condoId}'`)
   if (currentCount >= maxUsuarios) {
     const errorMsg = `Limite do plano atingido (${maxUsuarios} usuários). Faça upgrade do plano para continuar cadastrando.`
-    throw new BadRequestError(errorMsg, {
+    return e.badRequestError(errorMsg, {
       plan_limit: new ValidationError('plan_limit_reached', errorMsg),
     })
   }
@@ -175,9 +175,9 @@ onRecordCreate((e) => {
 }, 'moradores')
 
 // 3. Validar limite de Unidades antes da criação na collection 'units'
-onRecordCreate((e) => {
+onRecordCreateRequest((e) => {
   const record = e.record
-  const auth = e.requestInfo().auth
+  const auth = e.auth
 
   if (auth && (auth.getString('role') === 'master' || auth.getString('role') === 'admin')) {
     return e.next()
@@ -246,7 +246,7 @@ onRecordCreate((e) => {
   const currentCount = $app.countRecords('units', `condo_id = '${condoId}'`)
   if (currentCount >= maxUnits) {
     const errorMsg = `Limite do plano atingido (${maxUnits} unidades). Faça upgrade do plano para continuar cadastrando.`
-    throw new BadRequestError(errorMsg, {
+    return e.badRequestError(errorMsg, {
       plan_limit: new ValidationError('plan_limit_reached', errorMsg),
     })
   }
