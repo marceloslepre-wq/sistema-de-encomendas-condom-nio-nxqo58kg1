@@ -190,26 +190,31 @@ export default function GestorConfiguracoes() {
     })
 
     // Atualizar no banco para desconectado para que recarregar a página não mostre "Conectando..." congelado
-    try {
-      await updateCondo(targetCondoId, {
-        whatsapp_status: 'disconnected',
-        whatsapp_qrcode: '',
-        whatsapp_updated_at: new Date().toISOString(),
-      })
-    } catch {
-      /* intentionally ignored */
+    if (targetCondoId) {
+      try {
+        await updateCondo(targetCondoId, {
+          whatsapp_status: 'disconnected',
+          whatsapp_qrcode: '',
+          whatsapp_updated_at: new Date().toISOString(),
+        })
+      } catch {
+        /* intentionally ignored */
+      }
     }
   }
 
-  const startPollingStatus = (targetCondoId: string) => {
+  const startPollingStatus = (targetCondoId: string, initialSeconds = 120) => {
     stopPolling()
     pollingCountRef.current = 0
-    setCountdownSeconds(120)
+    const clampedInitial = Math.max(1, Math.min(120, initialSeconds))
+    setCountdownSeconds(clampedInitial)
 
     // Contador regressivo de segundo a segundo para feedback visual de tempo
     countdownRef.current = setInterval(() => {
       setCountdownSeconds((prev) => {
         if (prev <= 1) {
+          // Quando o contador zera, disparar falha por timeout
+          handleTimeoutFailure(targetCondoId)
           return 0
         }
         return prev - 1
@@ -220,7 +225,7 @@ export default function GestorConfiguracoes() {
     pollingRef.current = setInterval(async () => {
       pollingCountRef.current += 1
 
-      // Parar após ~2 minutos (24 x 5s = 120s)
+      // Fallback secundário de timeout por ciclos de polling
       if (pollingCountRef.current > 24) {
         await handleTimeoutFailure(targetCondoId)
         return
@@ -368,12 +373,34 @@ export default function GestorConfiguracoes() {
           if ((condo as any).logo) {
             setLogoPreview(pb.files.getURL(condo, (condo as any).logo))
           }
-          setWaConnected(!!condo.whatsapp_connected)
-          setWaStatus(
-            condo.whatsapp_status || (condo.whatsapp_connected ? 'connected' : 'disconnected'),
-          )
+          const isConnected = !!condo.whatsapp_connected
+          setWaConnected(isConnected)
+          const currentStatus =
+            condo.whatsapp_status || (isConnected ? 'connected' : 'disconnected')
+          setWaStatus(currentStatus)
           setWaPhone(condo.whatsapp_phone || '')
           setWaQrCode(condo.whatsapp_qrcode || '')
+
+          // Se a tela abriu já com status connecting (ex: recarga da página durante conexão)
+          if (!isConnected && currentStatus === 'connecting') {
+            // Calcular tempo restante com base em whatsapp_updated_at (limite de 120s)
+            let remaining = 120
+            if (condo.whatsapp_updated_at) {
+              const diffSec = Math.floor(
+                (Date.now() - new Date(condo.whatsapp_updated_at).getTime()) / 1000,
+              )
+              if (diffSec > 0 && diffSec < 120) {
+                remaining = 120 - diffSec
+              } else if (diffSec >= 120) {
+                remaining = 0
+              }
+            }
+            if (remaining > 0) {
+              startPollingStatus(condo.id, remaining)
+            } else {
+              handleTimeoutFailure(condo.id)
+            }
+          }
         }
         setTemplates(tmpls)
         setLoading(false)
@@ -977,9 +1004,6 @@ export default function GestorConfiguracoes() {
         open={waModalOpen}
         onOpenChange={(open) => {
           setWaModalOpen(open)
-          if (!open) {
-            stopPolling()
-          }
         }}
       >
         <DialogContent className="sm:max-w-md">
@@ -1059,7 +1083,6 @@ export default function GestorConfiguracoes() {
               variant="secondary"
               size="sm"
               onClick={() => {
-                stopPolling()
                 setWaModalOpen(false)
               }}
             >
