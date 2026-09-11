@@ -548,12 +548,9 @@ routerAdd(
             : []
         if (list.length > 0) {
           var item = list[0]
-          var num =
-            item.number ||
-            item.ownerJid ||
-            (item.owner ? item.owner.replace('@s.whatsapp.net', '') : '')
+          var num = item.number || item.ownerJid || item.owner || item.jid || ''
           if (num) {
-            detectedPhone = String(num).replace('@s.whatsapp.net', '').replace(/\D/g, '')
+            detectedPhone = String(num).replace(/@.*$/, '').replace(/\D/g, '')
           }
         }
       } catch (_) {}

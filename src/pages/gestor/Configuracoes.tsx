@@ -111,6 +111,30 @@ export default function GestorConfiguracoes() {
       .substring(0, 15)
   }
 
+  const formatDisplayPhone = (value: string) => {
+    if (!value) return ''
+    const digits = String(value).replace(/\D/g, '')
+    // Se vier com DDI 55 e tiver 12 ou 13 dígitos no total (55 + DDD de 2 dígitos + 8 ou 9 dígitos)
+    if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+      const ddd = digits.substring(2, 4)
+      const rest = digits.substring(4)
+      if (rest.length === 9) {
+        return `+55 (${ddd}) ${rest.substring(0, 5)}-${rest.substring(5)}`
+      } else {
+        return `+55 (${ddd}) ${rest.substring(0, 4)}-${rest.substring(4)}`
+      }
+    }
+    // Formato padrão celular/fixo nacional (11 ou 10 dígitos)
+    if (digits.length === 11) {
+      return `(${digits.substring(0, 2)}) ${digits.substring(2, 7)}-${digits.substring(7)}`
+    }
+    if (digits.length === 10) {
+      return `(${digits.substring(0, 2)}) ${digits.substring(2, 6)}-${digits.substring(6)}`
+    }
+    // Caso de fallback: exibir o número completo se não bater nos comprimentos conhecidos
+    return value
+  }
+
   const [templates, setTemplates] = useState<any[]>([])
   const [newTemplateStatus, setNewTemplateStatus] = useState('')
   const [newTemplateMensagem, setNewTemplateMensagem] = useState('')
@@ -566,7 +590,8 @@ export default function GestorConfiguracoes() {
                     </p>
                     {waPhone && (
                       <p className="text-xs font-medium text-emerald-900 mt-1">
-                        Número conectado: <span className="font-mono">{maskPhone(waPhone)}</span>
+                        Número conectado:{' '}
+                        <span className="font-mono">{formatDisplayPhone(waPhone)}</span>
                       </p>
                     )}
                   </div>
