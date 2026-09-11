@@ -244,7 +244,12 @@ export default function Cadastro() {
               <Building2 className="w-5 h-5" />
             </div>
             <div className="leading-tight">
-              <span className="font-bold text-lg text-slate-900 tracking-tight">CondoPack</span>
+              <span
+                className="font-bold text-lg text-slate-900 tracking-tight notranslate"
+                translate="no"
+              >
+                CondPack
+              </span>
               <span className="text-xs text-blue-600 font-semibold block">Multi-tenant Cloud</span>
             </div>
           </div>
@@ -416,7 +421,7 @@ export default function Cadastro() {
                               <div className="space-y-3">
                                 <div className="flex items-start justify-between">
                                   <span className="text-xs font-semibold text-blue-600 tracking-wider uppercase">
-                                    CondoPack
+                                    CondPack
                                   </span>
                                   {isSelected && (
                                     <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center">
@@ -675,7 +680,7 @@ export default function Cadastro() {
                               Solução
                             </span>
                             <span className="font-semibold text-slate-800">
-                              CondoPack Gestão Digital
+                              CondPack Gestão Digital
                             </span>
                             <span className="text-xs text-slate-500 block mt-0.5">
                               Plano: {selectedPlan ? selectedPlan.nome : 'Nenhum selecionado'}
@@ -763,7 +768,7 @@ export default function Cadastro() {
       <footer className="bg-white border-t border-slate-200 mt-auto py-6">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div>
-            © {new Date().getFullYear()} Sholver Soluções / CondoPack. Todos os direitos reservados.
+            © {new Date().getFullYear()} Sholver Soluções / CondPack. Todos os direitos reservados.
           </div>
           <div className="flex items-center gap-6">
             <span className="hover:underline cursor-pointer">Termos de Uso</span>

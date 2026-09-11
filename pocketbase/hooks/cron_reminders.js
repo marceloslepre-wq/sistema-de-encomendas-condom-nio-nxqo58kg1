@@ -13,15 +13,22 @@ cronAdd('send_reminders', '0 * * * *', () => {
   }
   while (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1)
 
+  // Helper para verificar se o condomínio é o condomínio de teste/demonstração oficial
+  const isDemoCondo = (condoRecord) => {
+    if (!condoRecord) return false
+    const id = condoRecord.id || ''
+    const name = (condoRecord.getString('name') || '').trim().toLowerCase()
+    return (
+      id === 'cjvbjhk0senz1yt' ||
+      name.indexOf('residencial parque') !== -1 ||
+      name.indexOf('residencial parque') !== -1
+    )
+  }
+
   // Helper para resolver instância de um condo_id
   const resolveCondoInstance = (condoId) => {
     if (!condoId) {
-      return {
-        instanceName: globalInstance,
-        apiKey: globalApiKey,
-        apiUrl: baseUrl,
-        senderNumber: globalSender,
-      }
+      return null
     }
     try {
       const c = $app.findRecordById('condos', condoId)
@@ -37,13 +44,19 @@ cronAdd('send_reminders', '0 * * * *', () => {
           }
         }
       }
+
+      // Se desconectado: fallback APENAS para o condomínio de testes/demonstração "Condomínio Residencial Parque"
+      if (isDemoCondo(c)) {
+        return {
+          instanceName: globalInstance,
+          apiKey: globalApiKey,
+          apiUrl: baseUrl,
+          senderNumber: globalSender,
+        }
+      }
     } catch (_) {}
-    return {
-      instanceName: globalInstance,
-      apiKey: globalApiKey,
-      apiUrl: baseUrl,
-      senderNumber: globalSender,
-    }
+
+    return null
   }
 
   const templates = $app.findRecordsByFilter(
@@ -144,6 +157,10 @@ cronAdd('send_reminders', '0 * * * *', () => {
       }
 
       const waInst = resolveCondoInstance(recordCondoId)
+      if (!waInst) {
+        // Condomínio desconectado e não é o condomínio de teste: pula o envio silenciosamente
+        continue
+      }
       const endpoint = `${waInst.apiUrl}/message/sendText/${waInst.instanceName}`
 
       const message = template

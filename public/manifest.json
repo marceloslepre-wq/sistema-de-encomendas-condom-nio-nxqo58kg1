@@ -1,6 +1,6 @@
 {
-  "name": "Sistema de Encomendas Condomínio",
-  "short_name": "Encomendas",
+  "name": "CondPack — Sistema de Encomendas",
+  "short_name": "CondPack",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

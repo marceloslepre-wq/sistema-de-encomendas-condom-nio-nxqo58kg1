@@ -111,16 +111,37 @@ onRecordAfterCreateSuccess((e) => {
       return e.next()
     }
 
-    // Resolução dinâmica de instância do condomínio
-    let targetInstance = globalInstance
+    // Resolução dinâmica de instância do condomínio:
+    // Se tiver instância própria conectada -> usa ela
+    // Se NÃO tiver -> usa a instância "Encomendas" APENAS se o condomínio for o "Condomínio Residencial Parque"
+    // Para qualquer outro condomínio desconectado -> NÃO enviar (pular silenciosamente sem quebrar o fluxo)
+    let targetInstance = ''
     let senderNumber = globalSender
+    let shouldSend = false
+
     if (condoRecord && condoRecord.getBool('whatsapp_connected')) {
       const cInst = (condoRecord.getString('whatsapp_instance_name') || '').trim()
       const cPhone = (condoRecord.getString('whatsapp_phone') || '').trim()
       if (cInst) {
         targetInstance = cInst
         if (cPhone) senderNumber = cPhone
+        shouldSend = true
       }
+    } else if (condoRecord) {
+      const cId = condoRecord.id || ''
+      const cName = (condoRecord.getString('name') || '').trim().toLowerCase()
+      const isDemo = cId === 'cjvbjhk0senz1yt' || cName.indexOf('residencial parque') !== -1
+      if (isDemo) {
+        targetInstance = globalInstance
+        shouldSend = true
+      }
+    }
+
+    if (!shouldSend || !targetInstance) {
+      console.log(
+        'WhatsApp envio create pulado: condomínio desconectado e não é o condomínio de teste',
+      )
+      return e.next()
     }
 
     let cleanPhone = phone.replace(/\D/g, '')

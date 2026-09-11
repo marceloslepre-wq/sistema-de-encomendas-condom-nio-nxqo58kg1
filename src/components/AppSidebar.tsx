@@ -84,7 +84,9 @@ export function AppSidebar() {
             <Package className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-bold text-lg leading-tight">CondoPack</h1>
+            <h1 className="font-bold text-lg leading-tight notranslate" translate="no">
+              CondPack
+            </h1>
             <p className="text-xs text-muted-foreground capitalize">{role}</p>
           </div>
         </div>

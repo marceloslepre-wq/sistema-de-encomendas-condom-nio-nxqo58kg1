@@ -52,7 +52,7 @@ export function LinkGeneratorCadastro({ planos }: LinkGeneratorCadastroProps) {
   const invitationMessage = useMemo(() => {
     const planoInfo = selectedPlano ? ` com o plano ${selectedPlano.nome}` : ''
     return (
-      `Olá! Você foi convidado para testar gratuitamente por 15 dias o CondoPack, a plataforma definitiva de gestão inteligente de encomendas para condomínios.\n\n` +
+      `Olá! Você foi convidado para testar gratuitamente por 15 dias o CondPack, a plataforma definitiva de gestão inteligente de encomendas para condomínios.\n\n` +
       `Acesse o link abaixo para iniciar seu Primeiro Cadastro${planoInfo}:\n` +
       `${generatedUrl}\n\n` +
       `Aproveite todos os recursos durante o período de avaliação gratuita!`
@@ -86,7 +86,7 @@ export function LinkGeneratorCadastro({ planos }: LinkGeneratorCadastroProps) {
 
   // Envio por E-mail
   const handleShareEmail = () => {
-    const subject = encodeURIComponent('Convite: Teste Grátis de 15 dias no CondoPack')
+    const subject = encodeURIComponent('Convite: Teste Grátis de 15 dias no CondPack')
     const body = encodeURIComponent(invitationMessage)
     window.location.href = `mailto:?subject=${subject}&body=${body}`
   }

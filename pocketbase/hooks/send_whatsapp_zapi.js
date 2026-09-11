@@ -63,8 +63,11 @@ routerAdd(
       condoId = auth.getString('condo_id') || ''
     }
 
-    let targetInstance = globalInstance
+    // Resolução dinâmica da instância com fallback restrito ao Condomínio Residencial Parque
+    let targetInstance = ''
     let senderNumber = globalSender
+    let shouldSend = false
+
     if (condoId) {
       try {
         const condo = $app.findRecordById('condos', condoId)
@@ -74,9 +77,26 @@ routerAdd(
           if (inst) {
             targetInstance = inst
             if (cPhone) senderNumber = cPhone
+            shouldSend = true
+          }
+        } else if (condo) {
+          const cId = condo.id || ''
+          const cName = (condo.getString('name') || '').trim().toLowerCase()
+          const isDemo = cId === 'cjvbjhk0senz1yt' || cName.indexOf('residencial parque') !== -1
+          if (isDemo) {
+            targetInstance = globalInstance
+            shouldSend = true
           }
         }
       } catch (_) {}
+    }
+
+    if (!shouldSend || !targetInstance) {
+      return e.json(200, {
+        success: true,
+        skipped: true,
+        message: 'Condomínio desconectado e não é o condomínio de teste. Envio pulado.',
+      })
     }
 
     const baseUrl = String(globalUrl).replace(/\/+$/, '')

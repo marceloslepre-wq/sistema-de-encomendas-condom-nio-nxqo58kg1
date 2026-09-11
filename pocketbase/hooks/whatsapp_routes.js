@@ -527,6 +527,26 @@ routerAdd(
       })
     }
 
+    // Se o condomínio estava marcado como 'connecting' há mais de 3 minutos sem conexão concluída,
+    // considerar como timeout/desconectado para evitar ficar preso eternamente no banco de dados
+    if (currentStatus === 'connecting' && !currentConnected) {
+      var lastUpdatedStr = condo.getString('whatsapp_updated_at')
+      if (lastUpdatedStr) {
+        try {
+          var lastUpdatedTime = new Date(lastUpdatedStr).getTime()
+          var diffMs = Date.now() - lastUpdatedTime
+          if (diffMs > 3 * 60 * 1000) {
+            condo.set('whatsapp_status', 'disconnected')
+            condo.set('whatsapp_qrcode', '')
+            condo.set('whatsapp_updated_at', new Date().toISOString())
+            $app.saveNoValidate(condo)
+            currentStatus = 'disconnected'
+            currentQrcode = ''
+          }
+        } catch (_) {}
+      }
+    }
+
     // Se estiver conectado / open, tentar obter o número pelo fetchInstances
     if (evolutionState === 'open') {
       try {

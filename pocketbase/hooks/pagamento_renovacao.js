@@ -953,7 +953,7 @@ routerAdd(
           {
             id: `renovacao_${licenca.id}`,
             title: `Renovação de Assinatura 30 dias - ${planoNome} (${condoName})`,
-            description: `Renovação por 30 dias do sistema de encomendas CondoPack para ${condoName}`,
+            description: `Renovação por 30 dias do sistema de encomendas CondPack para ${condoName}`,
             quantity: 1,
             currency_id: 'BRL',
             unit_price: precoMensal,

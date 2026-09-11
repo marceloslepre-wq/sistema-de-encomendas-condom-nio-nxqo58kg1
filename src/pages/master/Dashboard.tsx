@@ -273,9 +273,7 @@ export default function MasterDashboard() {
 
   const handleDesconectarWhatsAppMaster = async (condoId: string, condoName: string) => {
     if (
-      !confirm(
-        `Deseja realmente desconectar a instância de WhatsApp do condomínio "${condoName}"? Ele voltará a usar o envio padrão de fallback.`,
-      )
+      !confirm(`Deseja realmente desconectar a instância de WhatsApp do condomínio "${condoName}"?`)
     ) {
       return
     }
@@ -784,7 +782,9 @@ export default function MasterDashboard() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-lg tracking-tight">CondoPack</span>
+                <span className="font-bold text-lg tracking-tight notranslate" translate="no">
+                  CondPack
+                </span>
                 <span className="text-xs bg-indigo-500/20 text-indigo-300 font-semibold px-2 py-0.5 rounded border border-indigo-500/30">
                   MASTER MULTI-TENANT
                 </span>
@@ -1115,7 +1115,7 @@ export default function MasterDashboard() {
                             {/* Produto */}
                             <TableCell>
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                                CondoPack
+                                CondPack
                               </span>
                             </TableCell>
 

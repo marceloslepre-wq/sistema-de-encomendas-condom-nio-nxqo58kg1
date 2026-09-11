@@ -260,7 +260,12 @@ export default function Renovar() {
               <Building2 className="w-5 h-5" />
             </div>
             <div className="leading-tight">
-              <span className="font-bold text-lg text-slate-900 tracking-tight">CondoPack</span>
+              <span
+                className="font-bold text-lg text-slate-900 tracking-tight notranslate"
+                translate="no"
+              >
+                CondPack
+              </span>
               <span className="text-xs text-blue-600 font-semibold block">
                 Renovação de Assinatura
               </span>
@@ -317,7 +322,7 @@ export default function Renovar() {
                       Plano Contratado
                     </span>
                     <h3 className="text-2xl font-black text-white">
-                      {licencaInfo?.plano?.nome || 'Plano CondoPack'}
+                      {licencaInfo?.plano?.nome || 'Plano CondPack'}
                     </h3>
                     <p className="text-xs text-slate-300 mt-0.5">
                       {licencaInfo?.plano?.descricao ||
@@ -416,7 +421,7 @@ export default function Renovar() {
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 mt-auto py-5">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-          <div>© {new Date().getFullYear()} Sholver Soluções / CondoPack.</div>
+          <div>© {new Date().getFullYear()} Sholver Soluções / CondPack.</div>
           <div>Em caso de dúvidas sobre pagamentos, contate seu suporte técnico.</div>
         </div>
       </footer>

@@ -81,15 +81,17 @@ export default function GestorConfiguracoes() {
 
   // Estados de WhatsApp da Instância Própria
   const [waConnected, setWaConnected] = useState(false)
-  const [waStatus, setWaStatus] = useState<'disconnected' | 'connecting' | 'connected' | string>(
-    'disconnected',
-  )
+  const [waStatus, setWaStatus] = useState<
+    'disconnected' | 'connecting' | 'connected' | 'failed' | string
+  >('disconnected')
   const [waPhone, setWaPhone] = useState('')
   const [waQrCode, setWaQrCode] = useState('')
   const [waLoading, setWaLoading] = useState(false)
   const [waModalOpen, setWaModalOpen] = useState(false)
   const [waError, setWaError] = useState<string | null>(null)
+  const [countdownSeconds, setCountdownSeconds] = useState<number>(120)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollingCountRef = useRef<number>(0)
 
   // Máscaras
@@ -153,11 +155,14 @@ export default function GestorConfiguracoes() {
 
   const { toast } = useToast()
 
-  // Limpeza de polling ao desmontar
+  // Limpeza de timers ao desmontar
   useEffect(() => {
     return () => {
       if (pollingRef.current) {
         clearInterval(pollingRef.current)
+      }
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current)
       }
     }
   }, [])
@@ -167,19 +172,57 @@ export default function GestorConfiguracoes() {
       clearInterval(pollingRef.current)
       pollingRef.current = null
     }
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current)
+      countdownRef.current = null
+    }
     pollingCountRef.current = 0
+  }
+
+  const handleTimeoutFailure = async (targetCondoId: string) => {
+    stopPolling()
+    setWaStatus('failed')
+    setWaError('Tempo limite esgotado (2 minutos). O WhatsApp não foi conectado a tempo.')
+    toast({
+      title: 'Falha na conexão',
+      description: 'O tempo limite de 2 minutos esgotou. Clique em "Tentar novamente".',
+      variant: 'destructive',
+    })
+
+    // Atualizar no banco para desconectado para que recarregar a página não mostre "Conectando..." congelado
+    try {
+      await updateCondo(targetCondoId, {
+        whatsapp_status: 'disconnected',
+        whatsapp_qrcode: '',
+        whatsapp_updated_at: new Date().toISOString(),
+      })
+    } catch {
+      /* intentionally ignored */
+    }
   }
 
   const startPollingStatus = (targetCondoId: string) => {
     stopPolling()
     pollingCountRef.current = 0
+    setCountdownSeconds(120)
 
+    // Contador regressivo de segundo a segundo para feedback visual de tempo
+    countdownRef.current = setInterval(() => {
+      setCountdownSeconds((prev) => {
+        if (prev <= 1) {
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    // Polling a cada 5 segundos
     pollingRef.current = setInterval(async () => {
       pollingCountRef.current += 1
 
       // Parar após ~2 minutos (24 x 5s = 120s)
       if (pollingCountRef.current > 24) {
-        stopPolling()
+        await handleTimeoutFailure(targetCondoId)
         return
       }
 
@@ -278,11 +321,7 @@ export default function GestorConfiguracoes() {
 
   const handleDesconectarWhatsApp = async () => {
     if (!condoId) return
-    if (
-      !confirm(
-        'Deseja realmente desconectar o seu número de WhatsApp? O sistema voltará a usar o envio padrão.',
-      )
-    ) {
+    if (!confirm('Deseja realmente desconectar o seu número de WhatsApp do condomínio?')) {
       return
     }
     setWaLoading(true)
@@ -295,7 +334,7 @@ export default function GestorConfiguracoes() {
       setWaModalOpen(false)
       toast({
         title: 'WhatsApp Desconectado',
-        description: 'Sua instância foi desconectada. Os envios usarão o fallback seguro.',
+        description: 'Sua instância de WhatsApp foi desconectada com sucesso.',
       })
     } catch (err: any) {
       toast({
@@ -573,9 +612,17 @@ export default function GestorConfiguracoes() {
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Conectado ✓
                         </span>
                       ) : waStatus === 'connecting' ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
                           <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />{' '}
-                          Conectando...
+                          Conectando...{' '}
+                          <span className="font-mono text-[11px] text-amber-700 font-medium">
+                            ({Math.floor(countdownSeconds / 60)}:
+                            {String(countdownSeconds % 60).padStart(2, '0')})
+                          </span>
+                        </span>
+                      ) : waStatus === 'failed' ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300">
+                          <XCircle className="w-3.5 h-3.5 text-rose-600" /> Falhou a conexão
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300">
@@ -585,8 +632,7 @@ export default function GestorConfiguracoes() {
                     </div>
                     <p className="text-xs text-slate-600">
                       Envie mensagens de encomendas e notificações com o número de WhatsApp do
-                      próprio condomínio. Se desconectado, o sistema continuará enviando
-                      automaticamente pelo número padrão com segurança.
+                      próprio condomínio.
                     </p>
                     {waPhone && (
                       <p className="text-xs font-medium text-emerald-900 mt-1">
@@ -640,7 +686,9 @@ export default function GestorConfiguracoes() {
                           )}
                           {waStatus === 'connecting'
                             ? 'Reconectar / Ver QR Code'
-                            : 'Conectar meu WhatsApp'}
+                            : waStatus === 'failed'
+                              ? 'Tentar novamente'
+                              : 'Conectar meu WhatsApp'}
                         </Button>
                         {waStatus === 'connecting' && (
                           <Button
@@ -975,7 +1023,8 @@ export default function GestorConfiguracoes() {
                 <>
                   <div className="inline-flex items-center gap-2 text-xs font-medium text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Aguardando leitura do QR Code...
+                    Aguardando leitura do QR Code... ({Math.floor(countdownSeconds / 60)}:
+                    {String(countdownSeconds % 60).padStart(2, '0')})
                   </div>
                   <p className="text-[11px] text-slate-400">
                     Esta tela atualiza automaticamente assim que a conexão for estabelecida.
@@ -983,7 +1032,7 @@ export default function GestorConfiguracoes() {
                 </>
               ) : waError ? (
                 <p className="text-[11px] text-slate-500">
-                  Clique em &quot;Tentar novamente&quot; abaixo para tentar reconectar.
+                  Clique em &quot;Tentar novamente&quot; abaixo para reiniciar o fluxo de conexão.
                 </p>
               ) : (
                 <p className="text-[11px] text-slate-400">
