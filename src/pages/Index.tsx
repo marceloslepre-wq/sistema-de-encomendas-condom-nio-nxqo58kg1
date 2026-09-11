@@ -27,7 +27,7 @@ export default function Index() {
       }
       if (role === 'master') navigate('/master')
       else if (role === 'gestor') navigate('/gestor/dashboard')
-      else if (role === 'portaria') navigate('/portaria/registro')
+      else if (role === 'portaria' || role === 'porteiro') navigate('/portaria/registro')
       else if (role === 'triagem') navigate('/sala/triagem')
       else if (role === 'morador') navigate('/morador/dashboard')
       else navigate('/')

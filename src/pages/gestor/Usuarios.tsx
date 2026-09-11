@@ -448,14 +448,15 @@ export default function GestorUsuarios() {
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'gestor':
-        return <Badge className="bg-purple-500 hover:bg-purple-600">Gestor</Badge>
+        return <Badge className="bg-purple-500 hover:bg-purple-600 text-white">Gestor</Badge>
       case 'porteiro':
+        return <Badge className="bg-sky-500 hover:bg-sky-600 text-white">Porteiro</Badge>
       case 'portaria':
-        return <Badge className="bg-blue-500 hover:bg-blue-600">Portaria</Badge>
+        return <Badge className="bg-blue-500 hover:bg-blue-600 text-white">Portaria</Badge>
       case 'triagem':
-        return <Badge className="bg-indigo-500 hover:bg-indigo-600">Triagem</Badge>
+        return <Badge className="bg-indigo-500 hover:bg-indigo-600 text-white">Triagem</Badge>
       case 'morador':
-        return <Badge className="bg-green-500 hover:bg-green-600">Morador</Badge>
+        return <Badge className="bg-green-500 hover:bg-green-600 text-white">Morador</Badge>
       default:
         return <Badge variant="outline">{role}</Badge>
     }
@@ -996,14 +997,39 @@ export default function GestorUsuarios() {
               </>
             )}
 
+            {formData.role === 'porteiro' && (
+              <div className="col-span-1 md:col-span-2 mt-2">
+                <div className="bg-sky-50 border border-sky-200 text-sky-800 text-sm p-3 rounded-md flex items-start gap-2">
+                  <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
+                  <p>
+                    O perfil <strong>Porteiro</strong> possui acesso focado no recebimento rápido de
+                    encomendas, contendo as abas <strong>Registro</strong> e{' '}
+                    <strong>Entregadores</strong>.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {formData.role === 'portaria' && (
+              <div className="col-span-1 md:col-span-2 mt-2">
+                <div className="bg-blue-50 border border-blue-200 text-blue-800 text-sm p-3 rounded-md flex items-start gap-2">
+                  <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
+                  <p>
+                    O perfil <strong>Portaria</strong> possui acesso completo de recepção e sala de
+                    encomendas: <strong>Registro</strong>, <strong>Entregadores</strong>,{' '}
+                    <strong>Triagem</strong> e <strong>Retirada</strong>.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {formData.role === 'triagem' && (
               <div className="col-span-1 md:col-span-2 mt-2">
                 <div className="bg-indigo-50 border border-indigo-200 text-indigo-800 text-sm p-3 rounded-md flex items-start gap-2">
                   <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
                   <p>
-                    O perfil <strong>Triagem</strong> possui os mesmos acessos operacionais que a
-                    Portaria (registro de pacotes), mas sua conta será diferenciada nos relatórios e
-                    logs de auditoria do condomínio.
+                    O perfil <strong>Triagem</strong> é dedicado à sala de encomendas, contendo as
+                    abas <strong>Triagem</strong> e <strong>Retirada</strong>.
                   </p>
                 </div>
               </div>

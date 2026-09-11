@@ -47,11 +47,17 @@ export function AppSidebar() {
           { title: 'Configurações', url: '/gestor/configuracoes', icon: Settings },
           { title: 'Licenças e Planos', url: '/gestor/licencas', icon: Award },
         ]
-      case 'portaria':
       case 'porteiro':
         return [
           { title: 'Registro', url: '/portaria/registro', icon: Package },
           { title: 'Entregadores', url: '/portaria/entregadores', icon: Truck },
+        ]
+      case 'portaria':
+        return [
+          { title: 'Registro', url: '/portaria/registro', icon: Package },
+          { title: 'Entregadores', url: '/portaria/entregadores', icon: Truck },
+          { title: 'Triagem', url: '/sala/triagem', icon: Package },
+          { title: 'Retirada', url: '/sala/retirada', icon: QrCode },
         ]
       case 'triagem':
         return [

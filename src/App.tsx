@@ -41,9 +41,11 @@ import MasterDashboard from './pages/master/Dashboard'
 const ProtectedRoute = ({
   children,
   requiredRole,
+  allowedRoles,
 }: {
   children: React.ReactNode
   requiredRole?: string
+  allowedRoles?: string[]
 }) => {
   const { user, role, isAuthenticated, licenseExpired, loading } = useAuth()
 
@@ -62,24 +64,25 @@ const ProtectedRoute = ({
     return <Navigate to="/renovar" replace />
   }
 
-  if (requiredRole && role !== requiredRole) {
-    const isPortariaGroup = ['portaria', 'triagem', 'porteiro']
-    if (
-      requiredRole &&
-      isPortariaGroup.includes(requiredRole) &&
-      role &&
-      isPortariaGroup.includes(role)
-    ) {
-      // allow interchangeable access based on layout needs
-    } else {
-      if (role === 'master') return <Navigate to="/master" replace />
-      if (role === 'gestor') return <Navigate to="/gestor/dashboard" replace />
-      if (role === 'portaria' || role === 'porteiro')
-        return <Navigate to="/portaria/registro" replace />
-      if (role === 'triagem') return <Navigate to="/sala/triagem" replace />
-      if (role === 'morador') return <Navigate to="/morador/dashboard" replace />
-      return <Navigate to="/" replace />
+  // Verifica permissão por allowedRoles ou requiredRole
+  const hasAccess = (() => {
+    if (allowedRoles && allowedRoles.length > 0) {
+      return role ? allowedRoles.includes(role) : false
     }
+    if (requiredRole) {
+      return role === requiredRole
+    }
+    return true
+  })()
+
+  if (!hasAccess) {
+    if (role === 'master') return <Navigate to="/master" replace />
+    if (role === 'gestor') return <Navigate to="/gestor/dashboard" replace />
+    if (role === 'portaria' || role === 'porteiro')
+      return <Navigate to="/portaria/registro" replace />
+    if (role === 'triagem') return <Navigate to="/sala/triagem" replace />
+    if (role === 'morador') return <Navigate to="/morador/dashboard" replace />
+    return <Navigate to="/" replace />
   }
 
   return <>{children}</>
@@ -183,7 +186,7 @@ const App = () => (
             <Route
               path="/portaria/registro"
               element={
-                <ProtectedRoute requiredRole="portaria">
+                <ProtectedRoute allowedRoles={['porteiro', 'portaria']}>
                   <PortariaRegistro />
                 </ProtectedRoute>
               }
@@ -191,7 +194,7 @@ const App = () => (
             <Route
               path="/portaria/entregadores"
               element={
-                <ProtectedRoute requiredRole="portaria">
+                <ProtectedRoute allowedRoles={['porteiro', 'portaria']}>
                   <PortariaEntregadores />
                 </ProtectedRoute>
               }
@@ -199,7 +202,7 @@ const App = () => (
             <Route
               path="/sala/triagem"
               element={
-                <ProtectedRoute requiredRole="portaria">
+                <ProtectedRoute allowedRoles={['triagem', 'portaria']}>
                   <SalaTriagem />
                 </ProtectedRoute>
               }
@@ -207,7 +210,7 @@ const App = () => (
             <Route
               path="/sala/retirada"
               element={
-                <ProtectedRoute requiredRole="portaria">
+                <ProtectedRoute allowedRoles={['triagem', 'portaria']}>
                   <SalaRetirada />
                 </ProtectedRoute>
               }

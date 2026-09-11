@@ -9,16 +9,36 @@ export function MobileNav() {
 
   if (!role || role === 'gestor') return null
 
-  const links =
-    role === 'portaria' || role === 'porteiro'
-      ? [
+  const getMobileLinks = () => {
+    switch (role) {
+      case 'porteiro':
+        return [
           { title: 'Registro', url: '/portaria/registro', icon: Package },
           { title: 'Entregadores', url: '/portaria/entregadores', icon: Truck },
         ]
-      : [
+      case 'portaria':
+        return [
+          { title: 'Registro', url: '/portaria/registro', icon: Package },
+          { title: 'Entregadores', url: '/portaria/entregadores', icon: Truck },
+          { title: 'Triagem', url: '/sala/triagem', icon: Package },
+          { title: 'Retirada', url: '/sala/retirada', icon: QrCode },
+        ]
+      case 'triagem':
+        return [
+          { title: 'Triagem', url: '/sala/triagem', icon: Package },
+          { title: 'Retirada', url: '/sala/retirada', icon: QrCode },
+        ]
+      case 'morador':
+        return [
           { title: 'Ativas', url: '/morador/dashboard', icon: Package },
           { title: 'Perfil', url: '/morador/dados', icon: User },
         ]
+      default:
+        return []
+    }
+  }
+
+  const links = getMobileLinks()
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t flex justify-around items-center z-50 px-2 pb-safe">
