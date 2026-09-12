@@ -82,8 +82,17 @@ export default function SalaTriagem() {
           const normalizeString = (str: string) => (str || '').replace(/\s+/g, '').toLowerCase()
           const normParcelUnit = normalizeString(parcel.unidade)
 
+          // Se tiver morador_id vinculado diretamente, checa pelo ID primeiro
+          if (parcel.morador_id && m.id === parcel.morador_id) {
+            return true
+          }
+
+          // Se a string da unidade contiver o apt e a torre
           const aptMatch = m.unidade ? normParcelUnit.includes(normalizeString(m.unidade)) : false
-          const torreMatch = m.torre ? normParcelUnit.includes(normalizeString(m.torre)) : true
+          const normTorre = normalizeString(m.torre)
+          const torreMatch = normTorre
+            ? normParcelUnit.includes(normTorre) || normParcelUnit.includes(`torre${normTorre}`)
+            : true
 
           return aptMatch && torreMatch
         })

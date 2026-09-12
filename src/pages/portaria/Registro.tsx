@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/command'
 import { ChevronsUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { isResidentInUnit } from '@/lib/unitMatching'
 
 const formatCpf = (value: string) => {
   const v = value.replace(/\D/g, '').substring(0, 11)
@@ -87,8 +88,6 @@ type TableEntry = {
   residents?: ResidentUser[]
   loadingResidents?: boolean
 }
-
-const normalizeString = (str: string) => (str || '').replace(/\s+/g, '').toLowerCase()
 
 function UnitCombobox({
   units,
@@ -292,16 +291,10 @@ export default function PortariaRegistro() {
     const residentName = String(userRecord?.name || '').trim() || `Morador ${tower}-${apartment}`
 
     if (!userRecord) {
-      try {
-        const authCondoId = pb.authStore.record?.condo_id
-        const condoFilter = authCondoId ? ` && condo_id='${authCondoId}'` : ''
-        userRecord = await pb
-          .collection('users')
-          .getFirstListItem(
-            `role='morador' && torre='${escapeFilterValue(tower)}' && unidade='${escapeFilterValue(apartment)}' && name='${escapeFilterValue(residentName)}'${condoFilter}`,
-          )
-      } catch {
-        /* intentionally ignored */
+      // Procura na lista já carregada de moradores usando matching flexível
+      const matched = moradores.find((m) => isResidentInUnit(m, unit))
+      if (matched) {
+        userRecord = matched
       }
     }
 
@@ -851,13 +844,8 @@ export default function PortariaRegistro() {
                                     return
                                   }
 
-                                  const normTower = normalizeString(towerStr)
-                                  const normApt = normalizeString(aptStr)
-
-                                  const filtered = moradores.filter(
-                                    (m) =>
-                                      normalizeString(m.torre) === normTower &&
-                                      normalizeString(m.unidade) === normApt,
+                                  const filtered = moradores.filter((m) =>
+                                    isResidentInUnit(m, unit),
                                   )
 
                                   updateEntry(entry.id, (curr) =>
