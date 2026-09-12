@@ -13,6 +13,7 @@ import pb from '@/lib/pocketbase/client'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { isResidentInUnit } from '@/lib/unitMatching'
 
 interface HistoricoAndamento {
   id: string
@@ -36,22 +37,49 @@ export default function MoradorDashboard() {
     if (!user?.id) return
 
     try {
-      let unitId = ''
-      if (user.torre && user.unidade) {
-        const unit = await pb
-          .collection('units')
-          .getFirstListItem(`tower="${user.torre}" && apartment="${user.unidade}"`)
-          .catch(() => null)
-        unitId = unit?.id || ''
+      let matchedUnitId = ''
+      if (user.torre || user.unidade) {
+        try {
+          const condoFilter = user.condo_id ? `condo_id = "${user.condo_id}"` : ''
+          const units = await pb.collection('units').getFullList({
+            filter: condoFilter,
+            sort: 'tower,apartment',
+            requestKey: null,
+          })
+
+          const found = units.find((u: any) =>
+            isResidentInUnit(
+              { torre: user.torre, unidade: user.unidade },
+              { tower: u.tower, apartment: u.apartment },
+            ),
+          )
+
+          if (found) {
+            matchedUnitId = found.id
+          }
+        } catch (unitErr) {
+          console.warn('Erro ao carregar unidades para matching flexível:', unitErr)
+        }
       }
 
-      console.log('Dashboard carregando:', { morador_id: user.id, unidade_id: unitId })
+      console.log('Dashboard carregando:', {
+        morador_id: user.id,
+        user_torre: user.torre,
+        user_unidade: user.unidade,
+        unidade_id: matchedUnitId,
+      })
 
       const yesterday = new Date()
       yesterday.setHours(yesterday.getHours() - 24)
       const yesterdayStr = yesterday.toISOString().replace('T', ' ').substring(0, 19) + 'Z'
 
-      const filterAtivos = `morador_id = "${user.id}" && unidade_id = "${unitId}" && (status != 'RETIRADO' && status != 'ENTREGUE' || ((status = 'RETIRADO' || status = 'ENTREGUE') && updated >= "${yesterdayStr}"))`
+      // Se matchedUnitId for encontrado, busca por morador_id OU unidade_id correspondente.
+      // Se não for encontrado, busca SOMENTE por morador_id (nunca unidade_id = "").
+      const residentBaseCondition = matchedUnitId
+        ? `(morador_id = "${user.id}" || unidade_id = "${matchedUnitId}")`
+        : `morador_id = "${user.id}"`
+
+      const filterAtivos = `${residentBaseCondition} && (status != 'RETIRADO' && status != 'ENTREGUE' || ((status = 'RETIRADO' || status = 'ENTREGUE') && updated >= "${yesterdayStr}"))`
 
       const activeRes = await pb
         .collection('recebimentos_auditoria')
@@ -60,13 +88,13 @@ export default function MoradorDashboard() {
           sort: '-created',
         })
 
-      console.log('Buscando encomendas:', {
+      console.log('Buscando encomendas ativas:', {
         filtro: filterAtivos,
         registros_encontrados: activeRes.items.length,
       })
       setRecebimentosAtivos(activeRes.items)
 
-      const filterHistorico = `morador_id = "${user.id}" && unidade_id = "${unitId}" && (status = 'RETIRADO' || status = 'ENTREGUE') && updated < "${yesterdayStr}"`
+      const filterHistorico = `${residentBaseCondition} && (status = 'RETIRADO' || status = 'ENTREGUE') && updated < "${yesterdayStr}"`
 
       const historyRes = await pb
         .collection('recebimentos_auditoria')

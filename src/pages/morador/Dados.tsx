@@ -10,6 +10,7 @@ import { User, Phone, Mail, Hash, MapPin, Building, Shield } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 import { Skeleton } from '@/components/ui/skeleton'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { isResidentInUnit } from '@/lib/unitMatching'
 
 export default function MoradorDados() {
   const { user } = useAuth()
@@ -19,6 +20,9 @@ export default function MoradorDados() {
   const [newPassword, setNewPassword] = useState('')
   const [permitirTerceiros, setPermitirTerceiros] = useState<string>('true')
   const [moradorData, setMoradorData] = useState<any>(null)
+  const [matchedUnit, setMatchedUnit] = useState<{ tower?: string; apartment?: string } | null>(
+    null,
+  )
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
@@ -31,20 +35,50 @@ export default function MoradorDados() {
         setPermitirTerceiros(user.permitir_retirada_terceiros ? 'true' : 'false')
       }
 
-      const condoFilter = user.condo_id ? ` && condo_id="${user.condo_id}"` : ''
-      pb.collection('moradores')
-        .getFirstListItem(`email="${user.email}"${condoFilter}`)
-        .then((morador) => {
-          console.log('Perfil carregado:', morador)
-          setMoradorData(morador)
-          if (morador.permitir_retirada_terceiros !== undefined) {
-            setPermitirTerceiros(morador.permitir_retirada_terceiros ? 'true' : 'false')
+      const loadMoradorAndUnit = async () => {
+        try {
+          const condoFilter = user.condo_id ? ` && condo_id="${user.condo_id}"` : ''
+          const morador = await pb
+            .collection('moradores')
+            .getFirstListItem(`email="${user.email}"${condoFilter}`)
+            .catch(() => null)
+
+          if (morador) {
+            setMoradorData(morador)
+            if (morador.permitir_retirada_terceiros !== undefined) {
+              setPermitirTerceiros(morador.permitir_retirada_terceiros ? 'true' : 'false')
+            }
           }
-        })
-        .catch((erro) => {
-          console.log('ERRO:', erro)
-        })
-        .finally(() => setLoading(false))
+
+          // Resolver unidade flexível
+          const userTorre = morador?.torre || user.torre
+          const userUnidade = morador?.apartamento || user.unidade
+          if (userTorre || userUnidade) {
+            const unitFilter = user.condo_id ? `condo_id = "${user.condo_id}"` : ''
+            const units = await pb
+              .collection('units')
+              .getFullList({ filter: unitFilter, requestKey: null })
+              .catch(() => [])
+
+            const found = units.find((u: any) =>
+              isResidentInUnit(
+                { torre: userTorre, unidade: userUnidade },
+                { tower: u.tower, apartment: u.apartment },
+              ),
+            )
+
+            if (found) {
+              setMatchedUnit({ tower: found.tower, apartment: found.apartment })
+            }
+          }
+        } catch (erro) {
+          console.log('Erro ao carregar dados do morador:', erro)
+        } finally {
+          setLoading(false)
+        }
+      }
+
+      loadMoradorAndUnit()
     }
   }, [user])
 
@@ -192,7 +226,15 @@ export default function MoradorDados() {
                   Torre / Bloco
                 </Label>
                 <Input
-                  value={moradorData ? `Torre ${moradorData.torre}` : '-'}
+                  value={
+                    matchedUnit?.tower
+                      ? matchedUnit.tower
+                      : moradorData?.torre
+                        ? `Torre ${moradorData.torre}`
+                        : user?.torre
+                          ? `Torre ${user.torre}`
+                          : '-'
+                  }
                   disabled
                   className="bg-muted"
                 />
@@ -204,7 +246,15 @@ export default function MoradorDados() {
                   Apartamento
                 </Label>
                 <Input
-                  value={moradorData ? `Apto ${moradorData.apartamento}` : '-'}
+                  value={
+                    matchedUnit?.apartment
+                      ? matchedUnit.apartment
+                      : moradorData?.apartamento
+                        ? `Apto ${moradorData.apartamento}`
+                        : user?.unidade
+                          ? `Apto ${user.unidade}`
+                          : '-'
+                  }
                   disabled
                   className="bg-muted"
                 />
