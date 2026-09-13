@@ -51,6 +51,37 @@ export default function Cadastro() {
   const [submitting, setSubmitting] = useState(false)
   const [onboardingResult, setOnboardingResult] = useState<OnboardingResult | null>(null)
 
+  // Garante que o formulário público comece estritamente limpo a cada montagem,
+  // limpando qualquer persistência legada e impedindo contaminação de sessões anteriores.
+  useEffect(() => {
+    setRazaoSocial('')
+    setCnpj('')
+    setEmail('')
+    setCidade('')
+    setEstado('')
+    setResponsavel('')
+    setPhone('')
+    setPassword('')
+    setConfirmPassword('')
+
+    // Limpar possíveis chaves de rascunhos de cadastro em storage
+    try {
+      const draftKeys = [
+        'condpack_cadastro_draft',
+        'cadastro_draft',
+        'onboarding_draft',
+        'cadastro_form',
+        'condpack_onboarding',
+      ]
+      draftKeys.forEach((key) => {
+        localStorage.removeItem(key)
+        sessionStorage.removeItem(key)
+      })
+    } catch {
+      // Ignorar se storage não estiver acessível
+    }
+  }, [])
+
   // Mascaras
   const maskCNPJ = (value: string) => {
     return value
@@ -386,7 +417,25 @@ export default function Cadastro() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} autoComplete="off" noValidate={false}>
+              {/* Dummy hidden inputs para interceptar autofill agressivo do Chrome/Edge com credenciais salvas no domínio */}
+              <input
+                type="text"
+                name="condpack_prevent_autofill_username"
+                tabIndex={-1}
+                aria-hidden="true"
+                autoComplete="off"
+                className="sr-only opacity-0 h-0 w-0 absolute pointer-events-none -left-[9999px]"
+              />
+              <input
+                type="password"
+                name="condpack_prevent_autofill_password"
+                tabIndex={-1}
+                aria-hidden="true"
+                autoComplete="new-password"
+                className="sr-only opacity-0 h-0 w-0 absolute pointer-events-none -left-[9999px]"
+              />
+
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 {/* Coluna Esquerda: Passos 1 e 2 (8 colunas) */}
                 <div className="lg:col-span-7 space-y-8">
@@ -487,6 +536,8 @@ export default function Cadastro() {
                           </Label>
                           <Input
                             id="razaoSocial"
+                            name="company_razao_social"
+                            autoComplete="off"
                             placeholder="Sua Empresa LTDA ou Condomínio Residencial"
                             value={razaoSocial}
                             onChange={(e) => setRazaoSocial(e.target.value)}
@@ -502,6 +553,8 @@ export default function Cadastro() {
                             </Label>
                             <Input
                               id="cnpj"
+                              name="company_cnpj"
+                              autoComplete="off"
                               placeholder="00.000.000/0000-00"
                               value={cnpj}
                               onChange={(e) => setCnpj(maskCNPJ(e.target.value))}
@@ -517,7 +570,9 @@ export default function Cadastro() {
                             </Label>
                             <Input
                               id="email"
+                              name="corporate_contact_email"
                               type="email"
+                              autoComplete="off"
                               placeholder="contato@empresa.com"
                               value={email}
                               onChange={(e) => setEmail(e.target.value)}
@@ -534,6 +589,8 @@ export default function Cadastro() {
                             </Label>
                             <Input
                               id="cidade"
+                              name="company_cidade"
+                              autoComplete="off"
                               placeholder="Ex: São Paulo"
                               value={cidade}
                               onChange={(e) => setCidade(e.target.value)}
@@ -548,6 +605,8 @@ export default function Cadastro() {
                             </Label>
                             <Input
                               id="estado"
+                              name="company_estado"
+                              autoComplete="off"
                               placeholder="Ex: SP"
                               value={estado}
                               onChange={(e) => setEstado(e.target.value.toUpperCase())}
@@ -568,6 +627,8 @@ export default function Cadastro() {
                             </Label>
                             <Input
                               id="responsavel"
+                              name="manager_name"
+                              autoComplete="off"
                               placeholder="Ex: Marcelo Silva"
                               value={responsavel}
                               onChange={(e) => setResponsavel(e.target.value)}
@@ -582,6 +643,8 @@ export default function Cadastro() {
                             </Label>
                             <Input
                               id="phone"
+                              name="manager_whatsapp_phone"
+                              autoComplete="off"
                               placeholder="(00) 00000-0000"
                               value={phone}
                               onChange={(e) => setPhone(maskPhone(e.target.value))}
@@ -616,15 +679,17 @@ export default function Cadastro() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label
-                              htmlFor="password"
+                              htmlFor="new_admin_password"
                               className="text-slate-700 font-medium text-sm flex items-center gap-1.5"
                             >
                               <Lock className="w-3.5 h-3.5 text-slate-400" />
                               Criar Senha de Acesso <span className="text-rose-500">*</span>
                             </Label>
                             <Input
-                              id="password"
+                              id="new_admin_password"
+                              name="new_admin_password"
                               type="password"
+                              autoComplete="new-password"
                               placeholder="Mínimo 8 caracteres"
                               value={password}
                               onChange={(e) => setPassword(e.target.value)}
@@ -636,15 +701,17 @@ export default function Cadastro() {
 
                           <div className="space-y-2">
                             <Label
-                              htmlFor="confirmPassword"
+                              htmlFor="confirm_admin_password"
                               className="text-slate-700 font-medium text-sm flex items-center gap-1.5"
                             >
                               <Lock className="w-3.5 h-3.5 text-slate-400" />
                               Confirmar Senha <span className="text-rose-500">*</span>
                             </Label>
                             <Input
-                              id="confirmPassword"
+                              id="confirm_admin_password"
+                              name="confirm_admin_password"
                               type="password"
+                              autoComplete="new-password"
                               placeholder="Repita sua senha"
                               value={confirmPassword}
                               onChange={(e) => setConfirmPassword(e.target.value)}
