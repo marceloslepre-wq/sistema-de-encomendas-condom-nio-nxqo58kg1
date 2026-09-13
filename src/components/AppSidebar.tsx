@@ -16,6 +16,7 @@ import {
   Award,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
+import { CondPackLogo } from '@/components/CondPackLogo'
 import {
   Sidebar,
   SidebarContent,
@@ -80,9 +81,12 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b border-border/50 p-3 sm:p-4">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center shrink-0 w-11 h-11 bg-white rounded-lg border border-slate-200/80 p-0.5 shadow-2xs">
-            <img src="/condpack-logo.png" alt="CondPack" className="h-10 w-auto object-contain" />
-          </div>
+          <CondPackLogo
+            variant="icon-only"
+            size="md"
+            className="shrink-0 w-11 h-11 bg-white rounded-lg border border-slate-200/80 p-1 shadow-2xs"
+            imageClassName="h-9 w-auto max-h-9"
+          />
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-1">
               <span

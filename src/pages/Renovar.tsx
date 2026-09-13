@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
+import { CondPackLogo } from '@/components/CondPackLogo'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -256,10 +257,10 @@ export default function Renovar() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-xs">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-white rounded-lg border border-slate-200 p-0.5 shadow-2xs">
-              <img src="/condpack-logo.png" alt="CondPack" className="h-9 w-auto object-contain" />
+            <div className="flex items-center justify-center w-10 h-10 bg-white rounded-lg border border-slate-200 p-1 shadow-2xs">
+              <CondPackLogo variant="icon-only" size="sm" imageClassName="h-8 w-auto max-h-8" />
             </div>
-            <div className="leading-tight">
+            <div className="leading-tight select-none">
               <span
                 className="font-black text-lg text-slate-900 tracking-tight notranslate select-none"
                 translate="no"

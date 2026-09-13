@@ -14,6 +14,7 @@ import {
 import { getPublicInvitation, registerWithInvitation, getUnits } from '@/services/api'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, CheckCircle2, ShieldAlert } from 'lucide-react'
+import { CondPackLogo } from '@/components/CondPackLogo'
 
 export default function Registrar() {
   const { token } = useParams<{ token: string }>()
@@ -136,8 +137,19 @@ export default function Registrar() {
       <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
         <Card className="w-full max-w-md shadow-lg border-destructive/20">
           <CardHeader className="text-center">
-            <div className="flex justify-center mb-3">
-              <img src="/condpack-logo.png" alt="CondPack" className="h-16 w-auto object-contain" />
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <div className="flex items-center justify-center w-12 h-12 bg-white rounded-xl border border-slate-200 p-1 shadow-2xs">
+                <CondPackLogo variant="icon-only" size="md" imageClassName="h-10 w-auto" />
+              </div>
+              <div className="text-left select-none">
+                <span
+                  className="font-black text-2xl text-slate-900 tracking-tight notranslate select-none"
+                  translate="no"
+                >
+                  <span className="text-[#0d2a58]">Cond</span>
+                  <span className="text-[#00a896]">Pack</span>
+                </span>
+              </div>
             </div>
             <ShieldAlert className="w-10 h-10 text-destructive mx-auto mb-2" />
             <CardTitle className="text-2xl text-destructive">Link Inválido</CardTitle>
@@ -156,8 +168,19 @@ export default function Registrar() {
       <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
         <Card className="w-full max-w-md shadow-lg border-success/20">
           <CardHeader className="text-center">
-            <div className="flex justify-center mb-3">
-              <img src="/condpack-logo.png" alt="CondPack" className="h-16 w-auto object-contain" />
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <div className="flex items-center justify-center w-12 h-12 bg-white rounded-xl border border-slate-200 p-1 shadow-2xs">
+                <CondPackLogo variant="icon-only" size="md" imageClassName="h-10 w-auto" />
+              </div>
+              <div className="text-left select-none">
+                <span
+                  className="font-black text-2xl text-slate-900 tracking-tight notranslate select-none"
+                  translate="no"
+                >
+                  <span className="text-[#0d2a58]">Cond</span>
+                  <span className="text-[#00a896]">Pack</span>
+                </span>
+              </div>
             </div>
             <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto mb-2" />
             <CardTitle className="text-2xl text-green-600">Cadastro Concluído!</CardTitle>
@@ -177,16 +200,25 @@ export default function Registrar() {
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4 py-12">
       <Card className="w-full max-w-lg shadow-lg">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-2">
-            <img src="/condpack-logo.png" alt="CondPack" className="h-16 w-auto object-contain" />
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <div className="flex items-center justify-center w-12 h-12 bg-white rounded-xl border border-slate-200 p-1 shadow-2xs">
+              <CondPackLogo variant="icon-only" size="md" imageClassName="h-10 w-auto" />
+            </div>
+            <div className="text-left select-none">
+              <span
+                className="font-black text-2xl text-slate-900 tracking-tight notranslate select-none"
+                translate="no"
+              >
+                <span className="text-[#0d2a58]">Cond</span>
+                <span className="text-[#00a896]">Pack</span>
+              </span>
+            </div>
           </div>
-          <CardTitle className="text-2xl notranslate select-none" translate="no">
-            <span className="text-[#0d2a58]">Cond</span>
-            <span className="text-[#00a896]">Pack</span>
-            <span className="text-foreground text-xl font-normal ml-2">— Registro de Usuário</span>
+          <CardTitle className="text-xl font-semibold text-slate-800">
+            Registro de Usuário Convidado
           </CardTitle>
           <CardDescription>
-            Você foi convidado para acessar o sistema como{' '}
+            Você foi convidado para acessar o condomínio como{' '}
             <strong>{invitation.role.toUpperCase()}</strong>.
           </CardDescription>
         </CardHeader>

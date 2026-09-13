@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import logoOfficial from '@/assets/adobeexpressphotosd571e567b7c04e97963bed1eef6e9237copyedited-92155.png'
+import logoSimbolo from '@/assets/so-simbolo-condpack-03819.png'
 
 export default function Index() {
   const { signIn, isAuthenticated, role, licenseExpired, loading } = useAuth()
@@ -77,21 +77,28 @@ export default function Index() {
       <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div>
       <Card className="w-full max-w-md relative z-10 animate-fade-in-up shadow-2xl border-0">
         <CardHeader className="space-y-2 text-center pb-6">
-          <div className="flex justify-center mb-1">
-            <img
-              src={logoOfficial}
-              alt="CondPack — Soluções Inteligentes para Condomínios"
-              className="h-28 w-auto max-w-[240px] object-contain drop-shadow-sm"
-            />
+          <div className="flex items-center justify-center gap-3.5 mb-1">
+            <div className="flex items-center justify-center w-14 h-14 bg-white/95 rounded-xl border border-slate-200/90 p-1.5 shadow-sm">
+              <img
+                src={logoSimbolo}
+                alt="Símbolo CondPack"
+                className="h-11 w-auto object-contain shrink-0"
+              />
+            </div>
+            <div className="text-left select-none">
+              <span
+                className="text-3xl font-black tracking-tight leading-none block notranslate"
+                translate="no"
+              >
+                <span className="text-[#0d2a58]">Cond</span>
+                <span className="text-[#00a896]">Pack</span>
+              </span>
+              <span className="text-[10px] font-bold tracking-widest text-[#00a896] uppercase block mt-1">
+                Soluções Inteligentes
+              </span>
+            </div>
           </div>
-          <CardTitle
-            className="text-2xl font-bold tracking-tight notranslate select-none"
-            translate="no"
-          >
-            <span className="text-[#0d2a58]">Cond</span>
-            <span className="text-[#00a896]">Pack</span>
-          </CardTitle>
-          <CardDescription className="text-sm">
+          <CardDescription className="text-xs sm:text-sm pt-1 text-slate-500">
             Sistema de Gestão de Encomendas para Condomínios
           </CardDescription>
         </CardHeader>

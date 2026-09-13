@@ -92,6 +92,7 @@ import {
   getCondosList,
 } from '@/services/master'
 import { LinkGeneratorCadastro } from './LinkGeneratorCadastro'
+import { CondPackLogo } from '@/components/CondPackLogo'
 
 export default function MasterDashboard() {
   const { user, signOut } = useAuth()
@@ -777,11 +778,11 @@ export default function MasterDashboard() {
       <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-white rounded-lg border border-slate-700 p-0.5 shadow">
-              <img src="/condpack-logo.png" alt="CondPack" className="h-9 w-auto object-contain" />
+            <div className="flex items-center justify-center w-10 h-10 bg-white rounded-lg border border-slate-700 p-1 shadow">
+              <CondPackLogo variant="icon-only" size="sm" imageClassName="h-8 w-auto max-h-8" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 select-none">
                 <span
                   className="font-black text-lg tracking-tight notranslate select-none text-white"
                   translate="no"
