@@ -10,6 +10,7 @@ import NotFound from './pages/NotFound'
 import Cadastro from './pages/Cadastro'
 import Registrar from './pages/Registrar'
 import Renovar from './pages/Renovar'
+import Guia from './pages/Guia'
 
 // Gestor Pages
 import GestorDashboard from './pages/gestor/Dashboard'
@@ -111,6 +112,16 @@ const App = () => (
           />
 
           <Route element={<Layout />}>
+            {/* Rota do Guia de Uso - acessível a todos os perfis logados */}
+            <Route
+              path="/guia"
+              element={
+                <ProtectedRoute>
+                  <Guia />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path="/gestor/dashboard"
               element={

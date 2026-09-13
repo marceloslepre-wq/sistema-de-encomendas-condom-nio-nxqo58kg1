@@ -14,6 +14,7 @@ import {
   LogOut,
   MapPin,
   Award,
+  BookOpen,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { CondPackLogo } from '@/components/CondPackLogo'
@@ -47,11 +48,13 @@ export function AppSidebar() {
           { title: 'Permissões', url: '/gestor/permissoes', icon: Shield },
           { title: 'Configurações', url: '/gestor/configuracoes', icon: Settings },
           { title: 'Licenças e Planos', url: '/gestor/licencas', icon: Award },
+          { title: 'Guia de Uso', url: '/guia', icon: BookOpen },
         ]
       case 'porteiro':
         return [
           { title: 'Registro', url: '/portaria/registro', icon: Package },
           { title: 'Entregadores', url: '/portaria/entregadores', icon: Truck },
+          { title: 'Guia de Uso', url: '/guia', icon: BookOpen },
         ]
       case 'portaria':
         return [
@@ -59,16 +62,24 @@ export function AppSidebar() {
           { title: 'Entregadores', url: '/portaria/entregadores', icon: Truck },
           { title: 'Triagem', url: '/sala/triagem', icon: Package },
           { title: 'Retirada', url: '/sala/retirada', icon: QrCode },
+          { title: 'Guia de Uso', url: '/guia', icon: BookOpen },
         ]
       case 'triagem':
         return [
           { title: 'Triagem', url: '/sala/triagem', icon: Package },
           { title: 'Retirada', url: '/sala/retirada', icon: QrCode },
+          { title: 'Guia de Uso', url: '/guia', icon: BookOpen },
         ]
       case 'morador':
         return [
           { title: 'Minhas Encomendas', url: '/morador/dashboard', icon: Package },
           { title: 'Meus Dados', url: '/morador/dados', icon: UserCircle },
+          { title: 'Guia de Uso', url: '/guia', icon: BookOpen },
+        ]
+      case 'master':
+        return [
+          { title: 'Painel Master', url: '/master', icon: LayoutDashboard },
+          { title: 'Guia de Uso', url: '/guia', icon: BookOpen },
         ]
       default:
         return []

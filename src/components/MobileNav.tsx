@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Package, History, User, QrCode, Truck } from 'lucide-react'
+import { Package, User, QrCode, Truck, BookOpen } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
 
@@ -15,6 +15,7 @@ export function MobileNav() {
         return [
           { title: 'Registro', url: '/portaria/registro', icon: Package },
           { title: 'Entregadores', url: '/portaria/entregadores', icon: Truck },
+          { title: 'Guia', url: '/guia', icon: BookOpen },
         ]
       case 'portaria':
         return [
@@ -22,16 +23,19 @@ export function MobileNav() {
           { title: 'Entregadores', url: '/portaria/entregadores', icon: Truck },
           { title: 'Triagem', url: '/sala/triagem', icon: Package },
           { title: 'Retirada', url: '/sala/retirada', icon: QrCode },
+          { title: 'Guia', url: '/guia', icon: BookOpen },
         ]
       case 'triagem':
         return [
           { title: 'Triagem', url: '/sala/triagem', icon: Package },
           { title: 'Retirada', url: '/sala/retirada', icon: QrCode },
+          { title: 'Guia', url: '/guia', icon: BookOpen },
         ]
       case 'morador':
         return [
           { title: 'Ativas', url: '/morador/dashboard', icon: Package },
           { title: 'Perfil', url: '/morador/dados', icon: User },
+          { title: 'Guia', url: '/guia', icon: BookOpen },
         ]
       default:
         return []
