@@ -78,16 +78,24 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b border-border/50 p-4">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white">
-            <Package className="w-5 h-5" />
+      <SidebarHeader className="border-b border-border/50 p-3 sm:p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center shrink-0 w-11 h-11 bg-white rounded-lg border border-slate-200/80 p-0.5 shadow-2xs">
+            <img src="/condpack-logo.png" alt="CondPack" className="h-10 w-auto object-contain" />
           </div>
-          <div>
-            <h1 className="font-bold text-lg leading-tight notranslate" translate="no">
-              CondPack
-            </h1>
-            <p className="text-xs text-muted-foreground capitalize">{role}</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline gap-1">
+              <span
+                className="font-black text-base leading-tight tracking-tight notranslate select-none"
+                translate="no"
+              >
+                <span className="text-[#0d2a58]">Cond</span>
+                <span className="text-[#00a896]">Pack</span>
+              </span>
+            </div>
+            <p className="text-[11px] text-muted-foreground capitalize leading-tight truncate">
+              {role}
+            </p>
           </div>
         </div>
       </SidebarHeader>

@@ -256,17 +256,18 @@ export default function Renovar() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-xs">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold shadow-sm">
-              <Building2 className="w-5 h-5" />
+            <div className="flex items-center justify-center w-10 h-10 bg-white rounded-lg border border-slate-200 p-0.5 shadow-2xs">
+              <img src="/condpack-logo.png" alt="CondPack" className="h-9 w-auto object-contain" />
             </div>
             <div className="leading-tight">
               <span
-                className="font-bold text-lg text-slate-900 tracking-tight notranslate"
+                className="font-black text-lg text-slate-900 tracking-tight notranslate select-none"
                 translate="no"
               >
-                CondPack
+                <span className="text-[#0d2a58]">Cond</span>
+                <span className="text-[#00a896]">Pack</span>
               </span>
-              <span className="text-xs text-blue-600 font-semibold block">
+              <span className="text-xs text-[#00a896] font-semibold block">
                 Renovação de Assinatura
               </span>
             </div>

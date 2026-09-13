@@ -136,7 +136,10 @@ export default function Registrar() {
       <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
         <Card className="w-full max-w-md shadow-lg border-destructive/20">
           <CardHeader className="text-center">
-            <ShieldAlert className="w-12 h-12 text-destructive mx-auto mb-4" />
+            <div className="flex justify-center mb-3">
+              <img src="/condpack-logo.png" alt="CondPack" className="h-16 w-auto object-contain" />
+            </div>
+            <ShieldAlert className="w-10 h-10 text-destructive mx-auto mb-2" />
             <CardTitle className="text-2xl text-destructive">Link Inválido</CardTitle>
             <CardDescription>{error}</CardDescription>
           </CardHeader>
@@ -153,7 +156,10 @@ export default function Registrar() {
       <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
         <Card className="w-full max-w-md shadow-lg border-success/20">
           <CardHeader className="text-center">
-            <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-4" />
+            <div className="flex justify-center mb-3">
+              <img src="/condpack-logo.png" alt="CondPack" className="h-16 w-auto object-contain" />
+            </div>
+            <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto mb-2" />
             <CardTitle className="text-2xl text-green-600">Cadastro Concluído!</CardTitle>
             <CardDescription>
               Sua conta foi criada com sucesso. Você já pode fazer login no sistema.
@@ -171,7 +177,14 @@ export default function Registrar() {
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4 py-12">
       <Card className="w-full max-w-lg shadow-lg">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Registro de Usuário</CardTitle>
+          <div className="flex justify-center mb-2">
+            <img src="/condpack-logo.png" alt="CondPack" className="h-16 w-auto object-contain" />
+          </div>
+          <CardTitle className="text-2xl notranslate select-none" translate="no">
+            <span className="text-[#0d2a58]">Cond</span>
+            <span className="text-[#00a896]">Pack</span>
+            <span className="text-foreground text-xl font-normal ml-2">— Registro de Usuário</span>
+          </CardTitle>
           <CardDescription>
             Você foi convidado para acessar o sistema como{' '}
             <strong>{invitation.role.toUpperCase()}</strong>.

@@ -6,8 +6,9 @@ import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Package, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import logoOfficial from '@/assets/adobeexpressphotosd571e567b7c04e97963bed1eef6e9237copyedited-92155.png'
 
 export default function Index() {
   const { signIn, isAuthenticated, role, licenseExpired, loading } = useAuth()
@@ -75,14 +76,24 @@ export default function Index() {
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div>
       <Card className="w-full max-w-md relative z-10 animate-fade-in-up shadow-2xl border-0">
-        <CardHeader className="space-y-1 text-center pb-6">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-lg">
-            <Package className="h-8 w-8" />
+        <CardHeader className="space-y-2 text-center pb-6">
+          <div className="flex justify-center mb-1">
+            <img
+              src={logoOfficial}
+              alt="CondPack — Soluções Inteligentes para Condomínios"
+              className="h-28 w-auto max-w-[240px] object-contain drop-shadow-sm"
+            />
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight notranslate" translate="no">
-            CondPack
+          <CardTitle
+            className="text-2xl font-bold tracking-tight notranslate select-none"
+            translate="no"
+          >
+            <span className="text-[#0d2a58]">Cond</span>
+            <span className="text-[#00a896]">Pack</span>
           </CardTitle>
-          <CardDescription className="text-base">Sistema de Encomendas Digital</CardDescription>
+          <CardDescription className="text-sm">
+            Sistema de Gestão de Encomendas para Condomínios
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
