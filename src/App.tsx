@@ -11,6 +11,7 @@ import Cadastro from './pages/Cadastro'
 import Registrar from './pages/Registrar'
 import Renovar from './pages/Renovar'
 import Guia from './pages/Guia'
+import GuiaPublico from './pages/GuiaPublico'
 
 // Gestor Pages
 import GestorDashboard from './pages/gestor/Dashboard'
@@ -100,6 +101,8 @@ const App = () => (
           <Route path="/cadastro" element={<Cadastro />} />
           <Route path="/registrar/:token" element={<Registrar />} />
           <Route path="/renovar" element={<Renovar />} />
+          {/* Rota Pública da Vitrine / Demonstração do Guia para a sub-página Sholver */}
+          <Route path="/guia-publica" element={<GuiaPublico />} />
 
           {/* Rota Protegida Exclusiva para Master */}
           <Route

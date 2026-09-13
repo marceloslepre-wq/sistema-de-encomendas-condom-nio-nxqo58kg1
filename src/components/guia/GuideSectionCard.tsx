@@ -47,9 +47,15 @@ interface GuideSectionCardProps {
   section: GuideSectionData
   totalVisible: number
   currentIndex: number
+  isPublicMode?: boolean
 }
 
-export function GuideSectionCard({ section, totalVisible, currentIndex }: GuideSectionCardProps) {
+export function GuideSectionCard({
+  section,
+  totalVisible,
+  currentIndex,
+  isPublicMode = false,
+}: GuideSectionCardProps) {
   return (
     <Card
       id={`secao-${section.id}`}
@@ -91,8 +97,8 @@ export function GuideSectionCard({ section, totalVisible, currentIndex }: GuideS
                 size="sm"
                 className="bg-[#0d2a58] hover:bg-[#0d2a58]/90 text-white font-medium text-xs shadow-xs"
               >
-                <Link to={section.targetRoute}>
-                  {section.targetLabel || 'Ir para Tela'}
+                <Link to={isPublicMode ? '/cadastro' : section.targetRoute}>
+                  {isPublicMode ? 'Testar no Condomínio' : section.targetLabel || 'Ir para Tela'}
                   <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                 </Link>
               </Button>
@@ -170,13 +176,15 @@ export function GuideSectionCard({ section, totalVisible, currentIndex }: GuideS
         {/* Rodapé do card: atalho rápido para acessar a tela */}
         {section.targetRoute && (
           <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Pronto para usar?</span>
+            <span>{isPublicMode ? 'Gostou desta funcionalidade?' : 'Pronto para usar?'}</span>
             <Link
-              to={section.targetRoute}
+              to={isPublicMode ? '/cadastro' : section.targetRoute}
               className="font-semibold text-primary hover:text-primary/80 inline-flex items-center gap-1 transition-colors"
             >
               <span>
-                Acessar {section.targetLabel?.replace(/^Ir para\s*/, '') || 'a funcionalidade'}
+                {isPublicMode
+                  ? 'Experimentar Grátis por 15 Dias'
+                  : `Acessar ${section.targetLabel?.replace(/^Ir para\s*/, '') || 'a funcionalidade'}`}
               </span>
               <ChevronRight className="w-3.5 h-3.5" />
             </Link>

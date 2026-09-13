@@ -575,3 +575,21 @@ export const CONDPACK_GUIDE_SECTIONS: GuideSectionData[] = [
     ],
   },
 ]
+
+/**
+ * Seções filtradas para a Vitrine Pública de Vendas (/guia-publica):
+ * Exibe apenas as funcionalidades estratégicas de conversão:
+ * 1. Primeiros Passos (visão do ciclo e perfis)
+ * 6. Registro de Encomenda na Portaria
+ * 7. Triagem & Retirada com Código Seguro
+ * 10. Configurações & WhatsApp Próprio do Condomínio (com QR Code de pareamento)
+ * 11. Licença e Planos (explicando o trial de 15 dias e renovação PIX)
+ */
+export const CONDPACK_PUBLIC_SECTIONS: GuideSectionData[] = CONDPACK_GUIDE_SECTIONS.filter(
+  (sec) =>
+    sec.id === 'primeiros-passos' ||
+    sec.id === 'registro' ||
+    sec.id === 'triagem-retirada' ||
+    sec.id === 'configuracoes' ||
+    sec.id === 'licencas-planos',
+)
