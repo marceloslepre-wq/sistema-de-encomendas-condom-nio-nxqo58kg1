@@ -35,7 +35,11 @@ import {
   Smartphone,
   Unplug,
   RefreshCw,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   getCondo,
   updateCondo,
@@ -522,6 +526,39 @@ export default function GestorConfiguracoes() {
     }
   }
 
+  const handleToggleTemplateStatus = async (t: any) => {
+    const currentAtivo = t.ativo !== false
+    const nextAtivo = !currentAtivo
+
+    // Otimista
+    setTemplates((prev) =>
+      prev.map((item) => (item.id === t.id ? { ...item, ativo: nextAtivo } : item)),
+    )
+
+    try {
+      const updated = await updateTemplateNotificacao(t.id, { ativo: nextAtivo })
+      setTemplates((prev) =>
+        prev.map((item) => (item.id === t.id ? { ...item, ...updated, ativo: nextAtivo } : item)),
+      )
+      toast({
+        title: nextAtivo ? 'Template habilitado' : 'Template desabilitado',
+        description: nextAtivo
+          ? 'As notificações deste estágio voltarão a ser enviadas.'
+          : 'As notificações deste estágio não serão disparadas no WhatsApp.',
+      })
+    } catch (e: any) {
+      // Reverter estado se falhar
+      setTemplates((prev) =>
+        prev.map((item) => (item.id === t.id ? { ...item, ativo: currentAtivo } : item)),
+      )
+      toast({
+        title: 'Erro ao alterar estado do template',
+        description: e.message || 'Não foi possível salvar o estado no servidor.',
+        variant: 'destructive',
+      })
+    }
+  }
+
   const handleEditTemplate = (t: any) => {
     setNewTemplateStatus(t.flow_stage || t.status)
     setNewTemplateMensagem(t.mensagem_template)
@@ -953,46 +990,117 @@ export default function GestorConfiguracoes() {
                 </div>
               </div>
               <div className="space-y-2 mt-4">
-                {templates.map((t) => (
-                  <div
-                    key={t.id}
-                    className="flex items-center justify-between p-3 border rounded-md bg-card"
-                  >
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                          {FLOW_STAGES.find((s) => s.id === (t.flow_stage || t.status))?.label ||
-                            t.status}
-                        </span>
-                        {(t.flow_stage === 'LEMBRETE' || t.status === 'LEMBRETE') && (
-                          <span className="text-xs text-muted-foreground">
-                            A cada {t.reminder_frequency || 1} dia(s) às{' '}
-                            {t.reminder_time || '09:00'}
+                <TooltipProvider>
+                  {templates.map((t) => {
+                    const isAtivo = t.ativo !== false
+                    return (
+                      <div
+                        key={t.id}
+                        className={`flex items-center justify-between p-3 border rounded-md transition-all ${
+                          isAtivo
+                            ? 'bg-card border-border'
+                            : 'bg-muted/30 border-dashed border-muted-foreground/30 opacity-60'
+                        }`}
+                      >
+                        <div className="flex flex-col gap-1 flex-1 min-w-0 mr-4">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`font-medium text-sm px-2 py-0.5 rounded-full ${
+                                isAtivo
+                                  ? 'text-primary bg-primary/10'
+                                  : 'text-muted-foreground bg-muted'
+                              }`}
+                            >
+                              {FLOW_STAGES.find((s) => s.id === (t.flow_stage || t.status))
+                                ?.label || t.status}
+                            </span>
+                            {!isAtivo && (
+                              <Badge
+                                variant="outline"
+                                className="bg-amber-50 text-amber-700 border-amber-200 text-xs font-medium"
+                              >
+                                Desabilitada
+                              </Badge>
+                            )}
+                            {(t.flow_stage === 'LEMBRETE' || t.status === 'LEMBRETE') && (
+                              <span className="text-xs text-muted-foreground">
+                                A cada {t.reminder_frequency || 1} dia(s) às{' '}
+                                {t.reminder_time || '09:00'}
+                              </span>
+                            )}
+                          </div>
+                          <span
+                            className={`text-sm mt-1 break-words ${
+                              !isAtivo ? 'text-muted-foreground line-clamp-2' : ''
+                            }`}
+                          >
+                            {t.mensagem_template}
                           </span>
-                        )}
+                        </div>
+                        <div className="flex items-center flex-shrink-0 gap-0.5">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={
+                                  isAtivo
+                                    ? 'text-slate-600 hover:text-amber-600 hover:bg-amber-50'
+                                    : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'
+                                }
+                                onClick={() => handleToggleTemplateStatus(t)}
+                                aria-label={isAtivo ? 'Desabilitar mensagem' : 'Habilitar mensagem'}
+                              >
+                                {isAtivo ? (
+                                  <Eye className="w-4 h-4" />
+                                ) : (
+                                  <EyeOff className="w-4 h-4" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{isAtivo ? 'Desabilitar mensagem' : 'Habilitar mensagem'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-muted-foreground hover:text-primary"
+                                onClick={() => handleEditTemplate(t)}
+                                aria-label="Editar template"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Editar template</p>
+                            </TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDeleteTemplate(t.id)}
+                                aria-label="Excluir template"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Excluir template</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                       </div>
-                      <span className="text-sm mt-1">{t.mensagem_template}</span>
-                    </div>
-                    <div className="flex flex-shrink-0 ml-4">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground hover:text-primary"
-                        onClick={() => handleEditTemplate(t)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive"
-                        onClick={() => handleDeleteTemplate(t.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                    )
+                  })}
+                </TooltipProvider>
               </div>
             </CardContent>
           </Card>
