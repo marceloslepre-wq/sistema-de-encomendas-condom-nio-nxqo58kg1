@@ -43,7 +43,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
-import { ChevronsUpDown } from 'lucide-react'
+import { ChevronsUpDown, Check, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { isResidentInUnit } from '@/lib/unitMatching'
 
@@ -166,6 +166,8 @@ export default function PortariaRegistro() {
   const [carrier, setCarrier] = useState('')
 
   const [courierName, setCourierName] = useState('')
+  const [courierComboboxOpen, setCourierComboboxOpen] = useState(false)
+  const [courierSearchText, setCourierSearchText] = useState('')
   const [courierCpf, setCourierCpf] = useState('')
   const [courierPhone, setCourierPhone] = useState('')
   const [validationCode, setValidationCode] = useState('')
@@ -206,8 +208,15 @@ export default function PortariaRegistro() {
   }
 
   const loadEntregadores = () => {
+    const authCondoId = pb.authStore.record?.condo_id
+    const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
+    const filter = !isMaster && authCondoId ? `condo_id='${authCondoId}'` : undefined
+
     pb.collection('entregadores')
-      .getFullList<Entregador>()
+      .getFullList<Entregador>({
+        sort: '-created',
+        filter,
+      })
       .then(setEntregadoresList)
       .catch((err) => console.error('Error fetching entregadores:', err))
   }
@@ -259,12 +268,13 @@ export default function PortariaRegistro() {
 
   const isFormValid = useMemo(() => {
     const hasInvalidEntry = entries.some((e) => !e.unitId || !e.residentId || e.volumes < 1)
+    const isCpfValid = !courierCpf || courierCpf.replace(/\D/g, '').length === 11
     return (
       entries.length > 0 &&
       !hasInvalidEntry &&
       carrier &&
-      courierName &&
-      courierCpf.length === 14 &&
+      Boolean(courierName.trim()) &&
+      isCpfValid &&
       (isCodeVerified || bypassValidation)
     )
   }, [carrier, entries, courierName, courierCpf, isCodeVerified, bypassValidation])
@@ -359,14 +369,16 @@ export default function PortariaRegistro() {
 
   const saveEntregadorIfNeeded = async (cpfVal: string, nome: string, celular: string) => {
     const digits = cpfVal.replace(/\D/g, '')
-    if (digits.length !== 11) return
+    if (digits.length !== 11 || !nome.trim()) return
     const exists = entregadoresList.find((e) => e.cpf === digits)
     if (!exists) {
       try {
+        const authCondoId = pb.authStore.record?.condo_id
         await pb.collection('entregadores').create({
-          nome,
+          nome: nome.trim(),
           cpf: digits,
           celular: celular.replace(/\D/g, ''),
+          condo_id: authCondoId || undefined,
         })
       } catch (err) {
         console.error('Falha ao salvar entregador automaticamente', err)
@@ -377,12 +389,14 @@ export default function PortariaRegistro() {
   const handleFinish = async (autoSaveCodeVerified = false) => {
     const isActuallyVerified = isCodeVerified || autoSaveCodeVerified
     const hasInvalidEntry = entries.some((e) => !e.unitId || !e.residentId || e.volumes < 1)
+    const rawCpfDigits = courierCpf.replace(/\D/g, '')
+    const isCpfValid = rawCpfDigits.length === 0 || rawCpfDigits.length === 11
     const isValid =
       entries.length > 0 &&
       !hasInvalidEntry &&
       carrier &&
-      courierName &&
-      courierCpf.length === 14 &&
+      courierName.trim() &&
+      isCpfValid &&
       (isActuallyVerified || bypassValidation)
 
     if (!isValid) return
@@ -393,8 +407,8 @@ export default function PortariaRegistro() {
       if (hasInvalidEntry)
         throw new Error('Existem encomendas com campos obrigatórios ausentes ou inválidos.')
       if (!carrier) throw new Error('Selecione uma transportadora.')
-      if (!courierName) throw new Error('Nome do entregador é obrigatório.')
-      if (courierCpf.replace(/\D/g, '').length !== 11)
+      if (!courierName.trim()) throw new Error('Nome do entregador é obrigatório.')
+      if (rawCpfDigits.length > 0 && rawCpfDigits.length !== 11)
         throw new Error('CPF do entregador inválido.')
       if (!isActuallyVerified && !bypassValidation)
         throw new Error('A validação via WhatsApp é obrigatória.')
@@ -594,6 +608,8 @@ export default function PortariaRegistro() {
     ])
     setCarrier('')
     setCourierName('')
+    setCourierSearchText('')
+    setCourierComboboxOpen(false)
     setCourierCpf('')
     setCourierPhone('')
     setValidationCode('')
@@ -716,8 +732,10 @@ export default function PortariaRegistro() {
       setIsCodeVerified(true)
 
       const hasInvalidEntry = entries.some((e) => !e.unitId || !e.residentId || e.volumes < 1)
+      const rawCpfDigits = courierCpf.replace(/\D/g, '')
+      const isCpfValid = rawCpfDigits.length === 0 || rawCpfDigits.length === 11
       const isReadyToSave =
-        entries.length > 0 && !hasInvalidEntry && carrier && courierName && courierCpf.length === 14
+        entries.length > 0 && !hasInvalidEntry && carrier && courierName.trim() && isCpfValid
 
       if (isReadyToSave) {
         toast({
@@ -954,16 +972,145 @@ export default function PortariaRegistro() {
                   <Label>
                     Nome do Entregador/Portador <span className="text-destructive">*</span>
                   </Label>
-                  <Input
-                    value={courierName}
-                    onChange={(e) => setCourierName(e.target.value)}
-                    placeholder="Ex: João da Silva"
-                  />
+                  <Popover
+                    open={courierComboboxOpen}
+                    onOpenChange={(open) => {
+                      setCourierComboboxOpen(open)
+                      if (open) {
+                        setCourierSearchText(courierName)
+                      }
+                    }}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={courierComboboxOpen}
+                        className={cn(
+                          'w-full justify-between bg-background font-normal border-input hover:bg-slate-50',
+                          !courierName && 'text-muted-foreground',
+                        )}
+                      >
+                        <span className="truncate">
+                          {courierName || 'Buscar ou digitar nome do entregador...'}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[--radix-popover-trigger-width] min-w-[300px] p-0"
+                      align="start"
+                    >
+                      <Command>
+                        <CommandInput
+                          placeholder="Buscar ou digitar nome..."
+                          value={courierSearchText}
+                          onValueChange={(val) => {
+                            setCourierSearchText(val)
+                            setCourierName(val)
+                          }}
+                        />
+                        <CommandList className="max-h-60">
+                          {courierSearchText.trim() &&
+                            !entregadoresList.some(
+                              (ent) =>
+                                ent.nome.toLowerCase() === courierSearchText.trim().toLowerCase(),
+                            ) && (
+                              <CommandGroup heading="Digitação manual">
+                                <CommandItem
+                                  value={`__custom__:${courierSearchText}`}
+                                  onSelect={() => {
+                                    setCourierName(courierSearchText.trim())
+                                    setCourierComboboxOpen(false)
+                                  }}
+                                >
+                                  <User className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
+                                  <span className="truncate">
+                                    Usar &quot;{courierSearchText.trim()}&quot; (portador avulso)
+                                  </span>
+                                </CommandItem>
+                              </CommandGroup>
+                            )}
+
+                          <CommandEmpty>
+                            {courierSearchText.trim() ? (
+                              <div className="p-2 text-sm text-center">
+                                <p className="text-muted-foreground">
+                                  Nenhum entregador cadastrado encontrado.
+                                </p>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="mt-1 text-xs text-primary"
+                                  onClick={() => {
+                                    setCourierName(courierSearchText.trim())
+                                    setCourierComboboxOpen(false)
+                                  }}
+                                >
+                                  Manter &quot;{courierSearchText.trim()}&quot;
+                                </Button>
+                              </div>
+                            ) : (
+                              'Nenhum entregador cadastrado.'
+                            )}
+                          </CommandEmpty>
+
+                          {entregadoresList.length > 0 && (
+                            <CommandGroup heading="Entregadores Cadastrados">
+                              {entregadoresList.map((ent) => {
+                                const isSelected =
+                                  courierName.toLowerCase() === ent.nome.toLowerCase()
+                                return (
+                                  <CommandItem
+                                    key={ent.id}
+                                    value={`${ent.nome} ${ent.cpf} ${ent.celular}`}
+                                    onSelect={() => {
+                                      setCourierName(ent.nome)
+                                      setCourierSearchText(ent.nome)
+                                      if (ent.cpf) {
+                                        setCourierCpf(formatCpf(ent.cpf))
+                                      }
+                                      if (ent.celular) {
+                                        setCourierPhone(formatPhone(ent.celular))
+                                      }
+                                      setCourierComboboxOpen(false)
+                                      toast({
+                                        title: 'Entregador Selecionado',
+                                        description: `${ent.nome} preenchido automaticamente.`,
+                                      })
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        'mr-2 h-4 w-4 shrink-0 text-primary',
+                                        isSelected ? 'opacity-100' : 'opacity-0',
+                                      )}
+                                    />
+                                    <div className="flex flex-col truncate">
+                                      <span className="font-medium truncate">{ent.nome}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {ent.cpf ? `CPF: ${formatCpf(ent.cpf)}` : ''}
+                                        {ent.cpf && ent.celular ? ' • ' : ''}
+                                        {ent.celular ? formatPhone(ent.celular) : ''}
+                                      </span>
+                                    </div>
+                                  </CommandItem>
+                                )
+                              })}
+                            </CommandGroup>
+                          )}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="space-y-2">
                   <Label>
-                    CPF <span className="text-destructive">*</span>
+                    CPF{' '}
+                    <span className="text-muted-foreground text-sm font-normal">(Opcional)</span>
                   </Label>
                   <Input
                     value={courierCpf}
