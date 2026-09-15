@@ -288,15 +288,33 @@ export default function PortariaRegistro() {
 
     const tower = String(unit.tower || '').trim()
     const apartment = String(unit.apartment || '').trim()
-    const residentName = String(userRecord?.name || '').trim() || `Morador ${tower}-${apartment}`
 
     if (!userRecord) {
-      // Procura na lista já carregada de moradores usando matching flexível
-      const matched = moradores.find((m) => isResidentInUnit(m, unit))
-      if (matched) {
-        userRecord = matched
+      // Procura na lista já carregada de moradores pelo ID específico selecionado
+      if (group.residentId) {
+        userRecord = moradores.find((m) => m.id === group.residentId)
+      }
+      // Se ainda não encontrou e houver candidate com ID
+      if (!userRecord && residentCandidate?.id) {
+        userRecord = residentCandidate
+      }
+      // Procura na lista de moradores pelo nome exato do candidato se disponível
+      if (!userRecord && residentCandidate?.name) {
+        const normCandName = residentCandidate.name.trim().toLowerCase()
+        userRecord = moradores.find((m) => m.name && m.name.trim().toLowerCase() === normCandName)
+      }
+      // NUNCA pegar o primeiro morador aleatório da unidade se houver mais de um!
+      if (!userRecord) {
+        const matchingResidents = moradores.filter((m) => isResidentInUnit(m, unit))
+        if (matchingResidents.length === 1) {
+          userRecord = matchingResidents[0]
+        }
       }
     }
+
+    const residentName =
+      String(userRecord?.name || residentCandidate?.name || '').trim() ||
+      `Morador ${tower}-${apartment}`
 
     if (!userRecord) {
       const fallbackEmail =

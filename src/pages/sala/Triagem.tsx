@@ -42,6 +42,23 @@ type ExpandedVolume = RecebimentoAuditoria & {
   _matchedMorador?: any
 }
 
+const getDisplayName = (
+  vol?: { morador?: string; _matchedMorador?: { name?: string }; entregador_nome?: string } | null,
+) => {
+  if (!vol) return 'N/D'
+  // O morador gravado na encomenda é a fonte primária e oficial selecionada no registro
+  if (vol.morador && vol.morador.trim()) {
+    return vol.morador.trim()
+  }
+  if (vol._matchedMorador?.name && vol._matchedMorador.name.trim()) {
+    return vol._matchedMorador.name.trim()
+  }
+  if (vol.entregador_nome && vol.entregador_nome.trim()) {
+    return vol.entregador_nome.trim()
+  }
+  return 'N/D'
+}
+
 export default function SalaTriagem() {
   const { toast } = useToast()
   const { user } = useAuth()
@@ -76,26 +93,32 @@ export default function SalaTriagem() {
       const moradoresData = await pb.collection('users').getFullList<any>({ filter: userFilter })
 
       const enhancedData = data.map((parcel) => {
-        const morador = moradoresData.find((m) => {
-          if (!parcel.unidade) return false
+        // 1. Se tiver morador_id vinculado diretamente, busca especificamente por esse ID
+        let morador = parcel.morador_id
+          ? moradoresData.find((m) => m.id === parcel.morador_id)
+          : null
 
+        // 2. Se não encontrou por morador_id mas tem nome do morador gravado na encomenda, busca por nome dentro dos moradores
+        if (!morador && parcel.morador) {
+          const normParcelMorador = parcel.morador.trim().toLowerCase()
+          morador = moradoresData.find(
+            (m) => m.name && m.name.trim().toLowerCase() === normParcelMorador,
+          )
+        }
+
+        // 3. Apenas se ainda não encontrou e a unidade tiver moradores, tenta fallback pela unidade sem sobrescrever o nome
+        if (!morador && parcel.unidade) {
           const normalizeString = (str: string) => (str || '').replace(/\s+/g, '').toLowerCase()
           const normParcelUnit = normalizeString(parcel.unidade)
-
-          // Se tiver morador_id vinculado diretamente, checa pelo ID primeiro
-          if (parcel.morador_id && m.id === parcel.morador_id) {
-            return true
-          }
-
-          // Se a string da unidade contiver o apt e a torre
-          const aptMatch = m.unidade ? normParcelUnit.includes(normalizeString(m.unidade)) : false
-          const normTorre = normalizeString(m.torre)
-          const torreMatch = normTorre
-            ? normParcelUnit.includes(normTorre) || normParcelUnit.includes(`torre${normTorre}`)
-            : true
-
-          return aptMatch && torreMatch
-        })
+          morador = moradoresData.find((m) => {
+            const aptMatch = m.unidade ? normParcelUnit.includes(normalizeString(m.unidade)) : false
+            const normTorre = normalizeString(m.torre)
+            const torreMatch = normTorre
+              ? normParcelUnit.includes(normTorre) || normParcelUnit.includes(`torre${normTorre}`)
+              : true
+            return aptMatch && torreMatch
+          })
+        }
 
         return {
           ...parcel,
@@ -261,9 +284,7 @@ export default function SalaTriagem() {
               {recebimentos.map((vol) => (
                 <TableRow key={vol.id}>
                   <TableCell className="pl-6 font-medium">{vol.unidade || 'N/D'}</TableCell>
-                  <TableCell>
-                    {vol._matchedMorador?.name || vol.morador || vol.entregador_nome || 'N/D'}
-                  </TableCell>
+                  <TableCell>{getDisplayName(vol)}</TableCell>
                   <TableCell className="font-mono text-muted-foreground whitespace-nowrap">
                     {vol.volume || '1'}
                   </TableCell>
@@ -395,14 +416,17 @@ export default function SalaTriagem() {
                 <div className="bg-white text-black p-4 w-full aspect-[2/3] max-w-[220px] flex flex-col justify-between border-b mx-auto shadow-sm my-4">
                   <div className="text-center">
                     <h3 className="font-extrabold text-xl tracking-tight leading-none mb-1">
-                      {selectedVolume?._matchedMorador?.torre
-                        ? `${selectedVolume?._matchedMorador.torre} - `
+                      {selectedVolume?._matchedMorador?.torre &&
+                      !selectedVolume?.unidade
+                        ?.toLowerCase()
+                        .includes(selectedVolume._matchedMorador.torre.toLowerCase())
+                        ? `${selectedVolume._matchedMorador.torre} - `
                         : ''}
                       {selectedVolume?.unidade || 'S/N'}
                     </h3>
                     <p className="text-sm font-bold line-clamp-2 leading-tight">
-                      {selectedVolume?._matchedMorador?.name ||
-                        selectedVolume?.morador ||
+                      {selectedVolume?.morador ||
+                        selectedVolume?._matchedMorador?.name ||
                         'Morador N/D'}
                     </p>
                   </div>
@@ -470,13 +494,16 @@ export default function SalaTriagem() {
           <div className="w-full h-full border-[6px] border-black p-6 flex flex-col justify-between rounded-xl">
             <div className="text-center">
               <h3 className="font-extrabold text-[4.5rem] mb-2 tracking-tight leading-none">
-                {selectedVolume._matchedMorador?.torre
+                {selectedVolume._matchedMorador?.torre &&
+                !selectedVolume.unidade
+                  ?.toLowerCase()
+                  .includes(selectedVolume._matchedMorador.torre.toLowerCase())
                   ? `${selectedVolume._matchedMorador.torre} - `
                   : ''}
                 {selectedVolume.unidade || 'S/N'}
               </h3>
               <p className="text-4xl font-bold mb-6 line-clamp-2 overflow-hidden leading-tight">
-                {selectedVolume._matchedMorador?.name || selectedVolume.morador || 'Morador N/D'}
+                {selectedVolume.morador || selectedVolume._matchedMorador?.name || 'Morador N/D'}
               </p>
             </div>
 

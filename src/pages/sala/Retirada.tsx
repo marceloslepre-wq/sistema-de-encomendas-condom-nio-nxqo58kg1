@@ -44,7 +44,8 @@ export default function SalaRetirada() {
   const filteredParcels = parcels.filter((p) => {
     const term = search.toLowerCase()
     const apt = p.expand?.unidade_id?.apartment?.toLowerCase() || p.unidade?.toLowerCase() || ''
-    const name = p.expand?.morador_id?.name?.toLowerCase() || p.morador?.toLowerCase() || ''
+    // O morador gravado na encomenda é a fonte primária
+    const name = p.morador?.toLowerCase() || p.expand?.morador_id?.name?.toLowerCase() || ''
     return apt.includes(term) || name.includes(term)
   })
 
@@ -138,7 +139,7 @@ export default function SalaRetirada() {
                           : p.unidade || 'Unidade N/D'}
                       </p>
                       <p className="text-sm">
-                        {p.expand?.morador_id?.name || p.morador || 'Morador'}
+                        {p.morador || p.expand?.morador_id?.name || 'Morador'}
                       </p>
                       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-1">
                         <span>VOL: {p.volume || 1}</span>
@@ -181,7 +182,7 @@ export default function SalaRetirada() {
                       : selectedParcel.unidade || 'Unidade N/D'}
                   </p>
                   <p className="text-muted-foreground">
-                    {selectedParcel.expand?.morador_id?.name || selectedParcel.morador || 'Morador'}
+                    {selectedParcel.morador || selectedParcel.expand?.morador_id?.name || 'Morador'}
                   </p>
                   {selectedParcel.expand?.morador_id?.cpf && (
                     <p className="text-sm text-muted-foreground mt-1">
