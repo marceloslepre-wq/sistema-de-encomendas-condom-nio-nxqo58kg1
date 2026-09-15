@@ -4,17 +4,91 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { getPublicInvitation, registerWithInvitation, getUnits } from '@/services/api'
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import { getPublicInvitation, registerWithInvitation } from '@/services/api'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, CheckCircle2, ShieldAlert } from 'lucide-react'
+import { Loader2, CheckCircle2, ShieldAlert, ChevronsUpDown, Check } from 'lucide-react'
 import { CondPackLogo } from '@/components/CondPackLogo'
+import { cn } from '@/lib/utils'
+
+interface SearchableSelectProps {
+  options: string[]
+  value: string
+  onChange: (value: string) => void
+  placeholder: string
+  searchPlaceholder: string
+  emptyText: string
+  disabled?: boolean
+}
+
+function SearchableSelect({
+  options,
+  value,
+  onChange,
+  placeholder,
+  searchPlaceholder,
+  emptyText,
+  disabled = false,
+}: SearchableSelectProps) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className={cn(
+            'w-full justify-between bg-white text-left font-normal border-input hover:bg-slate-50',
+            !value && 'text-muted-foreground',
+          )}
+        >
+          <span className="truncate">{value ? value : placeholder}</span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[200px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandList className="max-h-60">
+            <CommandEmpty>{emptyText}</CommandEmpty>
+            <CommandGroup>
+              {options.map((opt) => (
+                <CommandItem
+                  key={opt}
+                  value={opt}
+                  onSelect={() => {
+                    onChange(opt)
+                    setOpen(false)
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      'mr-2 h-4 w-4 shrink-0 text-primary',
+                      value === opt ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
+                  <span className="truncate">{opt}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
 
 export default function Registrar() {
   const { token } = useParams<{ token: string }>()
@@ -56,13 +130,14 @@ export default function Registrar() {
           torre: data.torre || '',
           unidade: data.unidade || '',
         }))
-        if (data.role === 'morador') {
-          getUnits()
-            .then((u) => {
-              setUnits(u)
-              setTorres(Array.from(new Set(u.map((x: any) => x.tower))) as string[])
-            })
-            .catch(console.error)
+
+        // O endpoint público /backend/v1/invitations/{token} retorna as unidades do condomínio
+        if (data.units && Array.isArray(data.units)) {
+          setUnits(data.units)
+          const distinctTorres = Array.from(
+            new Set(data.units.map((x: any) => x.tower).filter(Boolean)),
+          ) as string[]
+          setTorres(distinctTorres)
         }
       })
       .catch((err) => {
@@ -75,7 +150,10 @@ export default function Registrar() {
 
   useEffect(() => {
     if (formData.torre && units.length > 0) {
-      const apts = units.filter((u) => u.tower === formData.torre).map((u) => u.apartment)
+      const apts = units
+        .filter((u) => u.tower === formData.torre)
+        .map((u) => u.apartment)
+        .filter(Boolean)
       setUnidadesPorTorre(Array.from(new Set(apts)) as string[])
     } else {
       setUnidadesPorTorre([])
@@ -107,6 +185,38 @@ export default function Registrar() {
         variant: 'destructive',
       })
       return
+    }
+
+    if (invitation?.role === 'morador') {
+      const finalTorre = invitation.torre || formData.torre
+      const finalUnidade = invitation.unidade || formData.unidade
+
+      if (!formData.cpf || formData.cpf.trim() === '') {
+        toast({
+          title: 'Atenção',
+          description: 'O CPF é obrigatório.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      if (!finalTorre) {
+        toast({
+          title: 'Atenção',
+          description: 'Por favor, selecione a Torre.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      if (!finalUnidade) {
+        toast({
+          title: 'Atenção',
+          description: 'Por favor, selecione a Unidade.',
+          variant: 'destructive',
+        })
+        return
+      }
     }
 
     setSubmitting(true)
@@ -288,30 +398,27 @@ export default function Registrar() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>
                       Torre <span className="text-destructive">*</span>
                     </Label>
                     {invitation.torre ? (
-                      <Input value={invitation.torre} disabled className="bg-muted" />
+                      <Input
+                        value={invitation.torre}
+                        disabled
+                        readOnly
+                        className="bg-muted text-muted-foreground cursor-not-allowed"
+                      />
                     ) : (
-                      <Select
+                      <SearchableSelect
+                        options={torres}
                         value={formData.torre}
-                        onValueChange={(v) => setFormData({ ...formData, torre: v, unidade: '' })}
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {torres.map((t) => (
-                            <SelectItem key={t} value={t}>
-                              {t}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        onChange={(v) => setFormData({ ...formData, torre: v, unidade: '' })}
+                        placeholder="Selecione ou busque a torre..."
+                        searchPlaceholder="Buscar torre..."
+                        emptyText="Nenhuma torre encontrada."
+                      />
                     )}
                   </div>
 
@@ -320,25 +427,30 @@ export default function Registrar() {
                       Unidade <span className="text-destructive">*</span>
                     </Label>
                     {invitation.unidade ? (
-                      <Input value={invitation.unidade} disabled className="bg-muted" />
+                      <Input
+                        value={invitation.unidade}
+                        disabled
+                        readOnly
+                        className="bg-muted text-muted-foreground cursor-not-allowed"
+                      />
                     ) : (
-                      <Select
+                      <SearchableSelect
+                        options={unidadesPorTorre}
                         value={formData.unidade}
-                        onValueChange={(v) => setFormData({ ...formData, unidade: v })}
+                        onChange={(v) => setFormData({ ...formData, unidade: v })}
                         disabled={!formData.torre}
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {unidadesPorTorre.map((u) => (
-                            <SelectItem key={u} value={u}>
-                              {u}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder={
+                          formData.torre
+                            ? 'Selecione ou busque a unidade...'
+                            : 'Primeiro selecione a torre'
+                        }
+                        searchPlaceholder="Buscar unidade (ex: 101)..."
+                        emptyText={
+                          formData.torre
+                            ? 'Nenhuma unidade cadastrada para esta torre.'
+                            : 'Selecione uma torre primeiro.'
+                        }
+                      />
                     )}
                   </div>
                 </div>
