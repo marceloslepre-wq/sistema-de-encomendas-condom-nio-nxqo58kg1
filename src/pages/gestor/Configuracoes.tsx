@@ -144,8 +144,6 @@ export default function GestorConfiguracoes() {
   const [templates, setTemplates] = useState<any[]>([])
   const [newTemplateStatus, setNewTemplateStatus] = useState('')
   const [newTemplateMensagem, setNewTemplateMensagem] = useState('')
-  const [reminderFreq, setReminderFreq] = useState('1')
-  const [reminderTime, setReminderTime] = useState('09:00')
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null)
 
   const FLOW_STAGES = [
@@ -153,8 +151,6 @@ export default function GestorConfiguracoes() {
     { id: 'Em triagem na sala de encomendas', label: 'Em triagem na sala de encomendas' },
     { id: 'Processado e Liberado para Retirada', label: 'Processado e Liberado para Retirada' },
     { id: 'Encomenda Retirada', label: 'Encomenda Retirada' },
-    { id: 'CANCELADO', label: 'Cancelado' },
-    { id: 'LEMBRETE', label: 'Lembrete (Retirada)' },
   ]
 
   const { toast } = useToast()
@@ -489,38 +485,55 @@ export default function GestorConfiguracoes() {
   }
 
   const handleAddTemplate = async () => {
-    if (!newTemplateStatus || !newTemplateMensagem) return
+    if (!newTemplateStatus || !newTemplateMensagem) {
+      toast({
+        title: 'Campos incompletos',
+        description: 'Por favor, selecione o estágio do fluxo e digite o texto da mensagem.',
+        variant: 'destructive',
+      })
+      return
+    }
     try {
       if (editingTemplateId) {
         const res = await updateTemplateNotificacao(editingTemplateId, {
           status: newTemplateStatus,
           flow_stage: newTemplateStatus,
-          mensagem_template: newTemplateMensagem,
-          reminder_frequency: newTemplateStatus === 'LEMBRETE' ? parseInt(reminderFreq) : 0,
-          reminder_time: newTemplateStatus === 'LEMBRETE' ? reminderTime : '',
+          mensagem_template: newTemplateMensagem.trim(),
+          reminder_frequency: 0,
+          reminder_time: '',
         })
         setTemplates(templates.map((t) => (t.id === editingTemplateId ? res : t)))
         setEditingTemplateId(null)
-        toast({ title: 'Template atualizado com sucesso' })
+        toast({ title: 'Sucesso', description: 'Template atualizado com sucesso!' })
       } else {
         const res = await createTemplateNotificacao({
           status: newTemplateStatus,
           flow_stage: newTemplateStatus,
-          mensagem_template: newTemplateMensagem,
-          reminder_frequency: newTemplateStatus === 'LEMBRETE' ? parseInt(reminderFreq) : 0,
-          reminder_time: newTemplateStatus === 'LEMBRETE' ? reminderTime : '',
+          mensagem_template: newTemplateMensagem.trim(),
+          reminder_frequency: 0,
+          reminder_time: '',
           ativo: true,
         })
         setTemplates([...templates, res])
-        toast({ title: 'Template adicionado com sucesso' })
+        toast({ title: 'Sucesso', description: 'Template adicionado com sucesso!' })
       }
       setNewTemplateStatus('')
       setNewTemplateMensagem('')
-      setReminderFreq('1')
-      setReminderTime('09:00')
-    } catch (e) {
+    } catch (e: any) {
+      const fieldErrors = e?.data?.data
+      let errorDescription = 'Falha ao salvar o template. Verifique os dados e tente novamente.'
+
+      if (fieldErrors?.flow_stage?.message) {
+        errorDescription = `Estágio inválido: ${fieldErrors.flow_stage.message}`
+      } else if (fieldErrors?.status?.message) {
+        errorDescription = `Status inválido: ${fieldErrors.status.message}`
+      } else if (e?.message) {
+        errorDescription = e.message
+      }
+
       toast({
         title: editingTemplateId ? 'Erro ao atualizar template' : 'Erro ao adicionar template',
+        description: errorDescription,
         variant: 'destructive',
       })
     }
@@ -562,16 +575,12 @@ export default function GestorConfiguracoes() {
   const handleEditTemplate = (t: any) => {
     setNewTemplateStatus(t.flow_stage || t.status)
     setNewTemplateMensagem(t.mensagem_template)
-    setReminderFreq(t.reminder_frequency?.toString() || '1')
-    setReminderTime(t.reminder_time || '09:00')
     setEditingTemplateId(t.id)
   }
 
   const handleCancelEdit = () => {
     setNewTemplateStatus('')
     setNewTemplateMensagem('')
-    setReminderFreq('1')
-    setReminderTime('09:00')
     setEditingTemplateId(null)
   }
 
@@ -580,8 +589,12 @@ export default function GestorConfiguracoes() {
       await deleteTemplateNotificacao(id)
       setTemplates(templates.filter((t) => t.id !== id))
       toast({ title: 'Template removido com sucesso' })
-    } catch (e) {
-      toast({ title: 'Erro ao remover template', variant: 'destructive' })
+    } catch (e: any) {
+      toast({
+        title: 'Erro ao remover template',
+        description: e?.message || 'Falha ao excluir o template.',
+        variant: 'destructive',
+      })
     }
   }
 
@@ -939,28 +952,6 @@ export default function GestorConfiguracoes() {
                       </SelectContent>
                     </Select>
                   </div>
-
-                  {newTemplateStatus === 'LEMBRETE' && (
-                    <>
-                      <div className="flex-[0.5] space-y-2">
-                        <Label>Frequência (dias)</Label>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={reminderFreq}
-                          onChange={(e) => setReminderFreq(e.target.value)}
-                        />
-                      </div>
-                      <div className="flex-[0.5] space-y-2">
-                        <Label>Horário do Envio</Label>
-                        <Input
-                          type="time"
-                          value={reminderTime}
-                          onChange={(e) => setReminderTime(e.target.value)}
-                        />
-                      </div>
-                    </>
-                  )}
                 </div>
 
                 <div className="flex flex-col gap-2">
@@ -1021,12 +1012,6 @@ export default function GestorConfiguracoes() {
                               >
                                 Desabilitada
                               </Badge>
-                            )}
-                            {(t.flow_stage === 'LEMBRETE' || t.status === 'LEMBRETE') && (
-                              <span className="text-xs text-muted-foreground">
-                                A cada {t.reminder_frequency || 1} dia(s) às{' '}
-                                {t.reminder_time || '09:00'}
-                              </span>
                             )}
                           </div>
                           <span
