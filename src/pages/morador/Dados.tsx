@@ -124,12 +124,30 @@ export default function MoradorDados() {
       }
 
       await updateUser(user.id, dataToUpdate)
-      if (moradorData) {
-        await pb.collection('moradores').update(moradorData.id, {
-          telefone: phone,
-          permitir_retirada_terceiros: boolTerceiros,
-          notificacoes_whatsapp: boolNotificacoes,
-        })
+      if (moradorData?.id) {
+        try {
+          await pb.collection('moradores').update(moradorData.id, {
+            telefone: phone,
+            permitir_retirada_terceiros: boolTerceiros,
+            notificacoes_whatsapp: boolNotificacoes,
+          })
+        } catch (moradorErr: any) {
+          const status = moradorErr?.status || moradorErr?.response?.status
+          // 404 (registro não existe / deletado / vínculo obsoleto) ou 403 (permissão):
+          // Não interrompe o salvamento nem quebra a experiência do morador.
+          if (status === 404 || status === 403) {
+            console.warn(
+              `Aviso ao atualizar registro em moradores (${moradorData.id}): status ${status}. Vínculo desconsiderado.`,
+              moradorErr,
+            )
+            if (status === 404) {
+              setMoradorData(null)
+            }
+          } else {
+            // Se for outro erro inesperado na sincronização com moradores, registra aviso mas preserva o sucesso do usuário
+            console.error('Erro ao sincronizar dados na coleção moradores:', moradorErr)
+          }
+        }
       }
 
       setNewPassword('')
