@@ -45,7 +45,7 @@ import {
 } from '@/components/ui/command'
 import { ChevronsUpDown, Check, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { isResidentInUnit } from '@/lib/unitMatching'
+import { isResidentInUnit, filterPortariaUnits } from '@/lib/unitMatching'
 
 const formatCpf = (value: string) => {
   const v = value.replace(/\D/g, '').substring(0, 11)
@@ -99,10 +99,25 @@ function UnitCombobox({
   onChange: (val: string) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
   const selectedUnit = units.find((u) => u.id === value)
 
+  // Filtro estrito: busca exata para número completo (101 -> apenas 101 em todas as torres),
+  // início de prefixo (10 -> 101, 102), busca por torre, e sempre agrupado/ordenado por unidade crescente.
+  const filteredUnits = useMemo(() => {
+    return filterPortariaUnits(units, search)
+  }, [units, search])
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen)
+        if (!nextOpen) {
+          setSearch('')
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -117,18 +132,23 @@ function UnitCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Buscar unidade (ex: A-102)..." />
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Buscar unidade (ex: 101, Torre A)..."
+            value={search}
+            onValueChange={setSearch}
+          />
           <CommandList>
             <CommandEmpty>Nenhuma unidade encontrada.</CommandEmpty>
             <CommandGroup>
-              {units.map((u) => (
+              {filteredUnits.map((u) => (
                 <CommandItem
                   key={u.id}
-                  value={`${u.tower} - ${u.apartment}`}
+                  value={u.id}
                   onSelect={() => {
                     onChange(u.id)
                     setOpen(false)
+                    setSearch('')
                   }}
                 >
                   <CheckCircle2

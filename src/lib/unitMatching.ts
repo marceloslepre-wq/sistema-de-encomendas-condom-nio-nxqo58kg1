@@ -305,3 +305,139 @@ export const towerMatches = (
   // Fallback para case-insensitive trim
   return normSelected === normUnit
 }
+
+export interface UnitItemLike {
+  id: string
+  tower: string
+  apartment: string
+  [key: string]: any
+}
+
+/**
+ * Ordena unidades priorizando o número do apartamento (ordem natural crescente),
+ * e como critério de desempate o nome da torre (ordem alfanumérica pt-BR).
+ * Resultado: agrupa primeiro todas as torres da menor unidade (ex.: Torre A 101, Torre B 101...),
+ * depois a próxima unidade (Torre A 102, Torre B 102...).
+ */
+export const sortUnitsByApartmentGroup = <T extends UnitItemLike>(list: T[]): T[] => {
+  return [...list].sort((a, b) => {
+    const aptComp = compareUnitNumbers(a.apartment, b.apartment)
+    if (aptComp !== 0) return aptComp
+    return (a.tower || '').localeCompare(b.tower || '', 'pt-BR', {
+      numeric: true,
+      sensitivity: 'base',
+    })
+  })
+}
+
+/**
+ * Filtro inteligente e estrito de unidades para a portaria.
+ *
+ * Regras:
+ * 1. Termo numérico ou com prefixo numérico puro (ex: "101"):
+ *    - Se parece um número completo (>= 3 dígitos ou sem letras), exige correspondência EXATA
+ *      com o número do apartamento normalizado: aptNum === qNum.
+ *    - Se é um prefixo curto de busca (1 ou 2 dígitos, ex: "10"): aceita unidades cujo número
+ *      COMEÇA com esse prefixo (ex.: 101, 102), mas NUNCA no meio (ex.: "01" NÃO traz "101").
+ * 2. Termo misto torre + unidade (ex: "Torre A - 101", "Torre A 101", "A 101", "A-101"):
+ *    - Extrai a torre e o número. A torre deve dar match e o número segue a regra de início/exato.
+ * 3. Termo puramente textual / torre (ex: "Torre A", "ORQUIDEA", "Bloco B"):
+ *    - Filtra as unidades pertencentes a essa torre pelo identificador ou apelido.
+ * 4. Ordenação do retorno: sempre agrupado por apartamento crescente (101 todas as torres, 102 todas...).
+ */
+export const filterPortariaUnits = <T extends UnitItemLike>(units: T[], query: string): T[] => {
+  const trimmed = (query || '').trim()
+  if (!trimmed) {
+    return sortUnitsByApartmentGroup(units)
+  }
+
+  const normQuery = normalizeText(trimmed)
+
+  // Verifica se o termo de busca é puramente numérico (apenas dígitos)
+  const isPureDigits = /^\d+$/.test(trimmed)
+
+  if (isPureDigits) {
+    const queryNum = trimmed
+    let filtered: T[]
+
+    if (queryNum.length >= 3) {
+      // Correspondência EXATA do número do apartamento.
+      // Exemplo: "101" -> SOMENTE apartamentos cujo número seja exatamente 101.
+      // Unidades 102, 103, 1010 NUNCA aparecem.
+      filtered = units.filter((u) => {
+        const aptNorm = normalizeApartment(u.apartment)
+        const aptRaw = (u.apartment || '').trim()
+        return aptNorm === queryNum || aptRaw === queryNum
+      })
+    } else {
+      // Prefixo curto enquanto digita (1 ou 2 dígitos, ex: "10"):
+      // Vale apenas como INÍCIO do número (startsWith).
+      // "10" traz 101, 102, 103...; "01" NÃO traz 101.
+      filtered = units.filter((u) => {
+        const aptNorm = normalizeApartment(u.apartment)
+        const aptRaw = (u.apartment || '').trim()
+        return aptNorm.startsWith(queryNum) || aptRaw.startsWith(queryNum)
+      })
+    }
+
+    return sortUnitsByApartmentGroup(filtered)
+  }
+
+  // Se a busca tem padrão "Torre + Unidade" separado por hífen, barra ou espaço (ex: "Torre A - 101", "A - 101", "Torre A 101")
+  const combinedMatch = trimmed.match(/^(.+?)(?:\s*[-/]\s*|\s+)(\d+[a-zA-Z]*)$/)
+  if (combinedMatch) {
+    const towerPart = combinedMatch[1].trim()
+    const aptPart = combinedMatch[2].trim()
+
+    const filtered = units.filter((u) => {
+      // Verifica torre
+      const towerOk =
+        isTowerMatch(u.tower, towerPart) ||
+        normalizeText(u.tower).includes(normalizeText(towerPart))
+
+      // Verifica unidade
+      const aptNorm = normalizeApartment(u.apartment)
+      const aptRaw = (u.apartment || '').trim().toLowerCase()
+      const aptPartNorm = normalizeApartment(aptPart)
+      const aptPartLower = aptPart.toLowerCase()
+
+      let aptOk = false
+      if (aptPart.length >= 3) {
+        aptOk = aptNorm === aptPartNorm || aptRaw === aptPartLower
+      } else {
+        aptOk = aptNorm.startsWith(aptPartNorm) || aptRaw.startsWith(aptPartLower)
+      }
+
+      return towerOk && aptOk
+    })
+
+    return sortUnitsByApartmentGroup(filtered)
+  }
+
+  // Busca textual livre: nome/apelido da torre, ou prefixo de apartamento alfanumérico
+  const filtered = units.filter((u) => {
+    const normTower = normalizeText(u.tower)
+    const normApartment = normalizeApartment(u.apartment)
+    const rawApartment = (u.apartment || '').trim().toLowerCase()
+    const labelCombined = normalizeText(`${u.tower} ${u.apartment}`)
+
+    // Se o usuário digitou parte do nome da torre (ex.: "ORQUIDEA", "Torre A")
+    if (normTower.includes(normQuery)) {
+      return true
+    }
+
+    // Se bate com início da unidade
+    if (normApartment.startsWith(normQuery) || rawApartment.startsWith(normQuery.toLowerCase())) {
+      return true
+    }
+
+    // Se a combinação torre+unidade contém a busca
+    if (labelCombined.includes(normQuery)) {
+      return true
+    }
+
+    return false
+  })
+
+  return sortUnitsByApartmentGroup(filtered)
+}
