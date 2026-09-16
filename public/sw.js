@@ -1,50 +1,98 @@
-const CACHE_NAME = 'encomendas-pwa-v1'
+// CondPack Service Worker — Shell estático offline e atualização automática
+// Versão do Cache: condpack-shell-v0.0.301
+const CACHE_NAME = 'condpack-shell-v0.0.301'
 
-const STATIC_ASSETS = ['/', '/index.html', '/manifest.json']
+const PRECACHE_ASSETS = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/favicon.svg',
+  '/icon-512.svg',
+  '/icon-maskable.svg',
+]
 
+// Instalação: ativa imediatamente sem aguardar abas antigas
 self.addEventListener('install', (event) => {
   self.skipWaiting()
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS)
+      return cache.addAll(PRECACHE_ASSETS)
     }),
   )
 })
 
+// Ativação: limpa versões antigas do cache e assume o controle imediatamente
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then((keys) => {
       return Promise.all(
-        cacheNames.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name)),
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key)
+          }
+        }),
       )
     }),
   )
   self.clients.claim()
 })
 
+// Mensagens vindas do app (ex.: pular espera se solicitado)
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
+})
+
+// Interceptação de requisições de rede
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
 
-  // Do not intercept API requests to PocketBase to prevent caching stale dynamic data
+  const requestUrl = new URL(event.request.url)
+
+  // NUNCA cachear dados dinâmicos, APIs do PocketBase, endpoints de autenticação ou serviços externos de terceiros
   if (
-    event.request.url.includes('/api/') ||
-    event.request.url.includes('/backend/v1/') ||
-    event.request.url.includes('/backend/v1/enviar-codigo-whatsapp') ||
-    event.request.url.includes('goskip.dev')
+    requestUrl.pathname.startsWith('/api/') ||
+    requestUrl.pathname.startsWith('/backend/') ||
+    requestUrl.hostname.includes('pocketbase') ||
+    requestUrl.hostname.includes('goskip.dev')
   ) {
     return
   }
 
-  const url = new URL(event.request.url)
-  // Skip cross-origin requests
-  if (url.origin !== self.location.origin) return
+  // Requisições para outras origens não são tratadas pelo nosso cache de shell
+  if (requestUrl.origin !== self.location.origin) {
+    return
+  }
 
+  // Para navegação SPA (documentos HTML): Network First com fallback para index.html em cache
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.ok) {
+            const clone = networkResponse.clone()
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put('/index.html', clone)
+            })
+          }
+          return networkResponse
+        })
+        .catch(async () => {
+          const cached = await caches.match('/index.html')
+          if (cached) return cached
+          return caches.match('/')
+        }),
+    )
+    return
+  }
+
+  // Para assets estáticos locais (/assets/, imagens, ícones, fontes): Stale-While-Revalidate
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request)
         .then((networkResponse) => {
-          // Cache successful responses for subsequent offline use
-          if (networkResponse.ok && event.request.url.startsWith('http')) {
+          if (networkResponse && networkResponse.ok) {
             const clone = networkResponse.clone()
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(event.request, clone)
@@ -52,12 +100,11 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse
         })
-        .catch((error) => {
-          console.warn('Fetch failed; returning offline cache instead.', error)
+        .catch((err) => {
+          // Se offline e falhou fetch, retorna cache existente se houver
           return cachedResponse
         })
 
-      // Implement stale-while-revalidate: return cache instantly if exists, but update in background
       return cachedResponse || fetchPromise
     }),
   )

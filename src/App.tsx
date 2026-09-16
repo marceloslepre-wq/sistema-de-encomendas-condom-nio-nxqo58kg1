@@ -3,6 +3,8 @@ import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider, useAuth } from '@/hooks/use-auth'
+import { PWAProvider } from '@/components/pwa/PWAContext'
+import { PWAInstallDialog } from '@/components/pwa/PWAInstallDialog'
 
 import Layout from './components/Layout'
 import Index from './pages/Index'
@@ -93,188 +95,191 @@ const ProtectedRoute = ({
 const App = () => (
   <BrowserRouter>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/cadastro" element={<Cadastro />} />
-          <Route path="/registrar/:token" element={<Registrar />} />
-          <Route path="/renovar" element={<Renovar />} />
-          {/* Rota Pública da Vitrine / Demonstração do Guia para a sub-página Sholver */}
-          <Route path="/guia-publica" element={<GuiaPublico />} />
+      <PWAProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <PWAInstallDialog />
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/cadastro" element={<Cadastro />} />
+            <Route path="/registrar/:token" element={<Registrar />} />
+            <Route path="/renovar" element={<Renovar />} />
+            {/* Rota Pública da Vitrine / Demonstração do Guia para a sub-página Sholver */}
+            <Route path="/guia-publica" element={<GuiaPublico />} />
 
-          {/* Rota Protegida Exclusiva para Master */}
-          <Route
-            path="/master"
-            element={
-              <ProtectedRoute requiredRole="master">
-                <MasterDashboard />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route element={<Layout />}>
-            {/* Rota do Guia de Uso - acessível a todos os perfis logados */}
+            {/* Rota Protegida Exclusiva para Master */}
             <Route
-              path="/guia"
+              path="/master"
               element={
-                <ProtectedRoute>
-                  <Guia />
+                <ProtectedRoute requiredRole="master">
+                  <MasterDashboard />
                 </ProtectedRoute>
               }
             />
 
-            <Route
-              path="/gestor/dashboard"
-              element={
-                <ProtectedRoute requiredRole="gestor">
-                  <GestorDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/gestor/usuarios"
-              element={
-                <ProtectedRoute requiredRole="gestor">
-                  <GestorUsuarios />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/gestor/unidades"
-              element={
-                <ProtectedRoute requiredRole="gestor">
-                  <GestorUnidades />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/gestor/transportadoras"
-              element={
-                <ProtectedRoute allowedRoles={['gestor', 'porteiro', 'portaria']}>
-                  <GestorTransportadoras />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/gestor/relatorios"
-              element={
-                <ProtectedRoute requiredRole="gestor">
-                  <GestorRelatorios />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/gestor/configuracoes"
-              element={
-                <ProtectedRoute requiredRole="gestor">
-                  <GestorConfiguracoes />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/gestor/licencas"
-              element={
-                <ProtectedRoute requiredRole="gestor">
-                  <GestorLicencas />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/gestor/permissoes"
-              element={
-                <ProtectedRoute requiredRole="gestor">
-                  <GestorPermissoes />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/gestor/logistica"
-              element={
-                <ProtectedRoute requiredRole="gestor">
-                  <GestorLogistica />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/portaria/registro"
-              element={
-                <ProtectedRoute allowedRoles={['porteiro', 'portaria']}>
-                  <PortariaRegistro />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/portaria/entregadores"
-              element={
-                <ProtectedRoute allowedRoles={['porteiro', 'portaria']}>
-                  <PortariaEntregadores />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/sala/triagem"
-              element={
-                <ProtectedRoute allowedRoles={['triagem', 'portaria']}>
-                  <SalaTriagem />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/sala/retirada"
-              element={
-                <ProtectedRoute allowedRoles={['triagem', 'portaria']}>
-                  <SalaRetirada />
-                </ProtectedRoute>
-              }
-            />
+            <Route element={<Layout />}>
+              {/* Rota do Guia de Uso - acessível a todos os perfis logados */}
+              <Route
+                path="/guia"
+                element={
+                  <ProtectedRoute>
+                    <Guia />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/morador/dashboard"
-              element={
-                <ProtectedRoute requiredRole="morador">
-                  <MoradorDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/morador/historico"
-              element={
-                <ProtectedRoute requiredRole="morador">
-                  <MoradorHistorico />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/morador/encomenda/:id"
-              element={
-                <ProtectedRoute requiredRole="morador">
-                  <MoradorDetalhes />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/morador/dados"
-              element={
-                <ProtectedRoute requiredRole="morador">
-                  <MoradorDados />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/morador/retirada"
-              element={
-                <ProtectedRoute requiredRole="morador">
-                  <MoradorRetirada />
-                </ProtectedRoute>
-              }
-            />
-          </Route>
+              <Route
+                path="/gestor/dashboard"
+                element={
+                  <ProtectedRoute requiredRole="gestor">
+                    <GestorDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/gestor/usuarios"
+                element={
+                  <ProtectedRoute requiredRole="gestor">
+                    <GestorUsuarios />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/gestor/unidades"
+                element={
+                  <ProtectedRoute requiredRole="gestor">
+                    <GestorUnidades />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/gestor/transportadoras"
+                element={
+                  <ProtectedRoute allowedRoles={['gestor', 'porteiro', 'portaria']}>
+                    <GestorTransportadoras />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/gestor/relatorios"
+                element={
+                  <ProtectedRoute requiredRole="gestor">
+                    <GestorRelatorios />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/gestor/configuracoes"
+                element={
+                  <ProtectedRoute requiredRole="gestor">
+                    <GestorConfiguracoes />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/gestor/licencas"
+                element={
+                  <ProtectedRoute requiredRole="gestor">
+                    <GestorLicencas />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/gestor/permissoes"
+                element={
+                  <ProtectedRoute requiredRole="gestor">
+                    <GestorPermissoes />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/gestor/logistica"
+                element={
+                  <ProtectedRoute requiredRole="gestor">
+                    <GestorLogistica />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/portaria/registro"
+                element={
+                  <ProtectedRoute allowedRoles={['porteiro', 'portaria']}>
+                    <PortariaRegistro />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/portaria/entregadores"
+                element={
+                  <ProtectedRoute allowedRoles={['porteiro', 'portaria']}>
+                    <PortariaEntregadores />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sala/triagem"
+                element={
+                  <ProtectedRoute allowedRoles={['triagem', 'portaria']}>
+                    <SalaTriagem />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sala/retirada"
+                element={
+                  <ProtectedRoute allowedRoles={['triagem', 'portaria']}>
+                    <SalaRetirada />
+                  </ProtectedRoute>
+                }
+              />
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </TooltipProvider>
+              <Route
+                path="/morador/dashboard"
+                element={
+                  <ProtectedRoute requiredRole="morador">
+                    <MoradorDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/morador/historico"
+                element={
+                  <ProtectedRoute requiredRole="morador">
+                    <MoradorHistorico />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/morador/encomenda/:id"
+                element={
+                  <ProtectedRoute requiredRole="morador">
+                    <MoradorDetalhes />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/morador/dados"
+                element={
+                  <ProtectedRoute requiredRole="morador">
+                    <MoradorDados />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/morador/retirada"
+                element={
+                  <ProtectedRoute requiredRole="morador">
+                    <MoradorRetirada />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </TooltipProvider>
+      </PWAProvider>
     </AuthProvider>
   </BrowserRouter>
 )

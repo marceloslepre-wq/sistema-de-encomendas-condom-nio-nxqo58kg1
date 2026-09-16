@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Bell, LogOut, User, Building2 } from 'lucide-react'
+import { Bell, LogOut, User, Building2, Smartphone } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
+import { usePWA } from '@/components/pwa/PWAContext'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -17,6 +18,7 @@ import pb from '@/lib/pocketbase/client'
 
 export function Header() {
   const { user, role, logout } = useAuth()
+  const { isStandalone, openManualPrompt } = usePWA()
   const navigate = useNavigate()
   const [condo, setCondo] = useState<CondoRecord | null>(null)
 
@@ -120,6 +122,15 @@ export function Header() {
               <User className="h-4 w-4" />
               <span>Meu Perfil</span>
             </DropdownMenuItem>
+            {!isStandalone && (
+              <DropdownMenuItem
+                onClick={openManualPrompt}
+                className="flex items-center gap-2 cursor-pointer text-[#00a896] focus:text-[#00a896] font-medium"
+              >
+                <Smartphone className="h-4 w-4" />
+                <span>Instalar Aplicativo</span>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}

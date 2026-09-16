@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Cores oficiais CondPack -->
+    <!-- Prédios: Azul Marinho profundo #0d2a58 -->
+    <!-- Caixa: Teal / Turquesa #00a896 -->
+  </defs>
+
+  <!-- Fundo seguro para maskable icon (área central protegida) -->
+  <rect width="512" height="512" fill="#0d2a58"/>
+  <rect x="36" y="36" width="440" height="440" rx="96" fill="#ffffff"/>
+
+  <!-- Grupo central do símbolo com padding seguro -->
+  <g transform="translate(68, 54) scale(0.85)">
+    <!-- PRÉDIOS (Azul Marinho) -->
+    <!-- Prédio Esquerdo -->
+    <path d="M70 148 L126 130 L126 310 L70 326 Z" fill="#0d2a58"/>
+    <!-- Janelas Prédio Esquerdo -->
+    <rect x="84" y="166" width="28" height="18" rx="2" fill="#ffffff" transform="skewY(-16)"/>
+    <rect x="84" y="212" width="28" height="18" rx="2" fill="#ffffff" transform="skewY(-16)"/>
+    <rect x="84" y="258" width="28" height="18" rx="2" fill="#ffffff" transform="skewY(-16)"/>
+
+    <!-- Prédio Central (mais alto) -->
+    <!-- Lado Esquerdo Prédio Central -->
+    <path d="M136 78 L196 54 L196 300 L136 300 Z" fill="#0d2a58"/>
+    <!-- Janelas Prédio Central -->
+    <rect x="150" y="106" width="32" height="20" rx="2" fill="#ffffff" transform="skewY(-20)"/>
+    <rect x="150" y="152" width="32" height="20" rx="2" fill="#ffffff" transform="skewY(-20)"/>
+    <rect x="150" y="198" width="32" height="20" rx="2" fill="#ffffff" transform="skewY(-20)"/>
+    <!-- Lado Direito Prédio Central (Sombra/Perspectiva) -->
+    <path d="M196 54 L244 80 L244 260 L196 260 Z" fill="#091d3e"/>
+
+    <!-- Prédio Direito -->
+    <path d="M254 130 L310 148 L310 326 L254 310 Z" fill="#0d2a58"/>
+    <!-- Janelas Prédio Direito -->
+    <rect x="268" y="240" width="28" height="18" rx="2" fill="#ffffff" transform="skewY(16)"/>
+    <rect x="268" y="286" width="28" height="18" rx="2" fill="#ffffff" transform="skewY(16)"/>
+    <rect x="268" y="332" width="28" height="18" rx="2" fill="#ffffff" transform="skewY(16)"/>
+
+    <!-- CAIXA EM PERSPECTIVA ISOMÉTRICA (Teal / Turquesa + Azul Marinho) -->
+    <!-- Face Superior da Caixa (Tampa / topo branco com contorno Teal) -->
+    <path d="M200 200 L300 258 L200 316 L100 258 Z" fill="#ffffff" stroke="#00a896" stroke-width="14" stroke-linejoin="round"/>
+
+    <!-- Fita da Caixa na face superior -->
+    <path d="M245 226 L265 238 L225 262 L205 250 Z" fill="#00a896"/>
+
+    <!-- Face Esquerda da Caixa (Azul Marinho sólido) -->
+    <path d="M96 262 L200 320 L200 440 L96 382 Z" fill="#0d2a58" stroke="#0d2a58" stroke-width="4" stroke-linejoin="round"/>
+
+    <!-- Face Direita da Caixa (Branco com borda Teal forte) -->
+    <path d="M200 320 L304 262 L304 382 L200 440 Z" fill="#ffffff" stroke="#00a896" stroke-width="14" stroke-linejoin="round"/>
+
+    <!-- Fita / Dobra na lateral direita da caixa -->
+    <path d="M260 286 L286 272 L286 324 L273 310 L260 324 Z" fill="#00a896"/>
+  </g>
+</svg>

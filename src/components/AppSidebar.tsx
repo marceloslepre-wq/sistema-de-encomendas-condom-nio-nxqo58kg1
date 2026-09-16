@@ -15,8 +15,10 @@ import {
   MapPin,
   Award,
   BookOpen,
+  Smartphone,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
+import { usePWA } from '@/components/pwa/PWAContext'
 import { CondPackLogo } from '@/components/CondPackLogo'
 import {
   Sidebar,
@@ -33,6 +35,7 @@ import {
 
 export function AppSidebar() {
   const { role, signOut } = useAuth()
+  const { isStandalone, openManualPrompt } = usePWA()
   const location = useLocation()
 
   const getLinks = () => {
@@ -137,8 +140,19 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-border/50 p-4">
+      <SidebarFooter className="border-t border-border/50 p-4 space-y-1">
         <SidebarMenu>
+          {!isStandalone && (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={openManualPrompt}
+                className="text-[#00a896] hover:text-[#008f80] hover:bg-[#00a896]/10 font-medium"
+              >
+                <Smartphone className="w-4 h-4" />
+                <span>Instalar aplicativo</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={signOut}

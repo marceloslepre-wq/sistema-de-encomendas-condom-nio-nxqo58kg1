@@ -9,14 +9,16 @@
       content="CondPack — Sistema de Gestão de Encomendas para Condomínios"
     />
     <meta name="author" content="CondPack" />
-    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image" content="/og-image.jpeg" />
 
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#0f172a" />
+    <meta name="theme-color" content="#0d2a58" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="CondPack" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="CondPack" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
   </head>
@@ -33,11 +35,21 @@
           navigator.serviceWorker
             .register("/sw.js")
             .then((registration) => {
-              console.log("SW registered with scope:", registration.scope);
+              // Checa atualizações periodicamente e ao focar a aba
+              registration.update();
             })
             .catch((error) => {
               console.error("SW registration failed:", error);
             });
+        });
+
+        // Quando um novo service worker assume o controle, atualiza abas para a versão mais recente
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
         });
       }
     </script>
