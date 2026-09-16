@@ -10,13 +10,44 @@ onRecordAfterUpdateSuccess((e) => {
     const moradorId = record.getString('morador_id')
     let phone = ''
     let moradorName = record.getString('morador') || ''
+    let notificacoesAtivas = true
 
     if (moradorId) {
       try {
         const morador = $app.findRecordById('users', moradorId)
         phone = morador.getString('phone')
         if (!moradorName) moradorName = morador.getString('name')
+        if (
+          morador.get('notificacoes_whatsapp') !== undefined &&
+          morador.get('notificacoes_whatsapp') !== null
+        ) {
+          notificacoesAtivas = morador.getBool('notificacoes_whatsapp')
+        }
       } catch (_) {}
+    }
+
+    // Se o morador optou por não receber notificações automáticas via WhatsApp
+    if (!notificacoesAtivas) {
+      console.log('Envio WhatsApp update cancelado: morador desabilitou notificações automáticas.')
+      try {
+        let recordCondoId = record.getString('condo_id') || ''
+        const notifLogs = $app.findCollectionByNameOrId('notificacoes_enviadas')
+        const notifRecord = new Record(notifLogs)
+        notifRecord.set('morador', moradorName || 'Desconhecido')
+        notifRecord.set('status', 'DESABILITADO_PELO_MORADOR')
+        notifRecord.set(
+          'mensagem',
+          'Envio cancelado: o morador optou por não receber notificações automáticas de WhatsApp.',
+        )
+        let cleanPhone = (phone || '').replace(/\D/g, '')
+        if (cleanPhone && !cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone
+        notifRecord.set('celular', cleanPhone || 'N/A')
+        notifRecord.set('sucesso', false)
+        notifRecord.set('sender_match', false)
+        if (recordCondoId) notifRecord.set('condo_id', recordCondoId)
+        $app.saveNoValidate(notifRecord)
+      } catch (_) {}
+      return e.next()
     }
 
     if (!phone) return e.next()

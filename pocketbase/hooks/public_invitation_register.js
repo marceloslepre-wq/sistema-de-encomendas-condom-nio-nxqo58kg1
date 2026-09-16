@@ -51,6 +51,7 @@ routerAdd('POST', '/backend/v1/invitations/{token}/register', (e) => {
         user.set('cpf', finalCpf)
         user.set('torre', finalTorre)
         user.set('unidade', finalUnidade)
+        user.set('notificacoes_whatsapp', true)
       }
 
       txApp.save(user)
@@ -64,6 +65,7 @@ routerAdd('POST', '/backend/v1/invitations/{token}/register', (e) => {
         morador.set('torre', finalTorre)
         morador.set('apartamento', finalUnidade)
         morador.set('telefone', body.phone || '')
+        morador.set('notificacoes_whatsapp', true)
         if (invCondoId) {
           morador.set('condo_id', invCondoId)
         }

@@ -126,6 +126,10 @@ routerAdd(
       record.set('permitir_retirada_terceiros', Boolean(body.permitir_retirada_terceiros))
     }
 
+    if (body.notificacoes_whatsapp !== undefined) {
+      record.set('notificacoes_whatsapp', Boolean(body.notificacoes_whatsapp))
+    }
+
     if (body.email !== undefined && body.email !== '') {
       record.setEmail(body.email)
     }

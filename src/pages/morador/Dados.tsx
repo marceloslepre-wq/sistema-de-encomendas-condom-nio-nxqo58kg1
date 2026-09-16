@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { updateUser } from '@/services/api'
-import { User, Phone, Mail, Hash, MapPin, Building, Shield } from 'lucide-react'
+import { User, Phone, Mail, Hash, MapPin, Building, Shield, Bell } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 import { Skeleton } from '@/components/ui/skeleton'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -19,6 +19,7 @@ export default function MoradorDados() {
   const [phone, setPhone] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [permitirTerceiros, setPermitirTerceiros] = useState<string>('true')
+  const [notificacoesWhatsapp, setNotificacoesWhatsapp] = useState<string>('true')
   const [moradorData, setMoradorData] = useState<any>(null)
   const [matchedUnit, setMatchedUnit] = useState<{ tower?: string; apartment?: string } | null>(
     null,
@@ -34,6 +35,9 @@ export default function MoradorDados() {
       if (user.permitir_retirada_terceiros !== undefined) {
         setPermitirTerceiros(user.permitir_retirada_terceiros ? 'true' : 'false')
       }
+      if (user.notificacoes_whatsapp !== undefined) {
+        setNotificacoesWhatsapp(user.notificacoes_whatsapp ? 'true' : 'false')
+      }
 
       const loadMoradorAndUnit = async () => {
         try {
@@ -47,6 +51,9 @@ export default function MoradorDados() {
             setMoradorData(morador)
             if (morador.permitir_retirada_terceiros !== undefined) {
               setPermitirTerceiros(morador.permitir_retirada_terceiros ? 'true' : 'false')
+            }
+            if (morador.notificacoes_whatsapp !== undefined) {
+              setNotificacoesWhatsapp(morador.notificacoes_whatsapp ? 'true' : 'false')
             }
           }
 
@@ -95,8 +102,13 @@ export default function MoradorDados() {
     if (!user) return
     setSubmitting(true)
     const boolTerceiros = permitirTerceiros === 'true'
+    const boolNotificacoes = notificacoesWhatsapp === 'true'
     try {
-      const dataToUpdate: any = { phone, permitir_retirada_terceiros: boolTerceiros }
+      const dataToUpdate: any = {
+        phone,
+        permitir_retirada_terceiros: boolTerceiros,
+        notificacoes_whatsapp: boolNotificacoes,
+      }
 
       if (newPassword && newPassword.trim().length >= 8) {
         dataToUpdate.password = newPassword
@@ -113,9 +125,11 @@ export default function MoradorDados() {
 
       await updateUser(user.id, dataToUpdate)
       if (moradorData) {
-        await pb
-          .collection('moradores')
-          .update(moradorData.id, { telefone: phone, permitir_retirada_terceiros: boolTerceiros })
+        await pb.collection('moradores').update(moradorData.id, {
+          telefone: phone,
+          permitir_retirada_terceiros: boolTerceiros,
+          notificacoes_whatsapp: boolNotificacoes,
+        })
       }
 
       setNewPassword('')
@@ -293,6 +307,51 @@ export default function MoradorDados() {
                       NÃO PERMITIR A RETIRADA DA MINHA ENCOMENDA POR TERCEIROS, MESMO COM O CODIGO
                       DE LIBERAÇÃO
                     </Label>
+                  </div>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div className="pt-6 border-t space-y-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-base font-semibold">
+                  <Bell className="h-5 w-5 text-primary" />
+                  Notificações via WhatsApp
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Configure se deseja receber as mensagens automáticas enviadas pelo sistema sobre a
+                  chegada e andamento das suas encomendas.
+                </p>
+              </div>
+
+              <RadioGroup
+                value={notificacoesWhatsapp}
+                onValueChange={setNotificacoesWhatsapp}
+                className="space-y-3"
+              >
+                <div className="flex items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm hover:bg-muted/50 cursor-pointer transition-colors">
+                  <RadioGroupItem value="true" id="notif-sim" className="mt-1" />
+                  <div className="space-y-1 leading-none">
+                    <Label htmlFor="notif-sim" className="cursor-pointer font-medium">
+                      QUERO RECEBER AS NOTIFICAÇÕES DAS MINHAS ENCOMENDAS PELO WHATSAPP
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Você continuará recebendo avisos automáticos de chegada na portaria, triagem,
+                      liberação para retirada e lembretes.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm hover:bg-muted/50 cursor-pointer transition-colors">
+                  <RadioGroupItem value="false" id="notif-nao" className="mt-1" />
+                  <div className="space-y-1 leading-none">
+                    <Label htmlFor="notif-nao" className="cursor-pointer font-medium">
+                      NÃO QUERO RECEBER MENSAGENS AUTOMÁTICAS DO SISTEMA
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Você não receberá avisos automáticos no celular, mas a portaria e
+                      administração continuam gerenciando suas encomendas normalmente. O código de
+                      retirada continua visível no seu painel.
+                    </p>
                   </div>
                 </div>
               </RadioGroup>

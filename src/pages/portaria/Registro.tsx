@@ -344,6 +344,7 @@ export default function PortariaRegistro() {
           phone: fallbackPhone,
           cpf: fallbackCpf,
           role: 'morador',
+          notificacoes_whatsapp: true,
           condo_id: authCondoId || undefined,
           password: 'Skip@Password123',
           passwordConfirm: 'Skip@Password123',

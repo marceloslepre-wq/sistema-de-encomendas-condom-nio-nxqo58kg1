@@ -400,6 +400,9 @@ export default function GestorUsuarios() {
         dataToSave.cpf = formData.cpf
         dataToSave.torre = formData.torre
         dataToSave.unidade = formData.unidade
+        if (!editingUser) {
+          dataToSave.notificacoes_whatsapp = true
+        }
       } else {
         dataToSave.cpf = ''
         dataToSave.torre = ''

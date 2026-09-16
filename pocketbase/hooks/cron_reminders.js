@@ -117,6 +117,7 @@ cronAdd('send_reminders', '0 * * * *', () => {
         } catch (_) {}
       }
 
+      let notificacoesAtivas = true
       const moradorId = record.getString('morador_id')
       if (moradorId) {
         try {
@@ -125,20 +126,55 @@ cronAdd('send_reminders', '0 * * * *', () => {
           name = user.getString('name') || name
           unidade = user.getString('unidade') || unidade
           torre = user.getString('torre') || torre
+          if (
+            user.get('notificacoes_whatsapp') !== undefined &&
+            user.get('notificacoes_whatsapp') !== null
+          ) {
+            notificacoesAtivas = user.getBool('notificacoes_whatsapp')
+          }
           if (!recordCondoId) {
             recordCondoId = user.getString('condo_id') || ''
           }
         } catch (_) {}
       }
 
-      if (!phone && name) {
+      if (name) {
         try {
           const moradorRecord = $app.findFirstRecordByData('moradores', 'nome', name)
-          phone = moradorRecord.getString('telefone') || phone
+          if (!phone) phone = moradorRecord.getString('telefone') || phone
+          if (
+            moradorRecord.get('notificacoes_whatsapp') !== undefined &&
+            moradorRecord.get('notificacoes_whatsapp') !== null
+          ) {
+            if (!moradorRecord.getBool('notificacoes_whatsapp')) {
+              notificacoesAtivas = false
+            }
+          }
           if (!recordCondoId) {
             recordCondoId = moradorRecord.getString('condo_id') || ''
           }
         } catch (_) {}
+      }
+
+      if (!notificacoesAtivas) {
+        try {
+          const logCol = $app.findCollectionByNameOrId('notificacoes_enviadas')
+          const log = new Record(logCol)
+          log.set('morador', name || 'Desconhecido')
+          log.set('status', 'DESABILITADO_PELO_MORADOR')
+          log.set(
+            'mensagem',
+            'Envio de lembrete cancelado: o morador optou por não receber notificações automáticas de WhatsApp.',
+          )
+          let cleanPhone = (phone || '').replace(/\D/g, '')
+          if (cleanPhone && !cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone
+          log.set('celular', cleanPhone || 'N/A')
+          log.set('sucesso', false)
+          log.set('sender_match', false)
+          if (recordCondoId) log.set('condo_id', recordCondoId)
+          $app.saveNoValidate(log)
+        } catch (err) {}
+        continue
       }
 
       if (!phone) {

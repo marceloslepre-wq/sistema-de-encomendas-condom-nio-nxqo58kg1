@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-16T10:49:04.834Z",
+  "generatedAt": "2026-09-16T11:04:16.865Z",
   "collections": [
     {
       "name": "users",
@@ -75,6 +75,12 @@
           "required": false,
           "system": false,
           "collectionRef": "condos"
+        },
+        {
+          "name": "notificacoes_whatsapp",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -690,6 +696,12 @@
           "required": false,
           "system": false,
           "collectionRef": "condos"
+        },
+        {
+          "name": "notificacoes_whatsapp",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX `idx_moradores_cpf` ON `moradores` (cpf) WHERE cpf != ''"]

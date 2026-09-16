@@ -66,6 +66,8 @@ export const createMorador = async (data: any) => {
     torre: data.torre,
     unidade: data.apartamento,
     role: 'morador',
+    notificacoes_whatsapp:
+      data.notificacoes_whatsapp !== undefined ? Boolean(data.notificacoes_whatsapp) : true,
   }
   if (authCondoId) userPayload.condo_id = authCondoId
 
@@ -81,6 +83,10 @@ export const createMorador = async (data: any) => {
     torre: moradorData.torre,
     apartamento: moradorData.apartamento,
     telefone: moradorData.telefone || '',
+    notificacoes_whatsapp:
+      moradorData.notificacoes_whatsapp !== undefined
+        ? Boolean(moradorData.notificacoes_whatsapp)
+        : true,
   }
   if (authCondoId) moradorPayload.condo_id = authCondoId
   return await pb.collection('moradores').create(moradorPayload)
@@ -165,6 +171,7 @@ export const updateUser = async (id: string, data: any) => {
     'torre',
     'unidade',
     'permitir_retirada_terceiros',
+    'notificacoes_whatsapp',
     'condo_id',
   ]
 
@@ -211,6 +218,7 @@ export const adminUpdateUser = async (id: string, data: any) => {
     'torre',
     'unidade',
     'permitir_retirada_terceiros',
+    'notificacoes_whatsapp',
   ]
 
   allowedFields.forEach((field) => {
@@ -247,13 +255,28 @@ export const adminUpdateUser = async (id: string, data: any) => {
 export const createUser = (data: any) => {
   const payload: any = {}
 
-  const allowedFields = ['name', 'email', 'phone', 'role', 'cpf', 'torre', 'unidade', 'condo_id']
+  const allowedFields = [
+    'name',
+    'email',
+    'phone',
+    'role',
+    'cpf',
+    'torre',
+    'unidade',
+    'permitir_retirada_terceiros',
+    'notificacoes_whatsapp',
+    'condo_id',
+  ]
 
   allowedFields.forEach((field) => {
     if (field in data) {
       payload[field] = data[field] === null ? '' : data[field]
     }
   })
+
+  if (payload.role === 'morador' && payload.notificacoes_whatsapp === undefined) {
+    payload.notificacoes_whatsapp = true
+  }
 
   if (data.password && String(data.password).trim() !== '') {
     payload.password = data.password
@@ -451,4 +474,5 @@ export type AppUser = RecordModel & {
   unidade?: string
   cpf?: string
   permitir_retirada_terceiros?: boolean
+  notificacoes_whatsapp?: boolean
 }
