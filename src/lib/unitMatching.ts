@@ -111,3 +111,27 @@ export const isResidentInUnit = (
     isTowerMatch(unit.tower, morador.torre) && isApartmentMatch(unit.apartment, morador.unidade)
   )
 }
+
+/**
+ * Comparador numérico/natural crescente para identificadores de unidade/apartamento.
+ * Ordena numericamentecaso haja número:
+ * Ex: 101 < 102 < 103 < 201 < 1002 < 1304 < 1601 < 2004.
+ * Caso tenha sufixos (ex: 101-A vs 101-B), compara o número principal primeiro e depois a string.
+ */
+export const compareUnitNumbers = (a?: string | null, b?: string | null): number => {
+  const strA = (a || '').toString().trim()
+  const strB = (b || '').toString().trim()
+
+  if (!strA && !strB) return 0
+  if (!strA) return 1
+  if (!strB) return -1
+
+  return strA.localeCompare(strB, 'pt-BR', { numeric: true, sensitivity: 'base' })
+}
+
+/**
+ * Ordena um array de strings de unidades/apartamentos em ordem crescente.
+ */
+export const sortUnitStrings = (list: string[]): string[] => {
+  return [...list].sort(compareUnitNumbers)
+}

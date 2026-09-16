@@ -119,10 +119,12 @@ export default function GestorLinks() {
   }
 
   const filteredUnits = units.filter((u) => u.condo_id === selectedCondo)
-  const availableTowers = Array.from(new Set(filteredUnits.map((u) => u.tower))).sort()
+  const availableTowers = Array.from(new Set(filteredUnits.map((u) => u.tower))).sort((a, b) =>
+    a.localeCompare(b, 'pt-BR', { numeric: true }),
+  )
   const availableApartments = filteredUnits
     .filter((u) => u.tower === selectedTower)
-    .sort((a, b) => a.apartment.localeCompare(b.apartment))
+    .sort((a, b) => a.apartment.localeCompare(b.apartment, 'pt-BR', { numeric: true }))
 
   const activeLinks = links.filter((l) => {
     if (l.used) return false

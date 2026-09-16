@@ -63,8 +63,10 @@ import {
   deleteInvitation,
   InvitationLink,
   adminUpdateUser,
+  getUnits,
 } from '@/services/api'
 import { extractFieldErrors } from '@/lib/pocketbase/errors'
+import { sortUnitStrings } from '@/lib/unitMatching'
 
 const formatPhone = (value: string) => {
   const v = value.replace(/\D/g, '').substring(0, 11)
@@ -114,14 +116,27 @@ export default function GestorUsuarios() {
 
   useEffect(() => {
     loadData()
-    pb.collection('units')
-      .getFullList()
+    getUnits()
       .then((data) => {
         setUnits(data)
-        const t = Array.from(new Set(data.map((u) => u.tower)))
+        const t = Array.from(new Set(data.map((u) => u.tower))).sort((a, b) =>
+          a.localeCompare(b, 'pt-BR', { numeric: true }),
+        )
         setTorres(t as string[])
       })
-      .catch(() => {})
+      .catch(() => {
+        // fallback caso ocorra erro
+        pb.collection('units')
+          .getFullList()
+          .then((data) => {
+            setUnits(data)
+            const t = Array.from(new Set(data.map((u) => u.tower))).sort((a, b) =>
+              a.localeCompare(b, 'pt-BR', { numeric: true }),
+            )
+            setTorres(t as string[])
+          })
+          .catch(() => {})
+      })
   }, [])
 
   const loadData = async () => {
@@ -141,11 +156,23 @@ export default function GestorUsuarios() {
   useRealtime('invitation_links', () => {
     loadData()
   })
+  useRealtime('units', () => {
+    getUnits()
+      .then((data) => {
+        setUnits(data)
+        const t = Array.from(new Set(data.map((u) => u.tower))).sort((a, b) =>
+          a.localeCompare(b, 'pt-BR', { numeric: true }),
+        )
+        setTorres(t as string[])
+      })
+      .catch(() => {})
+  })
 
   useEffect(() => {
     if (formData.torre) {
       const apts = units.filter((u) => u.tower === formData.torre).map((u) => u.apartment)
-      setUnidadesPorTorre(Array.from(new Set(apts)) as string[])
+      const uniqueApts = Array.from(new Set(apts)) as string[]
+      setUnidadesPorTorre(sortUnitStrings(uniqueApts))
     } else {
       setUnidadesPorTorre([])
     }
@@ -154,7 +181,8 @@ export default function GestorUsuarios() {
   useEffect(() => {
     if (linkFormData.torre) {
       const apts = units.filter((u) => u.tower === linkFormData.torre).map((u) => u.apartment)
-      setUnidadesPorTorreLink(Array.from(new Set(apts)) as string[])
+      const uniqueApts = Array.from(new Set(apts)) as string[]
+      setUnidadesPorTorreLink(sortUnitStrings(uniqueApts))
     } else {
       setUnidadesPorTorreLink([])
     }

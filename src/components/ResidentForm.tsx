@@ -55,11 +55,12 @@ export function ResidentForm({
     fetchUnits()
   })
 
-  const towers = Array.from(new Set(units.map((u) => u.tower))).sort()
-  const apartments = units
-    .filter((u) => u.tower === formData.torre)
-    .map((u) => u.apartment)
-    .sort()
+  const towers = Array.from(new Set(units.map((u) => u.tower))).sort((a, b) =>
+    a.localeCompare(b, 'pt-BR', { numeric: true }),
+  )
+  const apartments = Array.from(
+    new Set(units.filter((u) => u.tower === formData.torre).map((u) => u.apartment)),
+  ).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
 
   const handleTorreChange = (val: string) => {
     setFormData((prev) => ({ ...prev, torre: val, apartamento: '' }))
