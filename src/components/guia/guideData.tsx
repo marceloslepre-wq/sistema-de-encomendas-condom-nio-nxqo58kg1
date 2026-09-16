@@ -174,7 +174,7 @@ export const CONDPACK_GUIDE_SECTIONS: GuideSectionData[] = [
       'Mantenha a lista das principais empresas e transportadoras cadastradas para seleção em 1 clique na portaria.',
     targetRoute: '/gestor/transportadoras',
     targetLabel: 'Ir para Transportadoras',
-    allowedRoles: ['gestor', 'master'],
+    allowedRoles: ['gestor', 'porteiro', 'portaria', 'master'],
     steps: [
       {
         step: 1,

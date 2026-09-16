@@ -15,12 +15,14 @@ export function MobileNav() {
         return [
           { title: 'Registro', url: '/portaria/registro', icon: Package },
           { title: 'Entregadores', url: '/portaria/entregadores', icon: Truck },
+          { title: 'Transportadoras', url: '/gestor/transportadoras', icon: Truck },
           { title: 'Guia', url: '/guia', icon: BookOpen },
         ]
       case 'portaria':
         return [
           { title: 'Registro', url: '/portaria/registro', icon: Package },
           { title: 'Entregadores', url: '/portaria/entregadores', icon: Truck },
+          { title: 'Transportadoras', url: '/gestor/transportadoras', icon: Truck },
           { title: 'Triagem', url: '/sala/triagem', icon: Package },
           { title: 'Retirada', url: '/sala/retirada', icon: QrCode },
           { title: 'Guia', url: '/guia', icon: BookOpen },

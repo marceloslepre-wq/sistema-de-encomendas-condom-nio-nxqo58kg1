@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-16T10:40:22.136Z",
+  "generatedAt": "2026-09-16T10:49:04.834Z",
   "collections": [
     {
       "name": "users",
@@ -577,8 +577,8 @@
         "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
         "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
         "create": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro' || @request.auth.role = 'triagem'))",
-        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')",
-        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && @request.auth.role = 'gestor')"
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro'))",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id && (@request.auth.role = 'gestor' || @request.auth.role = 'portaria' || @request.auth.role = 'porteiro'))"
       },
       "fields": [
         {
