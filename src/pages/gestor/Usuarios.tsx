@@ -66,7 +66,7 @@ import {
   getUnits,
 } from '@/services/api'
 import { extractFieldErrors } from '@/lib/pocketbase/errors'
-import { sortUnitStrings } from '@/lib/unitMatching'
+import { dedupeTowers, towerMatches, sortUnitStrings } from '@/lib/unitMatching'
 
 const formatPhone = (value: string) => {
   const v = value.replace(/\D/g, '').substring(0, 11)
@@ -119,10 +119,8 @@ export default function GestorUsuarios() {
     getUnits()
       .then((data) => {
         setUnits(data)
-        const t = Array.from(new Set(data.map((u) => u.tower))).sort((a, b) =>
-          a.localeCompare(b, 'pt-BR', { numeric: true }),
-        )
-        setTorres(t as string[])
+        const t = dedupeTowers(data.map((u) => u.tower))
+        setTorres(t)
       })
       .catch(() => {
         // fallback caso ocorra erro
@@ -130,10 +128,8 @@ export default function GestorUsuarios() {
           .getFullList()
           .then((data) => {
             setUnits(data)
-            const t = Array.from(new Set(data.map((u) => u.tower))).sort((a, b) =>
-              a.localeCompare(b, 'pt-BR', { numeric: true }),
-            )
-            setTorres(t as string[])
+            const t = dedupeTowers(data.map((u) => u.tower))
+            setTorres(t)
           })
           .catch(() => {})
       })
@@ -160,17 +156,17 @@ export default function GestorUsuarios() {
     getUnits()
       .then((data) => {
         setUnits(data)
-        const t = Array.from(new Set(data.map((u) => u.tower))).sort((a, b) =>
-          a.localeCompare(b, 'pt-BR', { numeric: true }),
-        )
-        setTorres(t as string[])
+        const t = dedupeTowers(data.map((u) => u.tower))
+        setTorres(t)
       })
       .catch(() => {})
   })
 
   useEffect(() => {
     if (formData.torre) {
-      const apts = units.filter((u) => u.tower === formData.torre).map((u) => u.apartment)
+      const apts = units
+        .filter((u) => towerMatches(formData.torre, u.tower))
+        .map((u) => u.apartment)
       const uniqueApts = Array.from(new Set(apts)) as string[]
       setUnidadesPorTorre(sortUnitStrings(uniqueApts))
     } else {
@@ -180,7 +176,9 @@ export default function GestorUsuarios() {
 
   useEffect(() => {
     if (linkFormData.torre) {
-      const apts = units.filter((u) => u.tower === linkFormData.torre).map((u) => u.apartment)
+      const apts = units
+        .filter((u) => towerMatches(linkFormData.torre, u.tower))
+        .map((u) => u.apartment)
       const uniqueApts = Array.from(new Set(apts)) as string[]
       setUnidadesPorTorreLink(sortUnitStrings(uniqueApts))
     } else {
@@ -215,6 +213,10 @@ export default function GestorUsuarios() {
     setFieldErrors({})
     if (user) {
       setEditingUser(user)
+      const userTorre = (user as any).torre || ''
+      // Encontrar a torre correspondente na lista deduplicada de torres, se houver
+      const matchedDedupeTower = torres.find((t) => towerMatches(t, userTorre)) || userTorre
+
       setFormData({
         role: user.role || 'morador',
         name: user.name || '',
@@ -222,7 +224,7 @@ export default function GestorUsuarios() {
         password: '',
         phone: user.phone || '',
         cpf: (user as any).cpf || '',
-        torre: (user as any).torre || '',
+        torre: matchedDedupeTower,
         unidade: (user as any).unidade || '',
       })
     } else {

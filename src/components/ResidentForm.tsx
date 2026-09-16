@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select'
 import pb from '@/lib/pocketbase/client'
 import { useRealtime } from '@/hooks/use-realtime'
+import { dedupeTowers, towerMatches, sortUnitStrings } from '@/lib/unitMatching'
 
 interface ResidentFormProps {
   initialData?: any
@@ -55,12 +56,11 @@ export function ResidentForm({
     fetchUnits()
   })
 
-  const towers = Array.from(new Set(units.map((u) => u.tower))).sort((a, b) =>
-    a.localeCompare(b, 'pt-BR', { numeric: true }),
-  )
-  const apartments = Array.from(
-    new Set(units.filter((u) => u.tower === formData.torre).map((u) => u.apartment)),
-  ).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
+  const towers = dedupeTowers(units.map((u) => u.tower))
+  const rawApartments = Array.from(
+    new Set(units.filter((u) => towerMatches(formData.torre, u.tower)).map((u) => u.apartment)),
+  ) as string[]
+  const apartments = sortUnitStrings(rawApartments)
 
   const handleTorreChange = (val: string) => {
     setFormData((prev) => ({ ...prev, torre: val, apartamento: '' }))

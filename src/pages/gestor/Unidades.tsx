@@ -21,6 +21,7 @@ import {
   Unit,
 } from '@/services/api'
 import { useToast } from '@/hooks/use-toast'
+import { normalizeTower, extractTowerBase, compareUnitNumbers } from '@/lib/unitMatching'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog,
@@ -88,13 +89,57 @@ export default function GestorUnidades() {
       return
     }
 
+    // 1. Normalizar na fonte: trim e colapsar espaços múltiplos
+    const cleanedTower = formData.tower.trim().replace(/\s+/g, ' ')
+    const cleanedApartment = formData.apartment.trim().replace(/\s+/g, ' ')
+
+    if (!cleanedTower || !cleanedApartment) {
+      toast({
+        title: 'Campos obrigatórios',
+        description: 'Informe a torre e o apartamento.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // 2. Se já existir torre que normalize igual (case-insensitive / acentos), usar a grafia existente
+    const normCleaned = normalizeTower(cleanedTower)
+    let finalTower = cleanedTower
+
+    const existingExactNorm = units.find((u) => normalizeTower(u.tower) === normCleaned)
+    if (existingExactNorm) {
+      finalTower = existingExactNorm.tower
+    }
+
+    // 3. Checagem de variação de apelido: se o usuário digitou "Torre A (Algo)" mas só existe a forma base "Torre A"
+    const cleanedBase = extractTowerBase(normCleaned)
+    const hasParenthesis = cleanedBase !== normCleaned
+
+    if (hasParenthesis) {
+      const baseExists = units.some((u) => normalizeTower(u.tower) === cleanedBase)
+      if (baseExists && !existingExactNorm) {
+        toast({
+          title: 'Aviso sobre nome de torre',
+          description: `Identificamos que "${cleanedTower}" pode ser uma variação da base "${cleanedBase}" já cadastrada. A unidade foi salva, mas considere utilizar a grafia padrão da torre.`,
+        })
+      }
+    }
+
     setSubmitting(true)
     try {
       if (editingUnit) {
-        await updateUnit(editingUnit.id, { ...formData, condo_id: condoId })
+        await updateUnit(editingUnit.id, {
+          tower: finalTower,
+          apartment: cleanedApartment,
+          condo_id: condoId,
+        })
         toast({ title: 'Unidade atualizada com sucesso.' })
       } else {
-        await createUnit({ ...formData, condo_id: condoId })
+        await createUnit({
+          tower: finalTower,
+          apartment: cleanedApartment,
+          condo_id: condoId,
+        })
         toast({ title: 'Unidade criada com sucesso.' })
       }
       setIsFormOpen(false)
@@ -149,11 +194,20 @@ export default function GestorUnidades() {
     setIsDeleteDialogOpen(true)
   }
 
-  const filtered = units.filter(
-    (u) =>
-      u.tower.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.apartment.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  const filtered = units
+    .filter(
+      (u) =>
+        u.tower.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.apartment.toLowerCase().includes(searchTerm.toLowerCase()),
+    )
+    .sort((a, b) => {
+      const towerComp = a.tower.localeCompare(b.tower, 'pt-BR', {
+        numeric: true,
+        sensitivity: 'base',
+      })
+      if (towerComp !== 0) return towerComp
+      return compareUnitNumbers(a.apartment, b.apartment)
+    })
 
   if (loading) {
     return (

@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast'
 import { Loader2, CheckCircle2, ShieldAlert, ChevronsUpDown, Check } from 'lucide-react'
 import { CondPackLogo } from '@/components/CondPackLogo'
 import { cn } from '@/lib/utils'
+import { dedupeTowers, towerMatches, sortUnitStrings } from '@/lib/unitMatching'
 
 interface SearchableSelectProps {
   options: string[]
@@ -134,9 +135,7 @@ export default function Registrar() {
         // O endpoint público /backend/v1/invitations/{token} retorna as unidades do condomínio
         if (data.units && Array.isArray(data.units)) {
           setUnits(data.units)
-          const distinctTorres = Array.from(
-            new Set(data.units.map((x: any) => x.tower).filter(Boolean)),
-          ) as string[]
+          const distinctTorres = dedupeTowers(data.units.map((x: any) => x.tower).filter(Boolean))
           setTorres(distinctTorres)
         }
       })
@@ -151,10 +150,11 @@ export default function Registrar() {
   useEffect(() => {
     if (formData.torre && units.length > 0) {
       const apts = units
-        .filter((u) => u.tower === formData.torre)
+        .filter((u) => towerMatches(formData.torre, u.tower))
         .map((u) => u.apartment)
         .filter(Boolean)
-      setUnidadesPorTorre(Array.from(new Set(apts)) as string[])
+      const uniqueApts = Array.from(new Set(apts)) as string[]
+      setUnidadesPorTorre(sortUnitStrings(uniqueApts))
     } else {
       setUnidadesPorTorre([])
     }

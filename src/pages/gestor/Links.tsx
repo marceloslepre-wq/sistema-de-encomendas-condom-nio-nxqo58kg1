@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast'
 import { Link2, Copy, Mail, MessageCircle, Trash2, Search } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { format, isValid } from 'date-fns'
+import { dedupeTowers, towerMatches, sortUnitStrings } from '@/lib/unitMatching'
 
 export default function GestorLinks() {
   const { toast } = useToast()
@@ -119,12 +120,12 @@ export default function GestorLinks() {
   }
 
   const filteredUnits = units.filter((u) => u.condo_id === selectedCondo)
-  const availableTowers = Array.from(new Set(filteredUnits.map((u) => u.tower))).sort((a, b) =>
-    a.localeCompare(b, 'pt-BR', { numeric: true }),
-  )
-  const availableApartments = filteredUnits
-    .filter((u) => u.tower === selectedTower)
-    .sort((a, b) => a.apartment.localeCompare(b.apartment, 'pt-BR', { numeric: true }))
+  const availableTowers = dedupeTowers(filteredUnits.map((u) => u.tower))
+  const matchingUnits = filteredUnits.filter((u) => towerMatches(selectedTower, u.tower))
+  const availableApartments = [...matchingUnits].sort((a, b) => {
+    const sorted = sortUnitStrings([a.apartment, b.apartment])
+    return sorted[0] === a.apartment ? -1 : 1
+  })
 
   const activeLinks = links.filter((l) => {
     if (l.used) return false
