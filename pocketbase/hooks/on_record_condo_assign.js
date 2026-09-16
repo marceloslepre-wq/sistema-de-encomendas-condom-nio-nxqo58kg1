@@ -5,6 +5,7 @@
 const collectionsWithCondo = [
   'recebimentos_auditoria',
   'units',
+  'towers',
   'moradores',
   'carriers',
   'templates_notificacao',

@@ -64,6 +64,8 @@ import {
   InvitationLink,
   adminUpdateUser,
   getUnits,
+  getTowers,
+  Tower,
 } from '@/services/api'
 import { extractFieldErrors } from '@/lib/pocketbase/errors'
 import { dedupeTowers, towerMatches, sortUnitStrings } from '@/lib/unitMatching'
@@ -82,6 +84,7 @@ export default function GestorUsuarios() {
   const [invitations, setInvitations] = useState<InvitationLink[]>([])
   const [units, setUnits] = useState<any[]>([])
   const [torres, setTorres] = useState<string[]>([])
+  const [towersList, setTowersList] = useState<Tower[]>([])
   const [unidadesPorTorre, setUnidadesPorTorre] = useState<string[]>([])
   const [unidadesPorTorreLink, setUnidadesPorTorreLink] = useState<string[]>([])
 
@@ -114,25 +117,36 @@ export default function GestorUsuarios() {
     unidade: '',
   })
 
+  const refreshUnitsAndTowers = async () => {
+    try {
+      const [unitsData, towersData] = await Promise.all([
+        getUnits(),
+        getTowers().catch(() => [] as Tower[]),
+      ])
+      setUnits(unitsData)
+      setTowersList(towersData)
+
+      if (towersData && towersData.length > 0) {
+        setTorres(towersData.map((t) => t.display_name))
+      } else {
+        const t = dedupeTowers(unitsData.map((u) => u.tower))
+        setTorres(t)
+      }
+    } catch (_) {
+      try {
+        const unitsData = await pb.collection('units').getFullList()
+        setUnits(unitsData)
+        const t = dedupeTowers(unitsData.map((u) => u.tower))
+        setTorres(t)
+      } catch {
+        /* intentionally ignored */
+      }
+    }
+  }
+
   useEffect(() => {
     loadData()
-    getUnits()
-      .then((data) => {
-        setUnits(data)
-        const t = dedupeTowers(data.map((u) => u.tower))
-        setTorres(t)
-      })
-      .catch(() => {
-        // fallback caso ocorra erro
-        pb.collection('units')
-          .getFullList()
-          .then((data) => {
-            setUnits(data)
-            const t = dedupeTowers(data.map((u) => u.tower))
-            setTorres(t)
-          })
-          .catch(() => {})
-      })
+    refreshUnitsAndTowers()
   }, [])
 
   const loadData = async () => {
@@ -153,13 +167,10 @@ export default function GestorUsuarios() {
     loadData()
   })
   useRealtime('units', () => {
-    getUnits()
-      .then((data) => {
-        setUnits(data)
-        const t = dedupeTowers(data.map((u) => u.tower))
-        setTorres(t)
-      })
-      .catch(() => {})
+    refreshUnitsAndTowers()
+  })
+  useRealtime('towers', () => {
+    refreshUnitsAndTowers()
   })
 
   useEffect(() => {

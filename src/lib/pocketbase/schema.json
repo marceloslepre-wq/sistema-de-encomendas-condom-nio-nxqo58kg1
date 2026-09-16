@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-16T10:32:12.009Z",
+  "generatedAt": "2026-09-16T10:40:22.136Z",
   "collections": [
     {
       "name": "users",
@@ -251,6 +251,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "tower_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "towers"
         }
       ],
       "indexes": []
@@ -1402,6 +1409,67 @@
       ],
       "indexes": [
         "CREATE INDEX idx_hist_condo_created ON historico_licencas (condo_id, created DESC)"
+      ]
+    },
+    {
+      "name": "towers",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "view": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.condo_id != '' && condo_id = @request.auth.condo_id)",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.role = 'gestor' && @request.auth.condo_id != '')",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.role = 'gestor' && condo_id = @request.auth.condo_id)",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'admin' || (@request.auth.role = 'gestor' && condo_id = @request.auth.condo_id)"
+      },
+      "fields": [
+        {
+          "name": "condo_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "condos"
+        },
+        {
+          "name": "identifier",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "nickname",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "display_name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "normalized_identifier",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_towers_condo_norm_ident ON towers (condo_id, normalized_identifier)"
       ]
     }
   ]

@@ -132,9 +132,13 @@ export default function Registrar() {
           unidade: data.unidade || '',
         }))
 
-        // O endpoint público /backend/v1/invitations/{token} retorna as unidades do condomínio
+        // O endpoint público /backend/v1/invitations/{token} retorna towers e units
         if (data.units && Array.isArray(data.units)) {
           setUnits(data.units)
+        }
+        if (data.towers && Array.isArray(data.towers) && data.towers.length > 0) {
+          setTorres(data.towers.map((t: any) => t.display_name))
+        } else if (data.units && Array.isArray(data.units)) {
           const distinctTorres = dedupeTowers(data.units.map((x: any) => x.tower).filter(Boolean))
           setTorres(distinctTorres)
         }

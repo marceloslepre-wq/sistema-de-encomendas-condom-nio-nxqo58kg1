@@ -8,12 +8,30 @@ routerAdd('GET', '/backend/v1/invitations/{token}', (e) => {
 
     const condoId = record.getString('condo_id')
     let unitsList = []
+    let towersList = []
     let condoName = ''
 
     if (condoId) {
       try {
         const condoRecord = $app.findRecordById('condos', condoId)
         condoName = condoRecord.getString('name')
+      } catch (_) {}
+
+      try {
+        const towers = $app.findRecordsByFilter(
+          'towers',
+          'condo_id = {:condoId}',
+          'display_name',
+          1000,
+          0,
+          { condoId: condoId },
+        )
+        towersList = towers.map((t) => ({
+          id: t.id,
+          identifier: t.getString('identifier'),
+          nickname: t.getString('nickname'),
+          display_name: t.getString('display_name'),
+        }))
       } catch (_) {}
 
       try {
@@ -28,6 +46,7 @@ routerAdd('GET', '/backend/v1/invitations/{token}', (e) => {
         unitsList = units.map((u) => ({
           id: u.id,
           tower: u.getString('tower'),
+          tower_id: u.getString('tower_id'),
           apartment: u.getString('apartment'),
         }))
       } catch (_) {}
@@ -41,6 +60,7 @@ routerAdd('GET', '/backend/v1/invitations/{token}', (e) => {
       token: record.getString('token'),
       condo_id: condoId,
       condo_name: condoName,
+      towers: towersList,
       units: unitsList,
     })
   } catch (_) {

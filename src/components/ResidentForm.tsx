@@ -38,25 +38,39 @@ export function ResidentForm({
     password: '',
   })
   const [units, setUnits] = useState<any[]>([])
+  const [towersList, setTowersList] = useState<any[]>([])
 
-  const fetchUnits = async () => {
+  const fetchData = async () => {
     try {
-      const records = await pb.collection('units').getFullList()
-      setUnits(records)
+      const [u, t] = await Promise.all([
+        pb.collection('units').getFullList(),
+        pb
+          .collection('towers')
+          .getFullList({ sort: 'display_name' })
+          .catch(() => []),
+      ])
+      setUnits(u)
+      setTowersList(t)
     } catch (err) {
-      console.error('Failed to fetch units:', err)
+      console.error('Failed to fetch units/towers:', err)
     }
   }
 
   useEffect(() => {
-    fetchUnits()
+    fetchData()
   }, [])
 
   useRealtime('units', () => {
-    fetchUnits()
+    fetchData()
+  })
+  useRealtime('towers', () => {
+    fetchData()
   })
 
-  const towers = dedupeTowers(units.map((u) => u.tower))
+  const towers =
+    towersList.length > 0
+      ? towersList.map((t) => t.display_name)
+      : dedupeTowers(units.map((u) => u.tower))
   const rawApartments = Array.from(
     new Set(units.filter((u) => towerMatches(formData.torre, u.tower)).map((u) => u.apartment)),
   ) as string[]

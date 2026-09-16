@@ -21,6 +21,7 @@ export default function GestorLinks() {
   const { toast } = useToast()
   const [condos, setCondos] = useState<any[]>([])
   const [units, setUnits] = useState<any[]>([])
+  const [towers, setTowers] = useState<any[]>([])
   const [links, setLinks] = useState<any[]>([])
   const [selectedCondo, setSelectedCondo] = useState('')
   const [selectedRole, setSelectedRole] = useState('')
@@ -42,12 +43,17 @@ export default function GestorLinks() {
       pb.collection('condos').getFullList(),
       pb.collection('units').getFullList({ sort: 'tower,apartment' }),
       pb
+        .collection('towers')
+        .getFullList({ sort: 'display_name' })
+        .catch(() => []),
+      pb
         .collection('invitation_links')
         .getFullList({ expand: 'condo_id,unit_id', sort: '-created' }),
     ])
-      .then(([c, u, l]) => {
+      .then(([c, u, t, l]) => {
         setCondos(c)
         setUnits(u)
+        setTowers(t)
         setLinks(l)
         setLoading(false)
       })
@@ -120,7 +126,12 @@ export default function GestorLinks() {
   }
 
   const filteredUnits = units.filter((u) => u.condo_id === selectedCondo)
-  const availableTowers = dedupeTowers(filteredUnits.map((u) => u.tower))
+  const condoTowers = towers.filter((t) => t.condo_id === selectedCondo)
+  const availableTowers =
+    condoTowers.length > 0
+      ? condoTowers.map((t) => t.display_name)
+      : dedupeTowers(filteredUnits.map((u) => u.tower))
+
   const matchingUnits = filteredUnits.filter((u) => towerMatches(selectedTower, u.tower))
   const availableApartments = [...matchingUnits].sort((a, b) => {
     const sorted = sortUnitStrings([a.apartment, b.apartment])

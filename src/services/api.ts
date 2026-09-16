@@ -22,7 +22,9 @@ export const getUnits = () => {
   const authCondoId = pb.authStore.record?.condo_id
   const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
   const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
-  return pb.collection('units').getFullList({ filter, sort: 'tower,apartment', requestKey: null })
+  return pb
+    .collection('units')
+    .getFullList({ filter, sort: 'tower,apartment', expand: 'tower_id', requestKey: null })
 }
 
 export const createUnit = (data: any) => {
@@ -33,6 +35,8 @@ export const createUnit = (data: any) => {
 }
 export const updateUnit = (id: string, data: any) => pb.collection('units').update(id, data)
 export const deleteUnit = (id: string) => pb.collection('units').delete(id)
+
+export * from './towers'
 
 export type Morador = RecordModel & {
   nome: string
@@ -399,6 +403,7 @@ export type Parcel = RecordModel & {
 
 export type Unit = RecordModel & {
   tower: string
+  tower_id?: string
   apartment: string
 }
 
