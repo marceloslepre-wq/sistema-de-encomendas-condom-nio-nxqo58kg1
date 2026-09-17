@@ -25,9 +25,12 @@ import {
   History,
   Smartphone,
   Unplug,
+  HelpCircle,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { desconectarWhatsAppCondo } from '@/services/condos'
 import { useAuth } from '@/hooks/use-auth'
+import { usePWA } from '@/components/pwa/PWAContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -97,6 +100,8 @@ import { CondPackLogo } from '@/components/CondPackLogo'
 export default function MasterDashboard() {
   const { user, signOut } = useAuth()
   const { toast } = useToast()
+  const { isStandalone, isMobileDevice, canPromptNative, isIOS, openManualPrompt } = usePWA()
+  const canShowInstallButton = !isStandalone && (isMobileDevice || isIOS || canPromptNative)
 
   const [planos, setPlanos] = useState<Plano[]>([])
   const [licencas, setLicencas] = useState<Licenca[]>([])
@@ -798,8 +803,37 @@ export default function MasterDashboard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="text-right hidden sm:block">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Botão Instalar App no Header Master */}
+            {canShowInstallButton && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={openManualPrompt}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 text-[#38e8cb] hover:text-white hover:bg-white/10 font-semibold text-xs sm:text-sm h-9 min-h-[44px] rounded-lg border border-[#00a896]/40 bg-[#00a896]/10"
+                title="Instalar CondPack na sua tela inicial"
+              >
+                <Smartphone className="w-4 h-4 shrink-0 text-[#38e8cb]" />
+                <span className="hidden sm:inline">Instalar App</span>
+              </Button>
+            )}
+
+            {/* Link Guia de Uso */}
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 text-slate-300 hover:text-white hover:bg-white/10 font-medium text-xs sm:text-sm h-9 min-h-[44px] rounded-lg"
+              title="Guia de Uso do Sistema"
+            >
+              <Link to="/guia">
+                <HelpCircle className="w-4 h-4 shrink-0 text-slate-300" />
+                <span className="hidden sm:inline">Guia de Uso</span>
+              </Link>
+            </Button>
+
+            <div className="text-right hidden md:block">
               <div className="text-sm font-medium">{user?.name || 'Administrador'}</div>
               <div className="text-xs text-slate-400">{user?.email}</div>
             </div>
@@ -808,19 +842,19 @@ export default function MasterDashboard() {
               size="sm"
               onClick={() => loadData()}
               disabled={loading}
-              className="border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white"
+              className="border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white min-h-[44px]"
             >
               <RefreshCw className={`w-4 h-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
-              Atualizar
+              <span className="hidden sm:inline">Atualizar</span>
             </Button>
             <Button
               variant="destructive"
               size="sm"
               onClick={signOut}
-              className="bg-rose-600 hover:bg-rose-700 text-white"
+              className="bg-rose-600 hover:bg-rose-700 text-white min-h-[44px]"
             >
               <LogOut className="w-4 h-4 mr-1.5" />
-              Sair
+              <span className="hidden sm:inline">Sair</span>
             </Button>
           </div>
         </div>

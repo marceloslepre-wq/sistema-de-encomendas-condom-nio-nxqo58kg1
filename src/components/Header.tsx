@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Bell, LogOut, User, Building2, Smartphone } from 'lucide-react'
+import { Bell, LogOut, User, Building2, Smartphone, HelpCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { usePWA } from '@/components/pwa/PWAContext'
 import { Button } from '@/components/ui/button'
@@ -11,16 +11,20 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { getCondo, CondoRecord } from '@/services/condos'
 import pb from '@/lib/pocketbase/client'
 
 export function Header() {
   const { user, role, logout } = useAuth()
-  const { isStandalone, openManualPrompt } = usePWA()
+  const { isStandalone, isMobileDevice, canPromptNative, isIOS, openManualPrompt } = usePWA()
   const navigate = useNavigate()
   const [condo, setCondo] = useState<CondoRecord | null>(null)
+
+  // O botão de instalar fica disponível se NÃO estiver instalado (não-standalone)
+  // e o ambiente permitir instalação (mobile, iOS ou navegador com suporte a PWA)
+  const canShowInstallButton = !isStandalone && (isMobileDevice || isIOS || canPromptNative)
 
   useEffect(() => {
     let isMounted = true
@@ -87,7 +91,34 @@ export function Header() {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Botão Instalar App (visível para todos os perfis logados quando não-instalado) */}
+        {canShowInstallButton && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={openManualPrompt}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 text-[#00a896] hover:text-[#008f80] hover:bg-[#00a896]/10 font-semibold text-xs sm:text-sm h-9 min-h-[44px] rounded-lg transition-colors border border-[#00a896]/30 bg-[#00a896]/5"
+            title="Instalar CondPack na sua tela inicial"
+          >
+            <Smartphone className="w-4 h-4 shrink-0 text-[#00a896]" />
+            <span className="hidden sm:inline">Instalar App</span>
+          </Button>
+        )}
+
+        {/* Link Guia de Uso no Header */}
+        <Button
+          asChild
+          variant="ghost"
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 text-slate-600 hover:text-[#0d2a58] hover:bg-slate-100 font-medium text-xs sm:text-sm h-9 min-h-[44px] rounded-lg transition-colors"
+          title="Guia de Uso do Sistema"
+        >
+          <Link to="/guia">
+            <HelpCircle className="w-4 h-4 shrink-0 text-[#0d2a58]" />
+            <span className="hidden sm:inline">Guia de Uso</span>
+          </Link>
+        </Button>
+
         <Button
           variant="ghost"
           size="icon"
