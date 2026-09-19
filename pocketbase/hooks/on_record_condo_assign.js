@@ -61,7 +61,7 @@ for (const colName of collectionsWithCondo) {
         'name',
         'Condomínio Residencial Parque',
       )
-      if (defaultCondo && record.getString('role') !== 'master') {
+      if (defaultCondo) {
         record.set('condo_id', defaultCondo.id)
       }
     } catch (_) {}

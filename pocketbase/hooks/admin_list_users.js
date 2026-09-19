@@ -21,8 +21,9 @@ routerAdd(
       if (!userCondoId) {
         return e.json(200, [])
       }
-      // Inclui usuários do condomínio e usuários master vinculados ao condomínio
-      filter = `condo_id = '${userCondoId}' || role = 'master'`
+      // Lista estritamente os usuários vinculados ao condomínio do gestor
+      // Usuário master só deve aparecer se o seu condo_id for exatamente o deste condomínio
+      filter = `condo_id = '${userCondoId}'`
     }
 
     const result = $app.findRecordsByFilter('users', filter, '-created', 1000, 0)

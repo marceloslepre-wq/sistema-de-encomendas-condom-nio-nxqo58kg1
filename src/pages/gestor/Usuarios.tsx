@@ -488,12 +488,41 @@ export default function GestorUsuarios() {
       return
     }
 
+    if (userToDelete?.role === 'master') {
+      toast({
+        title: 'Ação não permitida',
+        description: 'Não é possível excluir um usuário Master do sistema.',
+        variant: 'destructive',
+      })
+      setUserToDelete(null)
+      return
+    }
+
     try {
       await deleteUser(id)
       toast({ title: 'Sucesso', description: 'Usuário excluído com sucesso.' })
       loadData()
-    } catch (err) {
-      toast({ title: 'Erro', description: 'Falha ao excluir usuário.', variant: 'destructive' })
+    } catch (err: any) {
+      const serverMsg =
+        err?.response?.data?.message ||
+        err?.response?.message ||
+        (typeof err?.message === 'string' &&
+        !err.message.includes('Failed to delete') &&
+        !err.message.includes('Something went wrong')
+          ? err.message
+          : null)
+
+      const errorDescription =
+        serverMsg ||
+        (userToDelete?.role === 'master'
+          ? 'Não é possível excluir um usuário Master do sistema.'
+          : 'Falha ao excluir usuário. Verifique suas permissões.')
+
+      toast({
+        title: 'Erro',
+        description: errorDescription,
+        variant: 'destructive',
+      })
     } finally {
       setUserToDelete(null)
     }
@@ -624,11 +653,15 @@ export default function GestorUsuarios() {
                               variant="ghost"
                               size="icon"
                               className={
-                                pb.authStore.record?.id === u.id
+                                pb.authStore.record?.id === u.id ||
+                                (u.role === 'master' && pb.authStore.record?.role !== 'master')
                                   ? 'opacity-40 cursor-not-allowed'
                                   : 'text-destructive'
                               }
-                              disabled={pb.authStore.record?.id === u.id}
+                              disabled={
+                                pb.authStore.record?.id === u.id ||
+                                (u.role === 'master' && pb.authStore.record?.role !== 'master')
+                              }
                               onClick={() => {
                                 if (pb.authStore.record?.id === u.id) {
                                   toast({
@@ -638,12 +671,22 @@ export default function GestorUsuarios() {
                                   })
                                   return
                                 }
+                                if (u.role === 'master' && pb.authStore.record?.role !== 'master') {
+                                  toast({
+                                    title: 'Ação não permitida',
+                                    description: 'Não é possível excluir um usuário Master.',
+                                    variant: 'destructive',
+                                  })
+                                  return
+                                }
                                 setUserToDelete(u)
                               }}
                               title={
                                 pb.authStore.record?.id === u.id
                                   ? 'Você não pode excluir seu próprio usuário'
-                                  : 'Excluir usuário'
+                                  : u.role === 'master' && pb.authStore.record?.role !== 'master'
+                                    ? 'Não é permitido excluir um usuário Master'
+                                    : 'Excluir usuário'
                               }
                             >
                               <Trash2 className="w-4 h-4" />
