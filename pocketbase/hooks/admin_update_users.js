@@ -28,7 +28,11 @@ routerAdd(
 
     if (!isMaster && !isSelf) {
       const authCondoId = auth.getString('condo_id')
-      if (record.getString('condo_id') && record.getString('condo_id') !== authCondoId) {
+      const recordCondoId = record.getString('condo_id')
+      const targetUserRole = record.getString('role')
+      // Se não for master nem o próprio usuário, só pode editar se for do mesmo condomínio
+      // ou se for usuário master acessível
+      if (recordCondoId && recordCondoId !== authCondoId && targetUserRole !== 'master') {
         throw new ForbiddenError('Acesso negado a usuário de outro condomínio.')
       }
     }

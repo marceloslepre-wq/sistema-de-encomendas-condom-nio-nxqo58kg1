@@ -3,8 +3,15 @@ routerAdd(
   '/backend/v1/admin/users',
   (e) => {
     const auth = e.auth
-    if (!auth || (auth.getString('role') !== 'gestor' && auth.getString('role') !== 'admin')) {
-      throw new ForbiddenError('Acesso negado. Apenas gestores podem realizar esta ação.')
+    if (
+      !auth ||
+      (auth.getString('role') !== 'gestor' &&
+        auth.getString('role') !== 'admin' &&
+        auth.getString('role') !== 'master')
+    ) {
+      throw new ForbiddenError(
+        'Acesso negado. Apenas gestores e administradores podem realizar esta ação.',
+      )
     }
 
     const role = auth.getString('role')
@@ -14,7 +21,8 @@ routerAdd(
       if (!userCondoId) {
         return e.json(200, [])
       }
-      filter = `condo_id = '${userCondoId}'`
+      // Inclui usuários do condomínio e usuários master vinculados ao condomínio
+      filter = `condo_id = '${userCondoId}' || role = 'master'`
     }
 
     const result = $app.findRecordsByFilter('users', filter, '-created', 1000, 0)

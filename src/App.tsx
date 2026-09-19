@@ -140,7 +140,7 @@ const App = () => (
               <Route
                 path="/gestor/usuarios"
                 element={
-                  <ProtectedRoute requiredRole="gestor">
+                  <ProtectedRoute allowedRoles={['gestor', 'master']}>
                     <GestorUsuarios />
                   </ProtectedRoute>
                 }

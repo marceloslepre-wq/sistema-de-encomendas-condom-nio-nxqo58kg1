@@ -478,6 +478,16 @@ export default function GestorUsuarios() {
   }
 
   const handleDelete = async (id: string) => {
+    if (pb.authStore.record?.id === id) {
+      toast({
+        title: 'Ação não permitida',
+        description: 'Você não pode excluir a sua própria conta de usuário.',
+        variant: 'destructive',
+      })
+      setUserToDelete(null)
+      return
+    }
+
     try {
       await deleteUser(id)
       toast({ title: 'Sucesso', description: 'Usuário excluído com sucesso.' })
@@ -491,6 +501,12 @@ export default function GestorUsuarios() {
 
   const getRoleBadge = (role: string) => {
     switch (role) {
+      case 'master':
+        return (
+          <Badge className="bg-[#e53e3e] hover:bg-[#c53030] text-white font-medium border-0 px-2.5 py-0.5 shadow-xs">
+            Master
+          </Badge>
+        )
       case 'gestor':
         return <Badge className="bg-purple-500 hover:bg-purple-600 text-white">Gestor</Badge>
       case 'porteiro':
@@ -551,6 +567,7 @@ export default function GestorUsuarios() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="todos">Todos os Perfis</SelectItem>
+                      <SelectItem value="master">Master</SelectItem>
                       <SelectItem value="gestor">Gestor</SelectItem>
                       <SelectItem value="porteiro">Porteiro</SelectItem>
                       <SelectItem value="portaria">Portaria</SelectItem>
@@ -595,14 +612,39 @@ export default function GestorUsuarios() {
                           </TableCell>
                           <TableCell>{getRoleBadge(u.role)}</TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(u)}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenDialog(u)}
+                              title="Editar usuário"
+                            >
                               <Edit className="w-4 h-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="text-destructive"
-                              onClick={() => setUserToDelete(u)}
+                              className={
+                                pb.authStore.record?.id === u.id
+                                  ? 'opacity-40 cursor-not-allowed'
+                                  : 'text-destructive'
+                              }
+                              disabled={pb.authStore.record?.id === u.id}
+                              onClick={() => {
+                                if (pb.authStore.record?.id === u.id) {
+                                  toast({
+                                    title: 'Ação não permitida',
+                                    description: 'Você não pode excluir sua própria conta.',
+                                    variant: 'destructive',
+                                  })
+                                  return
+                                }
+                                setUserToDelete(u)
+                              }}
+                              title={
+                                pb.authStore.record?.id === u.id
+                                  ? 'Você não pode excluir seu próprio usuário'
+                                  : 'Excluir usuário'
+                              }
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -899,6 +941,11 @@ export default function GestorUsuarios() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  {(editingUser?.role === 'master' ||
+                    formData.role === 'master' ||
+                    pb.authStore.record?.role === 'master') && (
+                    <SelectItem value="master">Master</SelectItem>
+                  )}
                   <SelectItem value="gestor">Gestor</SelectItem>
                   <SelectItem value="porteiro">Porteiro</SelectItem>
                   <SelectItem value="portaria">Portaria</SelectItem>
@@ -1074,6 +1121,19 @@ export default function GestorUsuarios() {
                   <p>
                     O perfil <strong>Triagem</strong> é dedicado à sala de encomendas, contendo as
                     abas <strong>Triagem</strong> e <strong>Retirada</strong>.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {formData.role === 'master' && (
+              <div className="col-span-1 md:col-span-2 mt-2">
+                <div className="bg-red-50 border border-red-200 text-red-800 text-sm p-3 rounded-md flex items-start gap-2">
+                  <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5 text-[#e53e3e]" />
+                  <p>
+                    O perfil <strong>Master</strong> tem privilégios de administração global e
+                    acesso irrestrito. Você pode alterar o Nome, E-mail (login) e Senha deste
+                    usuário.
                   </p>
                 </div>
               </div>
