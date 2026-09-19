@@ -38,8 +38,28 @@ export function AppSidebar() {
   const { isStandalone, openManualPrompt } = usePWA()
   const location = useLocation()
 
-  const getLinks = () => {
+  type NavLinkItem = {
+    title: string
+    url: string
+    icon: any
+    highlight?: boolean
+  }
+
+  const getLinks = (): NavLinkItem[] => {
     switch (role) {
+      case 'master':
+        return [
+          { title: 'Dashboard', url: '/gestor/dashboard', icon: LayoutDashboard },
+          { title: 'Usuários', url: '/gestor/usuarios', icon: Users },
+          { title: 'Unidades', url: '/gestor/unidades', icon: Building },
+          { title: 'Transportadoras', url: '/gestor/transportadoras', icon: Truck },
+          { title: 'Logística', url: '/gestor/logistica', icon: MapPin },
+          { title: 'Relatórios', url: '/gestor/relatorios', icon: FileText },
+          { title: 'Licenças e Planos', url: '/gestor/licencas', icon: Award },
+          { title: 'Painel Master', url: '/master', icon: Shield, highlight: true },
+          { title: 'Guia de Uso', url: '/guia', icon: BookOpen },
+          { title: 'Configurações', url: '/gestor/configuracoes', icon: Settings },
+        ]
       case 'gestor':
         return [
           { title: 'Dashboard', url: '/gestor/dashboard', icon: LayoutDashboard },
@@ -49,9 +69,9 @@ export function AppSidebar() {
           { title: 'Logística', url: '/gestor/logistica', icon: MapPin },
           { title: 'Relatórios', url: '/gestor/relatorios', icon: FileText },
           { title: 'Permissões', url: '/gestor/permissoes', icon: Shield },
-          { title: 'Configurações', url: '/gestor/configuracoes', icon: Settings },
           { title: 'Licenças e Planos', url: '/gestor/licencas', icon: Award },
           { title: 'Guia de Uso', url: '/guia', icon: BookOpen },
+          { title: 'Configurações', url: '/gestor/configuracoes', icon: Settings },
         ]
       case 'porteiro':
         return [
@@ -79,11 +99,6 @@ export function AppSidebar() {
         return [
           { title: 'Minhas Encomendas', url: '/morador/dashboard', icon: Package },
           { title: 'Meus Dados', url: '/morador/dados', icon: UserCircle },
-          { title: 'Guia de Uso', url: '/guia', icon: BookOpen },
-        ]
-      case 'master':
-        return [
-          { title: 'Painel Master', url: '/master', icon: LayoutDashboard },
           { title: 'Guia de Uso', url: '/guia', icon: BookOpen },
         ]
       default:
@@ -114,7 +129,7 @@ export function AppSidebar() {
               </span>
             </div>
             <p className="text-[11px] text-muted-foreground capitalize leading-tight truncate">
-              {role}
+              {role === 'master' ? 'Master Admin' : role}
             </p>
           </div>
         </div>
@@ -125,16 +140,35 @@ export function AppSidebar() {
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {links.map((link) => (
-                <SidebarMenuItem key={link.title}>
-                  <SidebarMenuButton asChild isActive={location.pathname === link.url}>
-                    <Link to={link.url}>
-                      <link.icon className="w-4 h-4" />
-                      <span>{link.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {links.map((link) => {
+                const isActive = location.pathname === link.url
+                const isMasterTab = link.highlight
+
+                return (
+                  <SidebarMenuItem key={link.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      className={
+                        isMasterTab
+                          ? isActive
+                            ? 'bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 font-semibold border border-indigo-300/80 shadow-xs ring-1 ring-indigo-400/30'
+                            : 'text-indigo-700 hover:text-indigo-900 hover:bg-indigo-50/70 font-semibold border border-indigo-200/60 bg-indigo-50/30'
+                          : undefined
+                      }
+                    >
+                      <Link to={link.url} className="flex items-center gap-2">
+                        <link.icon
+                          className={
+                            isMasterTab ? 'w-4 h-4 text-indigo-600 shrink-0' : 'w-4 h-4 shrink-0'
+                          }
+                        />
+                        <span className="flex-1 truncate">{link.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

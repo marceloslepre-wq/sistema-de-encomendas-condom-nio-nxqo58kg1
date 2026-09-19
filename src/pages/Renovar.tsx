@@ -69,8 +69,7 @@ export default function Renovar() {
       setLicencaInfo(data)
       if (!data.bloqueado && data.status === 'ativa') {
         // Se a licença já está ativa, pode voltar para a área inicial
-        if (data.role === 'gestor') navigate('/gestor/dashboard')
-        else if (data.role === 'master') navigate('/master')
+        if (data.role === 'gestor' || data.role === 'master') navigate('/gestor/dashboard')
         else if (data.role === 'portaria' || data.role === 'porteiro')
           navigate('/portaria/registro')
         else if (data.role === 'triagem') navigate('/sala/triagem')

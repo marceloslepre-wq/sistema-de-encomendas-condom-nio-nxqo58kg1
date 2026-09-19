@@ -80,8 +80,7 @@ const ProtectedRoute = ({
   })()
 
   if (!hasAccess) {
-    if (role === 'master') return <Navigate to="/master" replace />
-    if (role === 'gestor') return <Navigate to="/gestor/dashboard" replace />
+    if (role === 'master' || role === 'gestor') return <Navigate to="/gestor/dashboard" replace />
     if (role === 'portaria' || role === 'porteiro')
       return <Navigate to="/portaria/registro" replace />
     if (role === 'triagem') return <Navigate to="/sala/triagem" replace />
@@ -132,7 +131,7 @@ const App = () => (
               <Route
                 path="/gestor/dashboard"
                 element={
-                  <ProtectedRoute requiredRole="gestor">
+                  <ProtectedRoute allowedRoles={['gestor', 'master']}>
                     <GestorDashboard />
                   </ProtectedRoute>
                 }
@@ -148,7 +147,7 @@ const App = () => (
               <Route
                 path="/gestor/unidades"
                 element={
-                  <ProtectedRoute requiredRole="gestor">
+                  <ProtectedRoute allowedRoles={['gestor', 'master']}>
                     <GestorUnidades />
                   </ProtectedRoute>
                 }
@@ -156,7 +155,7 @@ const App = () => (
               <Route
                 path="/gestor/transportadoras"
                 element={
-                  <ProtectedRoute allowedRoles={['gestor', 'porteiro', 'portaria']}>
+                  <ProtectedRoute allowedRoles={['gestor', 'porteiro', 'portaria', 'master']}>
                     <GestorTransportadoras />
                   </ProtectedRoute>
                 }
@@ -164,7 +163,7 @@ const App = () => (
               <Route
                 path="/gestor/relatorios"
                 element={
-                  <ProtectedRoute requiredRole="gestor">
+                  <ProtectedRoute allowedRoles={['gestor', 'master']}>
                     <GestorRelatorios />
                   </ProtectedRoute>
                 }
@@ -172,7 +171,7 @@ const App = () => (
               <Route
                 path="/gestor/configuracoes"
                 element={
-                  <ProtectedRoute requiredRole="gestor">
+                  <ProtectedRoute allowedRoles={['gestor', 'master']}>
                     <GestorConfiguracoes />
                   </ProtectedRoute>
                 }
@@ -180,7 +179,7 @@ const App = () => (
               <Route
                 path="/gestor/licencas"
                 element={
-                  <ProtectedRoute requiredRole="gestor">
+                  <ProtectedRoute allowedRoles={['gestor', 'master']}>
                     <GestorLicencas />
                   </ProtectedRoute>
                 }
@@ -188,7 +187,7 @@ const App = () => (
               <Route
                 path="/gestor/permissoes"
                 element={
-                  <ProtectedRoute requiredRole="gestor">
+                  <ProtectedRoute allowedRoles={['gestor', 'master']}>
                     <GestorPermissoes />
                   </ProtectedRoute>
                 }
@@ -196,7 +195,7 @@ const App = () => (
               <Route
                 path="/gestor/logistica"
                 element={
-                  <ProtectedRoute requiredRole="gestor">
+                  <ProtectedRoute allowedRoles={['gestor', 'master']}>
                     <GestorLogistica />
                   </ProtectedRoute>
                 }
