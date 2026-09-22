@@ -1,5 +1,6 @@
 import pb from '@/lib/pocketbase/client'
 import { RecordModel } from 'pocketbase'
+import { getActiveCondoId, isSupportModeActive } from './supportSession'
 
 export type Tower = RecordModel & {
   condo_id: string
@@ -10,9 +11,11 @@ export type Tower = RecordModel & {
 }
 
 export const getTowers = async (condoId?: string) => {
-  const authCondoId = condoId || pb.authStore.record?.condo_id
+  const activeCondoId = condoId || getActiveCondoId()
   const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
-  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  const inSupport = isSupportModeActive()
+  // No modo suporte, filtra estritamente pelo condomínio ativo
+  const filter = (!isMaster || inSupport) && activeCondoId ? `condo_id = "${activeCondoId}"` : ''
   return pb.collection('towers').getFullList<Tower>({
     filter,
     sort: 'display_name',
@@ -26,10 +29,10 @@ export const createTower = async (data: {
   display_name?: string
   condo_id?: string
 }) => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const payload: any = { ...data }
-  if (authCondoId && !payload.condo_id) {
-    payload.condo_id = authCondoId
+  if (activeCondoId && !payload.condo_id) {
+    payload.condo_id = activeCondoId
   }
   const cleanIdent = payload.identifier.trim().replace(/\s+/g, ' ')
   const cleanNick = (payload.nickname || '').trim().replace(/\s+/g, ' ')

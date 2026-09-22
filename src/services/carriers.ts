@@ -1,4 +1,5 @@
 import pb from '@/lib/pocketbase/client'
+import { getActiveCondoId, isSupportModeActive } from './supportSession'
 
 export interface Carrier {
   id: string
@@ -9,18 +10,19 @@ export interface Carrier {
 }
 
 export const getCarriers = () => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
-  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  const inSupport = isSupportModeActive()
+  const filter = (!isMaster || inSupport) && activeCondoId ? `condo_id = "${activeCondoId}"` : ''
   return pb.collection('carriers').getFullList<Carrier>({ filter })
 }
 
 export const getCarrier = (id: string) => pb.collection('carriers').getOne<Carrier>(id)
 
 export const createCarrier = (data: Partial<Carrier>) => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const payload: any = { ...data }
-  if (authCondoId && !payload.condo_id) payload.condo_id = authCondoId
+  if (activeCondoId && !payload.condo_id) payload.condo_id = activeCondoId
   return pb.collection('carriers').create<Carrier>(payload)
 }
 

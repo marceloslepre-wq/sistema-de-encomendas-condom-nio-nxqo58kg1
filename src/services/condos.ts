@@ -65,12 +65,14 @@ export const desconectarWhatsAppCondo = async (
   })) as WhatsAppStatusResponse
 }
 
+import { getActiveCondoId } from './supportSession'
+
 export const getCondo = async (): Promise<CondoRecord | null> => {
   try {
-    const authCondoId = pb.authStore.record?.condo_id
-    if (authCondoId) {
+    const activeCondoId = getActiveCondoId()
+    if (activeCondoId) {
       try {
-        return (await pb.collection('condos').getOne(authCondoId)) as unknown as CondoRecord
+        return (await pb.collection('condos').getOne(activeCondoId)) as unknown as CondoRecord
       } catch {
         // fallback to list
       }

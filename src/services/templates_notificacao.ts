@@ -1,10 +1,12 @@
 import pb from '@/lib/pocketbase/client'
+import { getActiveCondoId, isSupportModeActive } from './supportSession'
 
 export const getTemplatesNotificacao = async () => {
   try {
-    const authCondoId = pb.authStore.record?.condo_id
+    const activeCondoId = getActiveCondoId()
     const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
-    const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+    const inSupport = isSupportModeActive()
+    const filter = (!isMaster || inSupport) && activeCondoId ? `condo_id = "${activeCondoId}"` : ''
     return await pb.collection('templates_notificacao').getFullList({ filter })
   } catch (e) {
     return []
@@ -12,9 +14,9 @@ export const getTemplatesNotificacao = async () => {
 }
 
 export const createTemplateNotificacao = async (data: any) => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const payload: any = { ...data }
-  if (authCondoId && !payload.condo_id) payload.condo_id = authCondoId
+  if (activeCondoId && !payload.condo_id) payload.condo_id = activeCondoId
   return pb.collection('templates_notificacao').create(payload)
 }
 

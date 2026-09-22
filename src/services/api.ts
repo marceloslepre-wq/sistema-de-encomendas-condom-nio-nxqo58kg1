@@ -1,11 +1,12 @@
 import pb from '@/lib/pocketbase/client'
 import { RecordModel } from 'pocketbase'
+import { getActiveCondoId, isSupportModeActive } from './supportSession'
 
 export const getCondo = async () => {
-  const authCondoId = pb.authStore.record?.condo_id
-  if (authCondoId) {
+  const activeCondoId = getActiveCondoId()
+  if (activeCondoId) {
     try {
-      return await pb.collection('condos').getOne(authCondoId)
+      return await pb.collection('condos').getOne(activeCondoId)
     } catch {
       // fallback
     }
@@ -19,18 +20,19 @@ export const createCondo = (data: any) => pb.collection('condos').create(data)
 export const updateCondo = (id: string, data: any) => pb.collection('condos').update(id, data)
 
 export const getUnits = () => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
-  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  const inSupport = isSupportModeActive()
+  const filter = (!isMaster || inSupport) && activeCondoId ? `condo_id = "${activeCondoId}"` : ''
   return pb
     .collection('units')
     .getFullList({ filter, sort: 'tower,apartment', expand: 'tower_id', requestKey: null })
 }
 
 export const createUnit = (data: any) => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const payload = { ...data }
-  if (authCondoId && !payload.condo_id) payload.condo_id = authCondoId
+  if (activeCondoId && !payload.condo_id) payload.condo_id = activeCondoId
   return pb.collection('units').create(payload)
 }
 export const updateUnit = (id: string, data: any) => pb.collection('units').update(id, data)
@@ -48,14 +50,15 @@ export type Morador = RecordModel & {
 }
 
 export const getMoradores = () => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
-  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  const inSupport = isSupportModeActive()
+  const filter = (!isMaster || inSupport) && activeCondoId ? `condo_id = "${activeCondoId}"` : ''
   return pb.collection('moradores').getFullList({ filter, sort: '-created', requestKey: null })
 }
 
 export const createMorador = async (data: any) => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const userPayload: any = {
     name: data.nome,
     email: data.email,
@@ -69,7 +72,7 @@ export const createMorador = async (data: any) => {
     notificacoes_whatsapp:
       data.notificacoes_whatsapp !== undefined ? Boolean(data.notificacoes_whatsapp) : true,
   }
-  if (authCondoId) userPayload.condo_id = authCondoId
+  if (activeCondoId) userPayload.condo_id = activeCondoId
 
   // Create user first. Any unique constraint error will be thrown to the caller.
   await pb.collection('users').create(userPayload)
@@ -88,7 +91,7 @@ export const createMorador = async (data: any) => {
         ? Boolean(moradorData.notificacoes_whatsapp)
         : true,
   }
-  if (authCondoId) moradorPayload.condo_id = authCondoId
+  if (activeCondoId) moradorPayload.condo_id = activeCondoId
   return await pb.collection('moradores').create(moradorPayload)
 }
 
@@ -154,9 +157,10 @@ export const updateMorador = async (id: string, data: any) => {
 export const deleteMorador = (id: string) => pb.collection('moradores').delete(id)
 
 export const getUsers = () => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
-  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  const inSupport = isSupportModeActive()
+  const filter = (!isMaster || inSupport) && activeCondoId ? `condo_id = "${activeCondoId}"` : ''
   return pb.collection('users').getFullList({ filter, sort: '-created' })
 }
 export const updateUser = async (id: string, data: any) => {
@@ -296,17 +300,18 @@ export type InvitationLink = RecordModel & {
 }
 
 export const getInvitations = () => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
-  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  const inSupport = isSupportModeActive()
+  const filter = (!isMaster || inSupport) && activeCondoId ? `condo_id = "${activeCondoId}"` : ''
   return pb
     .collection('invitation_links')
     .getFullList<InvitationLink>({ filter, sort: '-created', requestKey: null })
 }
 export const createInvitation = async (data: any) => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const payload = { ...data }
-  if (authCondoId && !payload.condo_id) payload.condo_id = authCondoId
+  if (activeCondoId && !payload.condo_id) payload.condo_id = activeCondoId
   return await pb.collection('invitation_links').create<InvitationLink>(payload, {
     requestKey: null,
   })
@@ -325,16 +330,17 @@ export const registerWithInvitation = (token: string, data: any) =>
   })
 
 export const getCarriers = () => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
-  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  const inSupport = isSupportModeActive()
+  const filter = (!isMaster || inSupport) && activeCondoId ? `condo_id = "${activeCondoId}"` : ''
   return pb.collection('carriers').getFullList({ filter, sort: 'name' })
 }
 
 export const createCarrier = (data: any) => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const payload = { ...data }
-  if (authCondoId && !payload.condo_id) payload.condo_id = authCondoId
+  if (activeCondoId && !payload.condo_id) payload.condo_id = activeCondoId
   return pb.collection('carriers').create(payload)
 }
 
@@ -342,25 +348,27 @@ export const updateCarrier = (id: string, data: any) => pb.collection('carriers'
 export const deleteCarrier = (id: string) => pb.collection('carriers').delete(id)
 
 export const getParcels = () => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
-  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  const inSupport = isSupportModeActive()
+  const filter = (!isMaster || inSupport) && activeCondoId ? `condo_id = "${activeCondoId}"` : ''
   return pb
     .collection('recebimentos_auditoria')
     .getFullList({ filter, expand: 'unidade_id,morador_id', sort: '-created' })
 }
 
 export const getVolumeTypes = () => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
-  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  const inSupport = isSupportModeActive()
+  const filter = (!isMaster || inSupport) && activeCondoId ? `condo_id = "${activeCondoId}"` : ''
   return pb.collection('volume_types').getFullList({ filter })
 }
 
 export const createVolumeType = (data: any) => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const payload = { ...data }
-  if (authCondoId && !payload.condo_id) payload.condo_id = authCondoId
+  if (activeCondoId && !payload.condo_id) payload.condo_id = activeCondoId
   return pb.collection('volume_types').create(payload)
 }
 
@@ -369,16 +377,17 @@ export const updateVolumeType = (id: string, data: any) =>
 export const deleteVolumeType = (id: string) => pb.collection('volume_types').delete(id)
 
 export const getShelfLocations = () => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
-  const filter = !isMaster && authCondoId ? `condo_id = "${authCondoId}"` : ''
+  const inSupport = isSupportModeActive()
+  const filter = (!isMaster || inSupport) && activeCondoId ? `condo_id = "${activeCondoId}"` : ''
   return pb.collection('shelf_locations').getFullList({ filter })
 }
 
 export const createShelfLocation = (data: any) => {
-  const authCondoId = pb.authStore.record?.condo_id
+  const activeCondoId = getActiveCondoId()
   const payload = { ...data }
-  if (authCondoId && !payload.condo_id) payload.condo_id = authCondoId
+  if (activeCondoId && !payload.condo_id) payload.condo_id = activeCondoId
   return pb.collection('shelf_locations').create(payload)
 }
 export const updateShelfLocation = (id: string, data: any) =>
