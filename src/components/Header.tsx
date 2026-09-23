@@ -50,11 +50,17 @@ export function Header() {
       }
     }
 
+    const handleSupportChanged = () => {
+      loadCondoData()
+    }
+
     window.addEventListener('condo-updated', handleCondoUpdated)
+    window.addEventListener('condpack:support-session-changed', handleSupportChanged)
 
     return () => {
       isMounted = false
       window.removeEventListener('condo-updated', handleCondoUpdated)
+      window.removeEventListener('condpack:support-session-changed', handleSupportChanged)
     }
   }, [user?.condo_id])
 

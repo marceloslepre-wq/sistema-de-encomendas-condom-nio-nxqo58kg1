@@ -26,9 +26,11 @@ import {
   Smartphone,
   Unplug,
   HelpCircle,
+  LogIn,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { desconectarWhatsAppCondo } from '@/services/condos'
+import { startSupportSession } from '@/services/supportSession'
 import { useAuth } from '@/hooks/use-auth'
 import { usePWA } from '@/components/pwa/PWAContext'
 import { Button } from '@/components/ui/button'
@@ -98,7 +100,8 @@ import { LinkGeneratorCadastro } from './LinkGeneratorCadastro'
 import { CondPackLogo } from '@/components/CondPackLogo'
 
 export default function MasterDashboard() {
-  const { user, signOut } = useAuth()
+  const { user, role, signOut } = useAuth()
+  const navigate = useNavigate()
   const { toast } = useToast()
   const { isStandalone, isMobileDevice, canPromptNative, isIOS, openManualPrompt } = usePWA()
   const canShowInstallButton = !isStandalone && (isMobileDevice || isIOS || canPromptNative)
@@ -330,6 +333,25 @@ export default function MasterDashboard() {
       override_max_unidades: '',
     })
     setIsLicencaModalOpen(true)
+  }
+
+  // Ação: Acessar Painel do Gestor do Condomínio (Modo Suporte do Master)
+  const handleAcessarPainel = (condoId: string, condoName: string) => {
+    if (!condoId) {
+      toast({
+        title: 'Condomínio não identificado',
+        description: 'Não foi possível identificar o condomínio para iniciar o suporte.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    startSupportSession({ id: condoId, name: condoName })
+    toast({
+      title: 'Modo Suporte ativado',
+      description: `Acessando painel como suporte de "${condoName}".`,
+    })
+    navigate('/gestor/dashboard')
   }
 
   // Ação: Reativar +30 dias
@@ -1281,7 +1303,21 @@ export default function MasterDashboard() {
 
                             {/* Botão de Ações com TODOS os poderes */}
                             <TableCell className="text-right pr-4 whitespace-nowrap">
-                              <div className="flex items-center justify-end gap-1">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {/* Botão Acessar Painel - exclusivo para Master em modo suporte */}
+                                {role === 'master' && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleAcessarPainel(licenca.condo_id, condoName)}
+                                    className="h-7 px-2.5 text-[11px] font-semibold gap-1.5 border-indigo-600 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors shadow-2xs"
+                                    title={`Acessar painel do condomínio "${condoName}" em modo suporte`}
+                                  >
+                                    <LogIn className="w-3.5 h-3.5" />
+                                    <span>Acessar Painel</span>
+                                  </Button>
+                                )}
+
                                 {/* Botão rápido Reativar +30 dias mantido para conveniência */}
                                 <Button
                                   size="sm"
