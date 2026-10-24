@@ -32,7 +32,7 @@ routerAdd(
     }
 
     let condoId = body.condo_id || ''
-    const auth = e.auth || e.requestInfo().auth || e.requestInfo().authRecord
+    const auth = e.auth || (e.requestInfo ? e.requestInfo().auth : null)
     if (!condoId && auth) {
       condoId = auth.getString('condo_id') || ''
     }

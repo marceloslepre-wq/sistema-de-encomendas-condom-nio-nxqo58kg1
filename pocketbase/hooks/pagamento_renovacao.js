@@ -307,7 +307,7 @@ routerAdd(
   'GET',
   '/backend/v1/pagamento/pix/status/{payment_id}',
   (e) => {
-    let auth = e.auth || e.requestInfo().auth || e.requestInfo().authRecord
+    let auth = e.auth || (e.requestInfo ? e.requestInfo().auth : null)
     if (!auth) {
       try {
         const rawAuth =
@@ -1067,7 +1067,7 @@ routerAdd(
   'POST',
   '/backend/v1/pagamento/renovar',
   (e) => {
-    let auth = e.auth || e.requestInfo().auth || e.requestInfo().authRecord
+    let auth = e.auth || (e.requestInfo ? e.requestInfo().auth : null)
     if (!auth) {
       try {
         const rawAuth =

@@ -3,7 +3,7 @@ routerAdd(
   'GET',
   '/backend/v1/licenca/status',
   (e) => {
-    let auth = e.auth || e.requestInfo().auth || e.requestInfo().authRecord
+    let auth = e.auth || (e.requestInfo ? e.requestInfo().auth : null)
     if (!auth) {
       try {
         const rawAuth =

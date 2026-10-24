@@ -124,7 +124,7 @@ routerAdd(
     }
 
     // Autenticação
-    var auth = e.auth || e.requestInfo().auth || e.requestInfo().authRecord
+    var auth = e.auth || (e.requestInfo ? e.requestInfo().auth : null)
     if (!auth) {
       try {
         var rawAuth =
@@ -408,7 +408,7 @@ routerAdd(
       }
     }
 
-    var auth = e.auth || e.requestInfo().auth || e.requestInfo().authRecord
+    var auth = e.auth || (e.requestInfo ? e.requestInfo().auth : null)
     if (!auth) {
       try {
         var rawAuth =
@@ -689,7 +689,7 @@ routerAdd(
       }
     }
 
-    var auth = e.auth || e.requestInfo().auth || e.requestInfo().authRecord
+    var auth = e.auth || (e.requestInfo ? e.requestInfo().auth : null)
     if (!auth) {
       try {
         var rawAuth =
