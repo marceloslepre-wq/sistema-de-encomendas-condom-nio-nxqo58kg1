@@ -33,6 +33,23 @@ onRecordAfterCreateSuccess((e) => {
         : '') || ''
     const documento = (condoRecord ? condoRecord.getString('cnpj') : '') || ''
 
+    let endereco = ''
+    if (condoRecord) {
+      const addr = (condoRecord.getString('address') || '').trim()
+      const cid = (condoRecord.getString('cidade') || '').trim()
+      const est = (condoRecord.getString('estado') || '').trim()
+      if (addr) {
+        endereco = addr
+        if (cid && !endereco.toLowerCase().includes(cid.toLowerCase())) {
+          endereco += est ? `, ${cid}/${est}` : `, ${cid}`
+        } else if (est && !endereco.toLowerCase().includes(est.toLowerCase())) {
+          endereco += `/${est}`
+        }
+      } else if (cid || est) {
+        endereco = [cid, est].filter(Boolean).join('/')
+      }
+    }
+
     const planoNome = (planoRecord ? planoRecord.getString('nome') : '') || 'Profissional'
     const preco = planoRecord ? Number(planoRecord.getInt('preco_mensal') || 0) : 0
 
@@ -59,6 +76,7 @@ onRecordAfterCreateSuccess((e) => {
         email: email,
         telefone: telefone,
         documento: documento,
+        endereco: endereco,
       },
       plano: {
         nome: planoNome,
@@ -201,6 +219,23 @@ onRecordAfterUpdateSuccess((e) => {
         : '') || ''
     const documento = (condoRecord ? condoRecord.getString('cnpj') : '') || ''
 
+    let endereco = ''
+    if (condoRecord) {
+      const addr = (condoRecord.getString('address') || '').trim()
+      const cid = (condoRecord.getString('cidade') || '').trim()
+      const est = (condoRecord.getString('estado') || '').trim()
+      if (addr) {
+        endereco = addr
+        if (cid && !endereco.toLowerCase().includes(cid.toLowerCase())) {
+          endereco += est ? `, ${cid}/${est}` : `, ${cid}`
+        } else if (est && !endereco.toLowerCase().includes(est.toLowerCase())) {
+          endereco += `/${est}`
+        }
+      } else if (cid || est) {
+        endereco = [cid, est].filter(Boolean).join('/')
+      }
+    }
+
     const planoNome = (planoRecord ? planoRecord.getString('nome') : '') || 'Profissional'
     const preco = planoRecord ? Number(planoRecord.getInt('preco_mensal') || 0) : 0
 
@@ -221,6 +256,7 @@ onRecordAfterUpdateSuccess((e) => {
         email: email,
         telefone: telefone,
         documento: documento,
+        endereco: endereco,
       },
       plano: {
         nome: planoNome,

@@ -150,6 +150,11 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
           ? $secrets.get('SHOLVER_WEBHOOK_SECRET')
           : '')
       if (sholverSecret) {
+        let sholverEndereco = ''
+        if (cidade || estado) {
+          sholverEndereco = [cidade, estado].filter(Boolean).join('/')
+        }
+
         const sholverPayload = {
           numero_pedido: `COND-2026-${createdLicencaId}`,
           cliente: {
@@ -158,6 +163,7 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
             email: email,
             telefone: phone,
             documento: cnpj,
+            endereco: sholverEndereco,
           },
           plano: {
             nome: selectedPlano.getString('nome') || 'Plano',

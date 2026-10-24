@@ -595,8 +595,26 @@ routerAdd(
                 } catch (_) {}
               }
 
+              let sholverEndereco = ''
+              if (sholverCondo) {
+                const addr = (sholverCondo.getString('address') || '').trim()
+                const cid = (sholverCondo.getString('cidade') || '').trim()
+                const est = (sholverCondo.getString('estado') || '').trim()
+                if (addr) {
+                  sholverEndereco = addr
+                  if (cid && !sholverEndereco.toLowerCase().includes(cid.toLowerCase())) {
+                    sholverEndereco += est ? `, ${cid}/${est}` : `, ${cid}`
+                  } else if (est && !sholverEndereco.toLowerCase().includes(est.toLowerCase())) {
+                    sholverEndereco += `/${est}`
+                  }
+                } else if (cid || est) {
+                  sholverEndereco = [cid, est].filter(Boolean).join('/')
+                }
+              }
+
+              const idPedidoResolvido = novaLicId || licencaAntigaId || paymentId
               const sholverPayload = {
-                numero_pedido: `COND-2026-${novaLicId || licencaAntigaId || paymentId}`,
+                numero_pedido: `COND-2026-${idPedidoResolvido}`,
                 cliente: {
                   razao_social:
                     (sholverCondo ? sholverCondo.getString('name') : '') || 'Condomínio',
@@ -612,6 +630,7 @@ routerAdd(
                       ? sholverCondo.getString('phone') || sholverCondo.getString('whatsapp_phone')
                       : '') || '',
                   documento: (sholverCondo ? sholverCondo.getString('cnpj') : '') || '',
+                  endereco: sholverEndereco,
                 },
                 plano: {
                   nome: planoNome,
@@ -945,8 +964,29 @@ routerAdd('POST', '/backend/v1/pagamento/webhook', (e) => {
                   } catch (_) {}
                 }
 
+                let sholverEnderecoWebhook = ''
+                if (sholverCondo) {
+                  const addr = (sholverCondo.getString('address') || '').trim()
+                  const cid = (sholverCondo.getString('cidade') || '').trim()
+                  const est = (sholverCondo.getString('estado') || '').trim()
+                  if (addr) {
+                    sholverEnderecoWebhook = addr
+                    if (cid && !sholverEnderecoWebhook.toLowerCase().includes(cid.toLowerCase())) {
+                      sholverEnderecoWebhook += est ? `, ${cid}/${est}` : `, ${cid}`
+                    } else if (
+                      est &&
+                      !sholverEnderecoWebhook.toLowerCase().includes(est.toLowerCase())
+                    ) {
+                      sholverEnderecoWebhook += `/${est}`
+                    }
+                  } else if (cid || est) {
+                    sholverEnderecoWebhook = [cid, est].filter(Boolean).join('/')
+                  }
+                }
+
+                const idPedidoWebhookResolvido = novaLicencaId || licencaAntigaId || paymentId
                 const sholverPayload = {
-                  numero_pedido: `COND-2026-${novaLicencaId || licencaAntigaId || paymentId}`,
+                  numero_pedido: `COND-2026-${idPedidoWebhookResolvido}`,
                   cliente: {
                     razao_social:
                       (sholverCondo ? sholverCondo.getString('name') : '') || 'Condomínio',
@@ -963,6 +1003,7 @@ routerAdd('POST', '/backend/v1/pagamento/webhook', (e) => {
                           sholverCondo.getString('whatsapp_phone')
                         : '') || '',
                     documento: (sholverCondo ? sholverCondo.getString('cnpj') : '') || '',
+                    endereco: sholverEnderecoWebhook,
                   },
                   plano: {
                     nome: planoNome,

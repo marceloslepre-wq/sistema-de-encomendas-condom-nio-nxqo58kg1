@@ -133,6 +133,23 @@ routerAdd(
         } catch (_) {}
 
         const precoNovo = Number(novoPlano.getInt('preco_mensal') || 0)
+        let sholverEndereco = ''
+        if (sholverCondo) {
+          const addr = (sholverCondo.getString('address') || '').trim()
+          const cid = (sholverCondo.getString('cidade') || '').trim()
+          const est = (sholverCondo.getString('estado') || '').trim()
+          if (addr) {
+            sholverEndereco = addr
+            if (cid && !sholverEndereco.toLowerCase().includes(cid.toLowerCase())) {
+              sholverEndereco += est ? `, ${cid}/${est}` : `, ${cid}`
+            } else if (est && !sholverEndereco.toLowerCase().includes(est.toLowerCase())) {
+              sholverEndereco += `/${est}`
+            }
+          } else if (cid || est) {
+            sholverEndereco = [cid, est].filter(Boolean).join('/')
+          }
+        }
+
         const sholverPayload = {
           numero_pedido: `COND-2026-${lic.id}`,
           cliente: {
@@ -148,6 +165,7 @@ routerAdd(
                 ? sholverCondo.getString('phone') || sholverCondo.getString('whatsapp_phone')
                 : '') || '',
             documento: (sholverCondo ? sholverCondo.getString('cnpj') : '') || '',
+            endereco: sholverEndereco,
           },
           plano: {
             nome: novoPlanoNome,

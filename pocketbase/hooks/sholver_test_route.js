@@ -15,25 +15,39 @@ routerAdd('POST', '/backend/v1/sholver/webhook/test', (e) => {
   const clienteBody = body.cliente || {}
   const planoBody = body.plano || {}
 
-  const numeroPedido =
-    body.numero_pedido || (body.licenca_id ? `COND-2026-${body.licenca_id}` : 'COND-2026-TESTE-001')
+  let rawNumero = body.numero_pedido || body.pedido_id || body.licenca_id || body.id || ''
+  if (!rawNumero) {
+    rawNumero = '000123'
+  }
+  const cleanNumero = String(rawNumero)
+    .trim()
+    .replace(/^COND-2026-/i, '')
+  const numeroPedido = `COND-2026-${cleanNumero}`
+
+  const enderecoCliente =
+    clienteBody.endereco !== undefined
+      ? clienteBody.endereco
+      : body.endereco !== undefined
+        ? body.endereco
+        : 'Av. Exemplo, 123 - Vitória/ES, CEP 29000-000'
 
   const payload = {
-    numero_pedido: String(numeroPedido).trim(),
+    numero_pedido: numeroPedido,
     cliente: {
       razao_social: (
         clienteBody.razao_social ||
         body.razao_social ||
-        'Condomínio Residencial Jardins'
+        'Condomínio Exemplo LTDA'
       ).trim(),
       nome_fantasia: (
         clienteBody.nome_fantasia ||
         body.nome_fantasia ||
-        'Residencial Jardins'
+        'Condomínio Exemplo'
       ).trim(),
-      email: (clienteBody.email || body.email || 'contato@residencialjardins.com.br').trim(),
-      telefone: (clienteBody.telefone || body.telefone || '27999998888').trim(),
-      documento: (clienteBody.documento || body.documento || '12.345.678/0001-90').trim(),
+      email: (clienteBody.email || body.email || 'contato@condominio.com.br').trim(),
+      telefone: (clienteBody.telefone || body.telefone || '27999999999').trim(),
+      documento: (clienteBody.documento || body.documento || '00.000.000/0000-00').trim(),
+      endereco: String(enderecoCliente || '').trim(),
     },
     plano: {
       nome: (planoBody.nome || body.plano_nome || 'Profissional').trim(),
@@ -167,13 +181,14 @@ routerAdd('GET', '/backend/v1/sholver/webhook/test', (e) => {
       : '')
 
   const payload = {
-    numero_pedido: 'COND-2026-TESTE-001',
+    numero_pedido: 'COND-2026-000123',
     cliente: {
-      razao_social: 'Condomínio Residencial Jardins',
-      nome_fantasia: 'Residencial Jardins',
-      email: 'contato@residencialjardins.com.br',
-      telefone: '27999998888',
-      documento: '12.345.678/0001-90',
+      razao_social: 'Condomínio Exemplo LTDA',
+      nome_fantasia: 'Condomínio Exemplo',
+      email: 'contato@condominio.com.br',
+      telefone: '27999999999',
+      documento: '00.000.000/0000-00',
+      endereco: 'Av. Exemplo, 123 - Vitória/ES, CEP 29000-000',
     },
     plano: {
       nome: 'Profissional',
