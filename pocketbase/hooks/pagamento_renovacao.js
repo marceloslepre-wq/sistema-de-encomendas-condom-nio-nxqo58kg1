@@ -10,7 +10,7 @@ routerAdd(
   'POST',
   '/backend/v1/pagamento/pix/criar',
   (e) => {
-    let auth = e.auth || e.requestInfo().auth || e.requestInfo().authRecord
+    let auth = e.auth || e.requestInfo().auth
     if (!auth) {
       try {
         const rawAuth =
@@ -580,6 +580,107 @@ routerAdd(
             novaLicId = localPag.getString('licenca_id')
           }
 
+          // Disparar sincronização com Sholver no polling de aprovação inline
+          try {
+            const sholverSecret =
+              $os.getenv('SHOLVER_WEBHOOK_SECRET') ||
+              ($secrets.has && $secrets.has('SHOLVER_WEBHOOK_SECRET')
+                ? $secrets.get('SHOLVER_WEBHOOK_SECRET')
+                : '')
+            if (sholverSecret) {
+              let sholverCondo = null
+              if (effCondoId) {
+                try {
+                  sholverCondo = $app.findRecordById('condos', effCondoId)
+                } catch (_) {}
+              }
+
+              const sholverPayload = {
+                numero_pedido: `COND-2026-${novaLicId || licencaAntigaId || paymentId}`,
+                cliente: {
+                  razao_social:
+                    (sholverCondo ? sholverCondo.getString('name') : '') || 'Condomínio',
+                  nome_fantasia:
+                    (sholverCondo
+                      ? sholverCondo.getString('responsavel') || sholverCondo.getString('name')
+                      : '') || 'Condomínio',
+                  email:
+                    (sholverCondo ? sholverCondo.getString('email') : '') ||
+                    'contato@condominio.com.br',
+                  telefone:
+                    (sholverCondo
+                      ? sholverCondo.getString('phone') || sholverCondo.getString('whatsapp_phone')
+                      : '') || '',
+                  documento: (sholverCondo ? sholverCondo.getString('cnpj') : '') || '',
+                },
+                plano: {
+                  nome: planoNome,
+                },
+                produto: 'Condpack',
+                valor: Number(payJson.transaction_amount || 0),
+                metodo_pagamento: 'PIX',
+                status: 'pago',
+              }
+
+              const sholverRes = $http.send({
+                url: 'https://plataforma-skip-apps-98eed.shrd00.internal.goskip.dev/backend/v1/webhook/condpack',
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Sholver-Secret': sholverSecret,
+                  'X-API-Key': sholverSecret,
+                },
+                body: JSON.stringify(sholverPayload),
+                timeout: 20,
+              })
+
+              const sStatus = sholverRes ? sholverRes.statusCode : 0
+              let sRaw = ''
+              if (sholverRes && sholverRes.raw) sRaw = String(sholverRes.raw)
+              else if (sholverRes && sholverRes.body) {
+                try {
+                  sRaw = new TextDecoder().decode(sholverRes.body)
+                } catch (_) {
+                  sRaw = String(sholverRes.body)
+                }
+              }
+              let sJson = null
+              try {
+                sJson = JSON.parse(sRaw)
+              } catch (_) {
+                sJson = { raw: sRaw }
+              }
+
+              const sLogCol = $app.findCollectionByNameOrId('sholver_sync_logs')
+              const sLogRec = new Record(sLogCol)
+              sLogRec.set('numero_pedido', sholverPayload.numero_pedido)
+              if (effCondoId) sLogRec.set('condo_id', effCondoId)
+              if (novaLicId || licencaAntigaId)
+                sLogRec.set('licenca_id', novaLicId || licencaAntigaId)
+              if (effPlanoId) sLogRec.set('plano_id', effPlanoId)
+              sLogRec.set('evento', 'pix_confirmado_polling')
+              sLogRec.set('status_pedido', 'pago')
+              sLogRec.set('metodo_pagamento', 'PIX')
+              sLogRec.set('valor', Number(payJson.transaction_amount || 0))
+              sLogRec.set('http_status', sStatus)
+              sLogRec.set('sucesso', sStatus >= 200 && sStatus < 300)
+              sLogRec.set('request_payload', sholverPayload)
+              sLogRec.set('response_body', sJson)
+              if (sStatus < 200 || sStatus >= 300) {
+                sLogRec.set('error', `HTTP ${sStatus}: ${sRaw.substring(0, 300)}`)
+              }
+              $app.saveNoValidate(sLogRec)
+            }
+          } catch (sErr) {
+            $app
+              .logger()
+              .error(
+                'Erro ao sincronizar com Sholver no polling de status:',
+                'error',
+                sErr.message || sErr,
+              )
+          }
+
           return e.json(200, {
             payment_id: paymentId,
             status: 'approved',
@@ -828,6 +929,108 @@ routerAdd('POST', '/backend/v1/pagamento/webhook', (e) => {
                 'novaLicencaId',
                 novaLicencaId,
               )
+
+            // Disparar sincronização com Sholver (Webhook fire-and-forget)
+            try {
+              const sholverSecret =
+                $os.getenv('SHOLVER_WEBHOOK_SECRET') ||
+                ($secrets.has && $secrets.has('SHOLVER_WEBHOOK_SECRET')
+                  ? $secrets.get('SHOLVER_WEBHOOK_SECRET')
+                  : '')
+              if (sholverSecret) {
+                let sholverCondo = null
+                if (effectiveCondoId) {
+                  try {
+                    sholverCondo = $app.findRecordById('condos', effectiveCondoId)
+                  } catch (_) {}
+                }
+
+                const sholverPayload = {
+                  numero_pedido: `COND-2026-${novaLicencaId || licencaAntigaId || paymentId}`,
+                  cliente: {
+                    razao_social:
+                      (sholverCondo ? sholverCondo.getString('name') : '') || 'Condomínio',
+                    nome_fantasia:
+                      (sholverCondo
+                        ? sholverCondo.getString('responsavel') || sholverCondo.getString('name')
+                        : '') || 'Condomínio',
+                    email:
+                      (sholverCondo ? sholverCondo.getString('email') : '') ||
+                      'contato@condominio.com.br',
+                    telefone:
+                      (sholverCondo
+                        ? sholverCondo.getString('phone') ||
+                          sholverCondo.getString('whatsapp_phone')
+                        : '') || '',
+                    documento: (sholverCondo ? sholverCondo.getString('cnpj') : '') || '',
+                  },
+                  plano: {
+                    nome: planoNome,
+                  },
+                  produto: 'Condpack',
+                  valor: Number(payJson.transaction_amount || 0),
+                  metodo_pagamento: 'PIX',
+                  status: 'pago',
+                }
+
+                const sholverRes = $http.send({
+                  url: 'https://plataforma-skip-apps-98eed.shrd00.internal.goskip.dev/backend/v1/webhook/condpack',
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-Sholver-Secret': sholverSecret,
+                    'X-API-Key': sholverSecret,
+                  },
+                  body: JSON.stringify(sholverPayload),
+                  timeout: 20,
+                })
+
+                const sStatus = sholverRes ? sholverRes.statusCode : 0
+                let sRaw = ''
+                if (sholverRes && sholverRes.raw) sRaw = String(sholverRes.raw)
+                else if (sholverRes && sholverRes.body) {
+                  try {
+                    sRaw = new TextDecoder().decode(sholverRes.body)
+                  } catch (_) {
+                    sRaw = String(sholverRes.body)
+                  }
+                }
+                let sJson = null
+                try {
+                  sJson = JSON.parse(sRaw)
+                } catch (_) {
+                  sJson = { raw: sRaw }
+                }
+
+                const sLogCol = $app.findCollectionByNameOrId('sholver_sync_logs')
+                const sLogRec = new Record(sLogCol)
+                sLogRec.set('numero_pedido', sholverPayload.numero_pedido)
+                if (effectiveCondoId) sLogRec.set('condo_id', effectiveCondoId)
+                if (novaLicencaId || licencaAntigaId)
+                  sLogRec.set('licenca_id', novaLicencaId || licencaAntigaId)
+                if (effectivePlanoId) sLogRec.set('plano_id', effectivePlanoId)
+                sLogRec.set('evento', 'pix_confirmado_webhook')
+                sLogRec.set('status_pedido', 'pago')
+                sLogRec.set('metodo_pagamento', 'PIX')
+                sLogRec.set('valor', Number(payJson.transaction_amount || 0))
+                sLogRec.set('http_status', sStatus)
+                sLogRec.set('sucesso', sStatus >= 200 && sStatus < 300)
+                sLogRec.set('request_payload', sholverPayload)
+                sLogRec.set('response_body', sJson)
+                if (sStatus < 200 || sStatus >= 300) {
+                  sLogRec.set('error', `HTTP ${sStatus}: ${sRaw.substring(0, 300)}`)
+                }
+                $app.saveNoValidate(sLogRec)
+              }
+            } catch (sErr) {
+              $app
+                .logger()
+                .error(
+                  'Erro ao sincronizar com Sholver no webhook do Mercado Pago:',
+                  'error',
+                  sErr.message || sErr,
+                )
+            }
           }
         } else {
           // Atualiza status pendente/cancelado se já tiver registro

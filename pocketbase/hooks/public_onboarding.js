@@ -142,6 +142,90 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
       createdUserId = userRecord.id
     })
 
+    // Disparo imediato para a Sholver (Onboarding / Novo Pedido Trial)
+    try {
+      const sholverSecret =
+        $os.getenv('SHOLVER_WEBHOOK_SECRET') ||
+        ($secrets.has && $secrets.has('SHOLVER_WEBHOOK_SECRET')
+          ? $secrets.get('SHOLVER_WEBHOOK_SECRET')
+          : '')
+      if (sholverSecret) {
+        const sholverPayload = {
+          numero_pedido: `COND-2026-${createdLicencaId}`,
+          cliente: {
+            razao_social: razaoSocial,
+            nome_fantasia: responsavel || razaoSocial,
+            email: email,
+            telefone: phone,
+            documento: cnpj,
+          },
+          plano: {
+            nome: selectedPlano.getString('nome') || 'Plano',
+          },
+          produto: 'Condpack',
+          valor: Number(selectedPlano.getInt('preco_mensal') || 0),
+          metodo_pagamento: 'TRIAL',
+          status: 'trial_ativo',
+        }
+
+        const sholverRes = $http.send({
+          url: 'https://plataforma-skip-apps-98eed.shrd00.internal.goskip.dev/backend/v1/webhook/condpack',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Sholver-Secret': sholverSecret,
+            'X-API-Key': sholverSecret,
+          },
+          body: JSON.stringify(sholverPayload),
+          timeout: 20,
+        })
+
+        const sStatus = sholverRes ? sholverRes.statusCode : 0
+        let sRaw = ''
+        if (sholverRes && sholverRes.raw) sRaw = String(sholverRes.raw)
+        else if (sholverRes && sholverRes.body) {
+          try {
+            sRaw = new TextDecoder().decode(sholverRes.body)
+          } catch (_) {
+            sRaw = String(sholverRes.body)
+          }
+        }
+        let sJson = null
+        try {
+          sJson = JSON.parse(sRaw)
+        } catch (_) {
+          sJson = { raw: sRaw }
+        }
+
+        const sLogCol = $app.findCollectionByNameOrId('sholver_sync_logs')
+        const sLogRec = new Record(sLogCol)
+        sLogRec.set('numero_pedido', sholverPayload.numero_pedido)
+        if (createdCondoId) sLogRec.set('condo_id', createdCondoId)
+        if (createdLicencaId) sLogRec.set('licenca_id', createdLicencaId)
+        if (selectedPlano) sLogRec.set('plano_id', selectedPlano.id)
+        sLogRec.set('evento', 'public_onboarding_trial')
+        sLogRec.set('status_pedido', 'trial_ativo')
+        sLogRec.set('metodo_pagamento', 'TRIAL')
+        sLogRec.set('valor', Number(selectedPlano.getInt('preco_mensal') || 0))
+        sLogRec.set('http_status', sStatus)
+        sLogRec.set('sucesso', sStatus >= 200 && sStatus < 300)
+        sLogRec.set('request_payload', sholverPayload)
+        sLogRec.set('response_body', sJson)
+        if (sStatus < 200 || sStatus >= 300) {
+          sLogRec.set('error', `HTTP ${sStatus}: ${sRaw.substring(0, 300)}`)
+        }
+        $app.saveNoValidate(sLogRec)
+      }
+    } catch (sholverErr) {
+      $app
+        .logger()
+        .error(
+          'Erro ao sincronizar com Sholver no public onboarding:',
+          'error',
+          sholverErr.message || sholverErr,
+        )
+    }
+
     return e.json(200, {
       success: true,
       condo: {
