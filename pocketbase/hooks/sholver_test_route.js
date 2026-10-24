@@ -16,7 +16,7 @@ routerAdd('POST', '/backend/v1/sholver/webhook/test', (e) => {
   const planoBody = body.plano || {}
 
   const numeroPedido =
-    body.numero_pedido || (body.licenca_id ? `COND-2026-${body.licenca_id}` : 'COND-2026-TESTE001')
+    body.numero_pedido || (body.licenca_id ? `COND-2026-${body.licenca_id}` : 'COND-2026-TESTE-001')
 
   const payload = {
     numero_pedido: String(numeroPedido).trim(),
@@ -167,7 +167,7 @@ routerAdd('GET', '/backend/v1/sholver/webhook/test', (e) => {
       : '')
 
   const payload = {
-    numero_pedido: 'COND-2026-TESTE001',
+    numero_pedido: 'COND-2026-TESTE-001',
     cliente: {
       razao_social: 'Condomínio Residencial Jardins',
       nome_fantasia: 'Residencial Jardins',
