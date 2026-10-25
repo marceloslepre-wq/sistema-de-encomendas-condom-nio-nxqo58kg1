@@ -162,6 +162,7 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
             nome_fantasia: responsavel || razaoSocial,
             email: email,
             telefone: phone,
+            whatsapp: phone,
             documento: cnpj,
             endereco: sholverEndereco,
           },

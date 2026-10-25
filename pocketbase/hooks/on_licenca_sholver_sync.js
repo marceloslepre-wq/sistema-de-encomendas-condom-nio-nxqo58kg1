@@ -31,6 +31,10 @@ onRecordAfterCreateSuccess((e) => {
       (condoRecord
         ? condoRecord.getString('phone') || condoRecord.getString('whatsapp_phone')
         : '') || ''
+    const whatsapp =
+      (condoRecord
+        ? condoRecord.getString('phone') || condoRecord.getString('whatsapp_phone')
+        : '') || ''
     const documento = (condoRecord ? condoRecord.getString('cnpj') : '') || ''
 
     let endereco = ''
@@ -75,6 +79,7 @@ onRecordAfterCreateSuccess((e) => {
         nome_fantasia: nomeFantasia,
         email: email,
         telefone: telefone,
+        whatsapp: whatsapp,
         documento: documento,
         endereco: endereco,
       },
@@ -217,6 +222,10 @@ onRecordAfterUpdateSuccess((e) => {
       (condoRecord
         ? condoRecord.getString('phone') || condoRecord.getString('whatsapp_phone')
         : '') || ''
+    const whatsapp =
+      (condoRecord
+        ? condoRecord.getString('phone') || condoRecord.getString('whatsapp_phone')
+        : '') || ''
     const documento = (condoRecord ? condoRecord.getString('cnpj') : '') || ''
 
     let endereco = ''
@@ -255,6 +264,7 @@ onRecordAfterUpdateSuccess((e) => {
         nome_fantasia: nomeFantasia,
         email: email,
         telefone: telefone,
+        whatsapp: whatsapp,
         documento: documento,
         endereco: endereco,
       },

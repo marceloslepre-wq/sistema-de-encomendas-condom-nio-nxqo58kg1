@@ -629,6 +629,10 @@ routerAdd(
                     (sholverCondo
                       ? sholverCondo.getString('phone') || sholverCondo.getString('whatsapp_phone')
                       : '') || '',
+                  whatsapp:
+                    (sholverCondo
+                      ? sholverCondo.getString('phone') || sholverCondo.getString('whatsapp_phone')
+                      : '') || '',
                   documento: (sholverCondo ? sholverCondo.getString('cnpj') : '') || '',
                   endereco: sholverEndereco,
                 },
@@ -998,6 +1002,11 @@ routerAdd('POST', '/backend/v1/pagamento/webhook', (e) => {
                       (sholverCondo ? sholverCondo.getString('email') : '') ||
                       'contato@condominio.com.br',
                     telefone:
+                      (sholverCondo
+                        ? sholverCondo.getString('phone') ||
+                          sholverCondo.getString('whatsapp_phone')
+                        : '') || '',
+                    whatsapp:
                       (sholverCondo
                         ? sholverCondo.getString('phone') ||
                           sholverCondo.getString('whatsapp_phone')

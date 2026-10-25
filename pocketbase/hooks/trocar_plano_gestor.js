@@ -164,6 +164,10 @@ routerAdd(
               (sholverCondo
                 ? sholverCondo.getString('phone') || sholverCondo.getString('whatsapp_phone')
                 : '') || '',
+            whatsapp:
+              (sholverCondo
+                ? sholverCondo.getString('phone') || sholverCondo.getString('whatsapp_phone')
+                : '') || '',
             documento: (sholverCondo ? sholverCondo.getString('cnpj') : '') || '',
             endereco: sholverEndereco,
           },

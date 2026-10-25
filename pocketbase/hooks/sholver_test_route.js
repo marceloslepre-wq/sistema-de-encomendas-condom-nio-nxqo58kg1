@@ -46,6 +46,12 @@ routerAdd('POST', '/backend/v1/sholver/webhook/test', (e) => {
       ).trim(),
       email: (clienteBody.email || body.email || 'contato@condominio.com.br').trim(),
       telefone: (clienteBody.telefone || body.telefone || '27999999999').trim(),
+      whatsapp: (clienteBody.whatsapp !== undefined
+        ? clienteBody.whatsapp
+        : body.whatsapp !== undefined
+          ? body.whatsapp
+          : clienteBody.telefone || body.telefone || '27999999999'
+      ).trim(),
       documento: (clienteBody.documento || body.documento || '00.000.000/0000-00').trim(),
       endereco: String(enderecoCliente || '').trim(),
     },
@@ -187,6 +193,7 @@ routerAdd('GET', '/backend/v1/sholver/webhook/test', (e) => {
       nome_fantasia: 'Condomínio Exemplo',
       email: 'contato@condominio.com.br',
       telefone: '27999999999',
+      whatsapp: '27999999999',
       documento: '00.000.000/0000-00',
       endereco: 'Av. Exemplo, 123 - Vitória/ES, CEP 29000-000',
     },
