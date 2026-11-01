@@ -31,15 +31,24 @@ routerAdd(
       return e.forbiddenError('Apenas gestores ou administradores podem alterar o plano.')
     }
 
-    const condoId = auth.getString('condo_id')
-    if (!condoId) {
-      return e.badRequestError('Nenhum condomínio vinculado a esta conta.')
-    }
-
     const body = e.requestInfo().body || {}
     const novoPlanoId = body.plano_id
     if (!novoPlanoId) {
       return e.badRequestError('O ID do novo plano é obrigatório.')
+    }
+
+    // Se for master/admin, aceita condo_id enviado no body (ex: modo suporte)
+    let condoId = auth.getString('condo_id')
+    if (
+      (role === 'master' || role === 'admin') &&
+      body.condo_id &&
+      String(body.condo_id).trim() !== ''
+    ) {
+      condoId = String(body.condo_id).trim()
+    }
+
+    if (!condoId) {
+      return e.badRequestError('Nenhum condomínio vinculado a esta conta.')
     }
 
     // Buscar novo plano

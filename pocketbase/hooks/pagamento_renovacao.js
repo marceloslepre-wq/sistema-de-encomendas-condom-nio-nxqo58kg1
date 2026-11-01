@@ -31,10 +31,20 @@ routerAdd(
     }
 
     const role = auth.getString('role')
-    const userCondoId = auth.getString('condo_id')
+    const reqBody = e.requestInfo().body || {}
+    let userCondoId = auth.getString('condo_id')
 
-    if (!userCondoId && role !== 'master') {
-      return e.badRequestError('Usuário não está vinculado a um condomínio.')
+    // Se for master/admin e informou condo_id no body (ex: suporte), usar o condomínio visitado
+    if (
+      (role === 'master' || role === 'admin') &&
+      reqBody.condo_id &&
+      String(reqBody.condo_id).trim() !== ''
+    ) {
+      userCondoId = String(reqBody.condo_id).trim()
+    }
+
+    if (!userCondoId) {
+      return e.badRequestError('Condomínio não informado ou usuário sem condomínio vinculado.')
     }
 
     const mpToken =
@@ -1138,10 +1148,19 @@ routerAdd(
     }
 
     const role = auth.getString('role')
-    const userCondoId = auth.getString('condo_id')
+    const reqBodyLegado = e.requestInfo().body || {}
+    let userCondoId = auth.getString('condo_id')
 
-    if (!userCondoId && role !== 'master') {
-      return e.badRequestError('Usuário não está vinculado a um condomínio.')
+    if (
+      (role === 'master' || role === 'admin') &&
+      reqBodyLegado.condo_id &&
+      String(reqBodyLegado.condo_id).trim() !== ''
+    ) {
+      userCondoId = String(reqBodyLegado.condo_id).trim()
+    }
+
+    if (!userCondoId) {
+      return e.badRequestError('Condomínio não informado ou usuário sem condomínio vinculado.')
     }
 
     const mpToken =

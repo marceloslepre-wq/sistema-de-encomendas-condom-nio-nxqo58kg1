@@ -70,27 +70,38 @@ const getAuthHeaders = () => {
   return token ? { Authorization: token } : {}
 }
 
-export const getLicencaStatus = async (): Promise<LicencaStatusResponse> => {
-  return await pb.send('/backend/v1/licenca/status', {
+export const getLicencaStatus = async (condoId?: string): Promise<LicencaStatusResponse> => {
+  const url = condoId
+    ? `/backend/v1/licenca/status?condo_id=${encodeURIComponent(condoId)}`
+    : '/backend/v1/licenca/status'
+  return await pb.send(url, {
     method: 'GET',
     requestKey: null,
     headers: getAuthHeaders(),
   })
 }
 
-export const iniciarRenovacao = async (): Promise<IniciarRenovacaoResponse> => {
+export const iniciarRenovacao = async (condoId?: string): Promise<IniciarRenovacaoResponse> => {
   return await pb.send('/backend/v1/pagamento/renovar', {
     method: 'POST',
+    body: condoId ? JSON.stringify({ condo_id: condoId }) : undefined,
     requestKey: null,
-    headers: getAuthHeaders(),
+    headers: {
+      ...getAuthHeaders(),
+      ...(condoId ? { 'Content-Type': 'application/json' } : {}),
+    },
   })
 }
 
-export const criarPixRenovacao = async (): Promise<CriarPixResponse> => {
+export const criarPixRenovacao = async (condoId?: string): Promise<CriarPixResponse> => {
   return await pb.send('/backend/v1/pagamento/pix/criar', {
     method: 'POST',
+    body: condoId ? JSON.stringify({ condo_id: condoId }) : undefined,
     requestKey: null,
-    headers: getAuthHeaders(),
+    headers: {
+      ...getAuthHeaders(),
+      ...(condoId ? { 'Content-Type': 'application/json' } : {}),
+    },
   })
 }
 

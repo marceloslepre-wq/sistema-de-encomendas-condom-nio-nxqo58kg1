@@ -32,18 +32,36 @@ routerAdd(
     }
 
     const role = auth.getString('role')
+
+    // Permitir que usuário master/admin consulte a licença de um condomínio específico
+    // (ex.: quando estiver em modo suporte/impersonação de condomínio)
+    const queryCondoId =
+      (e.request && e.request.url && e.request.url.query
+        ? e.request.url.query().get('condo_id')
+        : '') ||
+      (e.requestInfo && e.requestInfo().query ? e.requestInfo().query['condo_id'] : '') ||
+      ''
+
+    let condoId = ''
     if (role === 'master' || role === 'admin') {
-      return e.json(200, {
-        bloqueado: false,
-        status: 'ativa',
-        role: role,
-        master: true,
-        data_expiracao: null,
-        dias_restantes: 9999,
-      })
+      if (queryCondoId && queryCondoId.trim() !== '') {
+        // Master em modo suporte consultando condomínio visitado
+        condoId = queryCondoId.trim()
+      } else {
+        // Master no próprio condomínio (fora de suporte)
+        return e.json(200, {
+          bloqueado: false,
+          status: 'ativa',
+          role: role,
+          master: true,
+          data_expiracao: null,
+          dias_restantes: 9999,
+        })
+      }
+    } else {
+      condoId = auth.getString('condo_id')
     }
 
-    const condoId = auth.getString('condo_id')
     if (!condoId) {
       return e.json(200, {
         bloqueado: false,

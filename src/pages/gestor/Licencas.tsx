@@ -54,6 +54,7 @@ import {
 } from '@/services/master'
 import { getUnits } from '@/services/api'
 import { useRealtime } from '@/hooks/use-realtime'
+import { getActiveCondoId, isSupportModeActive } from '@/services/supportSession'
 import pb from '@/lib/pocketbase/client'
 
 export default function GestorLicencas() {
@@ -88,16 +89,22 @@ export default function GestorLicencas() {
   const loadData = async () => {
     setLoading(true)
     try {
-      const statusRes = await getLicencaStatus()
+      const inSupport = isSupportModeActive()
+      const activeCondoId = getActiveCondoId()
+      // Se estiver em modo suporte, passa o condomínio visitado explicitamente
+      const targetCondoId = inSupport && activeCondoId ? activeCondoId : undefined
+
+      const statusRes = await getLicencaStatus(targetCondoId)
       setLicencaData(statusRes)
 
-      const condoId = user?.condo_id || statusRes.condo_id
+      const effectiveCondoId =
+        inSupport && activeCondoId ? activeCondoId : user?.condo_id || statusRes.condo_id
 
-      const usersFilter = condoId ? `condo_id = "${condoId}"` : ''
+      const usersFilter = effectiveCondoId ? `condo_id = "${effectiveCondoId}"` : ''
       const [usersList, unitsList, histList] = await Promise.all([
         pb.collection('users').getFullList({ filter: usersFilter, requestKey: null }),
         getUnits(),
-        getHistoricoLicencas(condoId),
+        getHistoricoLicencas(effectiveCondoId),
       ])
 
       setTotalUsuarios(usersList.length)
@@ -139,7 +146,11 @@ export default function GestorLicencas() {
     setCopiadoPix(false)
 
     try {
-      const res = await criarPixRenovacao()
+      const inSupport = isSupportModeActive()
+      const activeCondoId = getActiveCondoId()
+      const targetCondoId = inSupport && activeCondoId ? activeCondoId : undefined
+
+      const res = await criarPixRenovacao(targetCondoId)
       if (!res.configured) {
         toast({
           title: 'Configuração do Gateway',
@@ -287,7 +298,11 @@ export default function GestorLicencas() {
 
     setSavingTroca(true)
     try {
-      const res: any = await trocarPlanoGestor(selectedPlanoId)
+      const inSupport = isSupportModeActive()
+      const activeCondoId = getActiveCondoId()
+      const targetCondoId = inSupport && activeCondoId ? activeCondoId : undefined
+
+      const res: any = await trocarPlanoGestor(selectedPlanoId, targetCondoId)
       toast({
         title: 'Plano alterado com sucesso!',
         description:
@@ -532,7 +547,8 @@ export default function GestorLicencas() {
             <CardDescription className="text-xs pt-1">
               Condomínio:{' '}
               <span className="font-semibold text-foreground">
-                {licencaData?.condo_name || user?.condo_id}
+                {licencaData?.condo_name ||
+                  (isSupportModeActive() ? getActiveCondoId() : user?.condo_id)}
               </span>
             </CardDescription>
           </CardHeader>
