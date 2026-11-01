@@ -1,26 +1,19 @@
 onRecordAfterDeleteSuccess((e) => {
   try {
     const email = e.record.getString('email')
-    const cpf = e.record.getString('cpf')
-    const telefone = e.record.getString('telefone')
-    const nome = e.record.getString('nome')
 
-    let filterParts = []
-
+    // Regra 1: A cascata de exclusão passa a casar SOMENTE por e-mail EXATO
+    // Nunca mais por telefone e nunca mais por CPF.
     if (email && email.trim() !== '') {
-      filterParts.push(`email='${email.replace(/'/g, "''")}'`)
-    }
-    if (cpf && cpf.trim() !== '') {
-      filterParts.push(`cpf='${cpf.replace(/'/g, "''")}'`)
-    }
-    if (telefone && telefone.trim() !== '') {
-      filterParts.push(`phone='${telefone.replace(/'/g, "''")}'`)
-    }
-
-    if (filterParts.length > 0) {
-      const filter = filterParts.join(' || ')
+      const escapedEmail = email.trim().replace(/'/g, "''")
       try {
-        const users = $app.findRecordsByFilter('users', filter, '-created', 10, 0)
+        const users = $app.findRecordsByFilter(
+          'users',
+          `email='${escapedEmail}'`,
+          '-created',
+          10,
+          0,
+        )
         for (const user of users) {
           if (user.getString('role') === 'morador') {
             try {
@@ -31,25 +24,8 @@ onRecordAfterDeleteSuccess((e) => {
       } catch (err) {}
     }
 
-    let notifFilters = []
-    if (nome) notifFilters.push(`morador='${nome.replace(/'/g, "''")}'`)
-    if (telefone) notifFilters.push(`celular='${telefone.replace(/'/g, "''")}'`)
-    if (notifFilters.length > 0) {
-      try {
-        const notificacoes = $app.findRecordsByFilter(
-          'notificacoes_enviadas',
-          notifFilters.join(' || '),
-          '',
-          1000,
-          0,
-        )
-        for (const n of notificacoes) {
-          try {
-            $app.delete(n)
-          } catch (_) {}
-        }
-      } catch (err) {}
-    }
+    // Regra 3: PRESERVAR as NOTIFICAÇÕES como histórico
+    // O hook não apaga mais registros de notificacoes_enviadas.
   } catch (err) {
     console.log('Error in on_morador_after_delete hook:', err)
   }
