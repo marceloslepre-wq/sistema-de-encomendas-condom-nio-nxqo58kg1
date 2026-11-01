@@ -151,7 +151,7 @@ export default function GestorUsuarios() {
 
   const loadData = async () => {
     try {
-      const usersData = await pb.send('/backend/v1/admin/users', { method: 'GET' })
+      const usersData = await getUsers()
       setUsers(usersData)
       const invData = await getInvitations()
       setInvitations(invData)

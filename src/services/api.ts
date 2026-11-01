@@ -156,12 +156,18 @@ export const updateMorador = async (id: string, data: any) => {
 }
 export const deleteMorador = (id: string) => pb.collection('moradores').delete(id)
 
-export const getUsers = () => {
+export const getUsers = async (): Promise<AppUser[]> => {
   const activeCondoId = getActiveCondoId()
-  const isMaster = pb.authStore.record?.role === 'master' || pb.authStore.record?.role === 'admin'
-  const inSupport = isSupportModeActive()
-  const filter = (!isMaster || inSupport) && activeCondoId ? `condo_id = "${activeCondoId}"` : ''
-  return pb.collection('users').getFullList({ filter, sort: '-created' })
+  const filter = activeCondoId ? `condo_id = "${activeCondoId}"` : ''
+  try {
+    const list: AppUser[] = await pb.send('/backend/v1/admin/users', { method: 'GET' })
+    if (activeCondoId) {
+      return list.filter((u) => u.condo_id === activeCondoId)
+    }
+    return list
+  } catch {
+    return await pb.collection('users').getFullList<AppUser>({ filter, sort: '-created' })
+  }
 }
 export const updateUser = async (id: string, data: any) => {
   const existingRecord = await pb.collection('users').getOne(id)
