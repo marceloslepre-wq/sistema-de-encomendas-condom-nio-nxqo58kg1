@@ -67,7 +67,7 @@ export default function GuiaPublico() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      {/* Cabeçalho Vitrine Público com Logo CondPack + Botão CTA Testar Grátis por 15 dias */}
+      {/* Cabeçalho Vitrine Público com Logo CondPack + Botão CTA Testar Grátis por 30 dias */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-4">
           <Link
@@ -92,7 +92,7 @@ export default function GuiaPublico() {
             </div>
           </Link>
 
-          {/* Botão de Ação CTA "Testar Grátis por 15 dias" para /cadastro */}
+          {/* Botão de Ação CTA "Testar Grátis por 30 dias" para /cadastro */}
           <div className="flex items-center gap-3 shrink-0">
             <Link
               to="/"
@@ -105,7 +105,7 @@ export default function GuiaPublico() {
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm h-9 sm:h-11 px-3 sm:px-5 shadow-sm transition-all gap-1.5"
             >
               <Link to="/cadastro">
-                <span>Testar Grátis por 15 dias</span>
+                <span>Testar Grátis por 30 dias</span>
                 <ArrowRight className="w-4 h-4 ml-0.5" />
               </Link>
             </Button>
@@ -187,7 +187,7 @@ export default function GuiaPublico() {
             <div className="p-3 bg-white rounded-xl border border-slate-200/70 text-xs flex items-center gap-2.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span className="text-slate-700">
-                <strong>Trial 15 Dias:</strong> sem cartão e ativação imediata
+                <strong>Trial 30 Dias:</strong> sem cartão e ativação imediata
               </span>
             </div>
           </div>
@@ -281,7 +281,7 @@ export default function GuiaPublico() {
           <div className="space-y-2 text-center md:text-left">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 text-xs font-semibold text-white backdrop-blur-xs">
               <ShieldCheck className="w-4 h-4 text-emerald-300" />
-              15 Dias Sem Compromisso
+              30 Dias Sem Compromisso
             </div>
             <h3 className="text-xl sm:text-2xl font-black tracking-tight">
               Gostou do CondPack? Comece seu teste agora mesmo.
@@ -299,7 +299,7 @@ export default function GuiaPublico() {
               className="w-full sm:w-auto bg-white text-[#0d2a58] hover:bg-slate-100 font-extrabold text-sm sm:text-base h-12 px-6 shadow-lg transition-transform hover:scale-105"
             >
               <Link to="/cadastro">
-                <span>Testar Grátis por 15 dias</span>
+                <span>Testar Grátis por 30 dias</span>
                 <ArrowRight className="w-4 h-4 ml-1.5 text-[#00a896]" />
               </Link>
             </Button>
@@ -326,7 +326,7 @@ export default function GuiaPublico() {
 
           <div className="flex items-center gap-5">
             <Link to="/cadastro" className="text-blue-600 hover:underline font-semibold">
-              Criar Conta (15 dias grátis)
+              Criar Conta (30 dias grátis)
             </Link>
             <Link to="/" className="hover:underline">
               Acesso ao Sistema

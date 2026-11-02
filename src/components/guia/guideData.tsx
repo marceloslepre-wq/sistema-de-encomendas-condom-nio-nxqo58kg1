@@ -526,16 +526,16 @@ export const CONDPACK_GUIDE_SECTIONS: GuideSectionData[] = [
     category: 'Financeiro',
     title: 'Licença, Planos & Renovação Instantânea por PIX',
     subtitle:
-      'Acompanhe o período de trial de 15 dias, consulte o plano vigente e renove com liberação automática em segundos através do PIX Mercado Pago.',
+      'Acompanhe o período de trial de 30 dias, consulte o plano vigente e renove com liberação automática em segundos através do PIX Mercado Pago.',
     targetRoute: '/gestor/licencas',
     targetLabel: 'Ir para Licenças',
     allowedRoles: ['gestor', 'morador', 'master'],
     steps: [
       {
         step: 1,
-        title: 'Período de Degustação (Trial de 15 Dias)',
+        title: 'Período de Degustação (Trial de 30 Dias)',
         description:
-          'Todo novo condomínio cadastrado no CondPack recebe 15 dias de teste gratuito com todas as funcionalidades liberadas e sem compromisso.',
+          'Todo novo condomínio cadastrado no CondPack recebe 30 dias de teste gratuito com todas as funcionalidades liberadas e sem compromisso.',
       },
       {
         step: 2,
@@ -583,7 +583,7 @@ export const CONDPACK_GUIDE_SECTIONS: GuideSectionData[] = [
  * 6. Registro de Encomenda na Portaria
  * 7. Triagem & Retirada com Código Seguro
  * 10. Configurações & WhatsApp Próprio do Condomínio (com QR Code de pareamento)
- * 11. Licença e Planos (explicando o trial de 15 dias e renovação PIX)
+ * 11. Licença e Planos (explicando o trial de 30 dias e renovação PIX)
  */
 export const CONDPACK_PUBLIC_SECTIONS: GuideSectionData[] = CONDPACK_GUIDE_SECTIONS.filter(
   (sec) =>

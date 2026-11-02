@@ -65,7 +65,7 @@ onRecordAfterCreateSuccess((e) => {
       statusPedido = 'pago'
       metodoPagamento = 'ISENTO'
     } else if (statusLicenca === 'ativa' && licenca.getString('data_expiracao')) {
-      // Verificar se é trial (ex: 15 dias)
+      // Verificar se é trial (ex: 30 dias)
       statusPedido = 'trial_ativo'
       metodoPagamento = 'TRIAL'
     }

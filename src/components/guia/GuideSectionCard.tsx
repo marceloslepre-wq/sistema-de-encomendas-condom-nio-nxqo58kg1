@@ -183,7 +183,7 @@ export function GuideSectionCard({
             >
               <span>
                 {isPublicMode
-                  ? 'Experimentar Grátis por 15 Dias'
+                  ? 'Experimentar Grátis por 30 Dias'
                   : `Acessar ${section.targetLabel?.replace(/^Ir para\s*/, '') || 'a funcionalidade'}`}
               </span>
               <ChevronRight className="w-3.5 h-3.5" />

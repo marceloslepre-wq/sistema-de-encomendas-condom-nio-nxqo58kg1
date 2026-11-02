@@ -91,9 +91,9 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
     return e.badRequestError('Nenhum plano ativo foi encontrado para vincular ao teste grátis.')
   }
 
-  // Calcular data de expiração (15 dias a partir de hoje às 23:59:59)
+  // Calcular data de expiração (30 dias a partir de hoje às 23:59:59)
   const now = new Date()
-  const expirationDate = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000)
+  const expirationDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
   const expirationISO = expirationDate.toISOString()
 
   let createdCondoId = ''
@@ -116,7 +116,7 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
       txApp.save(condoRecord)
       createdCondoId = condoRecord.id
 
-      // 2. Criar a licença de trial de 15 dias vinculada ao condomínio e ao plano
+      // 2. Criar a licença de trial de 30 dias vinculada ao condomínio e ao plano
       const licencasCol = txApp.findCollectionByNameOrId('licencas')
       const licencaRecord = new Record(licencasCol)
       licencaRecord.set('condo_id', createdCondoId)
@@ -251,7 +251,7 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
         id: createdLicencaId,
         status: 'ativa',
         data_expiracao: expirationISO,
-        dias_trial: 15,
+        dias_trial: 30,
       },
       gestor: {
         id: createdUserId,

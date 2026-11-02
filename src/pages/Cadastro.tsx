@@ -234,7 +234,7 @@ export default function Cadastro() {
       setOnboardingResult(res)
       toast({
         title: 'Conta criada com sucesso!',
-        description: 'Seu período de teste grátis de 15 dias está ativo com seu login exclusivo.',
+        description: 'Seu período de teste grátis de 30 dias está ativo com seu login exclusivo.',
       })
     } catch (error: any) {
       toast({
@@ -315,7 +315,7 @@ export default function Cadastro() {
               </h1>
               <p className="text-slate-600 max-w-lg mx-auto">
                 Seu condomínio foi provisionado e sua licença de avaliação de{' '}
-                <span className="font-semibold text-slate-800">15 dias</span> já está pronta para
+                <span className="font-semibold text-slate-800">30 dias</span> já está pronta para
                 uso no seu login exclusivo.
               </p>
             </div>
@@ -373,7 +373,7 @@ export default function Cadastro() {
                         <strong>
                           {formatExpirationDate(onboardingResult.licenca.data_expiracao)}
                         </strong>{' '}
-                        (15 dias)
+                        (30 dias)
                       </span>
                     </div>
                   </div>
@@ -410,10 +410,10 @@ export default function Cadastro() {
           <div className="space-y-8">
             <div className="space-y-2">
               <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                Solicite seu Teste Grátis por 15 dias
+                Solicite seu Teste Grátis por 30 dias
               </h1>
               <p className="text-base sm:text-lg text-slate-600">
-                Avalie nossa solução por 15 dias sem compromisso e comece com seu login exclusivo.
+                Avalie nossa solução por 30 dias sem compromisso e comece com seu login exclusivo.
               </p>
             </div>
 
@@ -769,7 +769,7 @@ export default function Cadastro() {
                               Período de Testes
                             </span>
                             <span className="text-xs text-emerald-600 font-semibold block">
-                              15 Dias Grátis
+                              30 Dias Grátis
                             </span>
                           </div>
                           <span className="font-bold text-emerald-600 text-sm">R$ 0,00</span>
@@ -800,12 +800,12 @@ export default function Cadastro() {
                               <span>Configurando seu condomínio...</span>
                             </>
                           ) : (
-                            <span>Teste Grátis por 15 dias</span>
+                            <span>Teste Grátis por 30 dias</span>
                           )}
                         </Button>
 
                         <p className="text-center text-xs text-slate-500 leading-relaxed px-2">
-                          Após os 15 dias, você poderá renovar o plano por 30 dias diretamente pelo
+                          Após os 30 dias, você poderá renovar o plano por 30 dias diretamente pelo
                           sistema. Sem compromisso, cancele quando quiser.
                         </p>
                       </div>
