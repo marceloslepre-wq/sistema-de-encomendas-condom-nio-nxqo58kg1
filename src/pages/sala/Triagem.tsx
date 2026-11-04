@@ -37,6 +37,7 @@ import {
 import useRealtime from '@/hooks/use-realtime'
 import { format } from 'date-fns'
 import pb from '@/lib/pocketbase/client'
+import { PackagePhotoPicker } from '@/components/sala/PackagePhotoPicker'
 
 type ExpandedVolume = RecebimentoAuditoria & {
   _matchedMorador?: any
@@ -70,7 +71,6 @@ export default function SalaTriagem() {
   const [volumeType, setVolumeType] = useState('')
   const [shelfLocation, setShelfLocation] = useState('')
   const [photo, setPhoto] = useState<File | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -195,7 +195,6 @@ export default function SalaTriagem() {
       setVolumeType(volumeTypes.length > 0 ? volumeTypes[0].name : '')
       setShelfLocation(shelfLocations.length > 0 ? shelfLocations[0].name : '')
       setPhoto(null)
-      if (fileInputRef.current) fileInputRef.current.value = ''
     } catch (err: any) {
       toast({ title: 'Erro', description: 'Falha ao iniciar triagem.', variant: 'destructive' })
     }
@@ -402,12 +401,7 @@ export default function SalaTriagem() {
               </div>
               <div className="space-y-2">
                 <Label>Foto do Pacote</Label>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  onChange={(e) => setPhoto(e.target.files?.[0] || null)}
-                />
+                <PackagePhotoPicker photo={photo} onChange={setPhoto} />
               </div>
             </div>
 
