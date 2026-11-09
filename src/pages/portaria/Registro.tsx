@@ -34,7 +34,8 @@ import { getErrorMessage, extractFieldErrors } from '@/lib/pocketbase/errors'
 import pb from '@/lib/pocketbase/client'
 import { RecebimentosTable } from '@/components/RecebimentosTable'
 import { useRealtime } from '@/hooks/use-realtime'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+
+import { TouchCombobox } from '@/components/TouchCombobox'
 import {
   Command,
   CommandEmpty,
@@ -109,7 +110,7 @@ function UnitCombobox({
   }, [units, search])
 
   return (
-    <Popover
+    <TouchCombobox
       open={open}
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen)
@@ -117,8 +118,8 @@ function UnitCombobox({
           setSearch('')
         }
       }}
-    >
-      <PopoverTrigger asChild>
+      contentClassName="w-[300px] p-0"
+      trigger={
         <Button
           variant="outline"
           role="combobox"
@@ -130,38 +131,37 @@ function UnitCombobox({
             : 'Selecione a unidade...'}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0" align="start">
-        <Command shouldFilter={false}>
-          <CommandInput
-            placeholder="Buscar unidade (ex: 101, Torre A)..."
-            value={search}
-            onValueChange={setSearch}
-          />
-          <CommandList>
-            <CommandEmpty>Nenhuma unidade encontrada.</CommandEmpty>
-            <CommandGroup>
-              {filteredUnits.map((u) => (
-                <CommandItem
-                  key={u.id}
-                  value={u.id}
-                  onSelect={() => {
-                    onChange(u.id)
-                    setOpen(false)
-                    setSearch('')
-                  }}
-                >
-                  <CheckCircle2
-                    className={cn('mr-2 h-4 w-4', value === u.id ? 'opacity-100' : 'opacity-0')}
-                  />
-                  {u.tower} - {u.apartment}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+      }
+    >
+      <Command shouldFilter={false}>
+        <CommandInput
+          placeholder="Buscar unidade (ex: 101, Torre A)..."
+          value={search}
+          onValueChange={setSearch}
+        />
+        <CommandList>
+          <CommandEmpty>Nenhuma unidade encontrada.</CommandEmpty>
+          <CommandGroup>
+            {filteredUnits.map((u) => (
+              <CommandItem
+                key={u.id}
+                value={u.id}
+                onSelect={() => {
+                  onChange(u.id)
+                  setOpen(false)
+                  setSearch('')
+                }}
+              >
+                <CheckCircle2
+                  className={cn('mr-2 h-4 w-4', value === u.id ? 'opacity-100' : 'opacity-0')}
+                />
+                {u.tower} - {u.apartment}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </Command>
+    </TouchCombobox>
   )
 }
 
@@ -993,7 +993,7 @@ export default function PortariaRegistro() {
                   <Label>
                     Nome do Entregador/Portador <span className="text-destructive">*</span>
                   </Label>
-                  <Popover
+                  <TouchCombobox
                     open={courierComboboxOpen}
                     onOpenChange={(open) => {
                       setCourierComboboxOpen(open)
@@ -1001,8 +1001,8 @@ export default function PortariaRegistro() {
                         setCourierSearchText(courierName)
                       }
                     }}
-                  >
-                    <PopoverTrigger asChild>
+                    contentClassName="w-[--radix-popover-trigger-width] min-w-[300px] p-0"
+                    trigger={
                       <Button
                         type="button"
                         variant="outline"
@@ -1018,114 +1018,110 @@ export default function PortariaRegistro() {
                         </span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="w-[--radix-popover-trigger-width] min-w-[300px] p-0"
-                      align="start"
-                    >
-                      <Command>
-                        <CommandInput
-                          placeholder="Buscar ou digitar nome..."
-                          value={courierSearchText}
-                          onValueChange={(val) => {
-                            setCourierSearchText(val)
-                            setCourierName(val)
-                          }}
-                        />
-                        <CommandList className="max-h-60">
-                          {courierSearchText.trim() &&
-                            !entregadoresList.some(
-                              (ent) =>
-                                ent.nome.toLowerCase() === courierSearchText.trim().toLowerCase(),
-                            ) && (
-                              <CommandGroup heading="Digitação manual">
-                                <CommandItem
-                                  value={`__custom__:${courierSearchText}`}
-                                  onSelect={() => {
-                                    setCourierName(courierSearchText.trim())
-                                    setCourierComboboxOpen(false)
-                                  }}
-                                >
-                                  <User className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
-                                  <span className="truncate">
-                                    Usar &quot;{courierSearchText.trim()}&quot; (portador avulso)
-                                  </span>
-                                </CommandItem>
-                              </CommandGroup>
-                            )}
-
-                          <CommandEmpty>
-                            {courierSearchText.trim() ? (
-                              <div className="p-2 text-sm text-center">
-                                <p className="text-muted-foreground">
-                                  Nenhum entregador cadastrado encontrado.
-                                </p>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="mt-1 text-xs text-primary"
-                                  onClick={() => {
-                                    setCourierName(courierSearchText.trim())
-                                    setCourierComboboxOpen(false)
-                                  }}
-                                >
-                                  Manter &quot;{courierSearchText.trim()}&quot;
-                                </Button>
-                              </div>
-                            ) : (
-                              'Nenhum entregador cadastrado.'
-                            )}
-                          </CommandEmpty>
-
-                          {entregadoresList.length > 0 && (
-                            <CommandGroup heading="Entregadores Cadastrados">
-                              {entregadoresList.map((ent) => {
-                                const isSelected =
-                                  courierName.toLowerCase() === ent.nome.toLowerCase()
-                                return (
-                                  <CommandItem
-                                    key={ent.id}
-                                    value={`${ent.nome} ${ent.cpf} ${ent.celular}`}
-                                    onSelect={() => {
-                                      setCourierName(ent.nome)
-                                      setCourierSearchText(ent.nome)
-                                      if (ent.cpf) {
-                                        setCourierCpf(formatCpf(ent.cpf))
-                                      }
-                                      if (ent.celular) {
-                                        setCourierPhone(formatPhone(ent.celular))
-                                      }
-                                      setCourierComboboxOpen(false)
-                                      toast({
-                                        title: 'Entregador Selecionado',
-                                        description: `${ent.nome} preenchido automaticamente.`,
-                                      })
-                                    }}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        'mr-2 h-4 w-4 shrink-0 text-primary',
-                                        isSelected ? 'opacity-100' : 'opacity-0',
-                                      )}
-                                    />
-                                    <div className="flex flex-col truncate">
-                                      <span className="font-medium truncate">{ent.nome}</span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {ent.cpf ? `CPF: ${formatCpf(ent.cpf)}` : ''}
-                                        {ent.cpf && ent.celular ? ' • ' : ''}
-                                        {ent.celular ? formatPhone(ent.celular) : ''}
-                                      </span>
-                                    </div>
-                                  </CommandItem>
-                                )
-                              })}
+                    }
+                  >
+                    <Command>
+                      <CommandInput
+                        placeholder="Buscar ou digitar nome..."
+                        value={courierSearchText}
+                        onValueChange={(val) => {
+                          setCourierSearchText(val)
+                          setCourierName(val)
+                        }}
+                      />
+                      <CommandList className="max-h-60">
+                        {courierSearchText.trim() &&
+                          !entregadoresList.some(
+                            (ent) =>
+                              ent.nome.toLowerCase() === courierSearchText.trim().toLowerCase(),
+                          ) && (
+                            <CommandGroup heading="Digitação manual">
+                              <CommandItem
+                                value={`__custom__:${courierSearchText}`}
+                                onSelect={() => {
+                                  setCourierName(courierSearchText.trim())
+                                  setCourierComboboxOpen(false)
+                                }}
+                              >
+                                <User className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
+                                <span className="truncate">
+                                  Usar &quot;{courierSearchText.trim()}&quot; (portador avulso)
+                                </span>
+                              </CommandItem>
                             </CommandGroup>
                           )}
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+
+                        <CommandEmpty>
+                          {courierSearchText.trim() ? (
+                            <div className="p-2 text-sm text-center">
+                              <p className="text-muted-foreground">
+                                Nenhum entregador cadastrado encontrado.
+                              </p>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="mt-1 text-xs text-primary"
+                                onClick={() => {
+                                  setCourierName(courierSearchText.trim())
+                                  setCourierComboboxOpen(false)
+                                }}
+                              >
+                                Manter &quot;{courierSearchText.trim()}&quot;
+                              </Button>
+                            </div>
+                          ) : (
+                            'Nenhum entregador cadastrado.'
+                          )}
+                        </CommandEmpty>
+
+                        {entregadoresList.length > 0 && (
+                          <CommandGroup heading="Entregadores Cadastrados">
+                            {entregadoresList.map((ent) => {
+                              const isSelected =
+                                courierName.toLowerCase() === ent.nome.toLowerCase()
+                              return (
+                                <CommandItem
+                                  key={ent.id}
+                                  value={`${ent.nome} ${ent.cpf} ${ent.celular}`}
+                                  onSelect={() => {
+                                    setCourierName(ent.nome)
+                                    setCourierSearchText(ent.nome)
+                                    if (ent.cpf) {
+                                      setCourierCpf(formatCpf(ent.cpf))
+                                    }
+                                    if (ent.celular) {
+                                      setCourierPhone(formatPhone(ent.celular))
+                                    }
+                                    setCourierComboboxOpen(false)
+                                    toast({
+                                      title: 'Entregador Selecionado',
+                                      description: `${ent.nome} preenchido automaticamente.`,
+                                    })
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      'mr-2 h-4 w-4 shrink-0 text-primary',
+                                      isSelected ? 'opacity-100' : 'opacity-0',
+                                    )}
+                                  />
+                                  <div className="flex flex-col truncate">
+                                    <span className="font-medium truncate">{ent.nome}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {ent.cpf ? `CPF: ${formatCpf(ent.cpf)}` : ''}
+                                      {ent.cpf && ent.celular ? ' • ' : ''}
+                                      {ent.celular ? formatPhone(ent.celular) : ''}
+                                    </span>
+                                  </div>
+                                </CommandItem>
+                              )
+                            })}
+                          </CommandGroup>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </TouchCombobox>
                 </div>
 
                 <div className="space-y-2">
