@@ -165,6 +165,80 @@ function UnitCombobox({
   )
 }
 
+function CarrierCombobox({
+  carriers,
+  value,
+  onChange,
+}: {
+  carriers: Carrier[]
+  value: string
+  onChange: (val: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const names = useMemo(() => [...carriers.map((c) => c.name), 'Outros'], [carriers])
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return names
+    return names.filter((name) => name.toLowerCase().includes(q))
+  }, [names, search])
+
+  return (
+    <TouchCombobox
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen)
+        if (!nextOpen) {
+          setSearch('')
+        }
+      }}
+      contentClassName="w-[300px] p-0"
+      trigger={
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between bg-background font-normal"
+        >
+          {value || 'Selecione...'}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      }
+    >
+      <Command shouldFilter={false}>
+        <CommandInput
+          placeholder="Buscar transportadora..."
+          value={search}
+          onValueChange={setSearch}
+        />
+        <CommandList>
+          <CommandEmpty>Nenhuma transportadora encontrada.</CommandEmpty>
+          <CommandGroup>
+            {filtered.map((name, i) => (
+              <CommandItem
+                key={`${name}-${i}`}
+                value={name}
+                onSelect={() => {
+                  onChange(name)
+                  setOpen(false)
+                  setSearch('')
+                }}
+              >
+                <Check
+                  className={cn('mr-2 h-4 w-4', value === name ? 'opacity-100' : 'opacity-0')}
+                />
+                {name}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </Command>
+    </TouchCombobox>
+  )
+}
+
 export default function PortariaRegistro() {
   const { toast } = useToast()
 
@@ -828,19 +902,7 @@ export default function PortariaRegistro() {
                     <Truck className="w-4 h-4 text-muted-foreground" /> Transportadora{' '}
                     <span className="text-destructive">*</span>
                   </Label>
-                  <Select value={carrier} onValueChange={setCarrier}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {carriers.map((c) => (
-                        <SelectItem key={c.id} value={c.name}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="Outros">Outros</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <CarrierCombobox carriers={carriers} value={carrier} onChange={setCarrier} />
                 </div>
               </div>
 
