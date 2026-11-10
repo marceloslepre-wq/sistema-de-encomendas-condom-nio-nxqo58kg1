@@ -251,18 +251,25 @@ export default function SalaTriagem() {
     window.print()
   }
 
-  // Busca inteligente (client-side, por inclusão, ignorando acentos/maiúsculas)
+  // Busca inteligente por termos (client-side, ignorando acentos/maiúsculas).
+  // A consulta é dividida em palavras; o volume casa quando TODAS as palavras
+  // aparecem em algum campo pesquisável (ex.: "torre d 601" acha "TORRE D (BROMELIA) - 601").
   const filteredRecebimentos = searchQuery.trim()
     ? recebimentos.filter((vol) => {
-        const q = normalizeText(searchQuery)
+        // normalizeText remove espaços, então dividimos a consulta crua antes de normalizar cada termo
+        const terms = searchQuery
+          .trim()
+          .split(/\s+/)
+          .map((t) => normalizeText(t))
+          .filter(Boolean)
         const haystacks = [
           getDisplayName(vol),
           vol.unidade || '',
           vol.transportadora || '',
           vol.status || '',
           vol.codigo_rastreio || '',
-        ]
-        return haystacks.some((h) => normalizeText(h).includes(q))
+        ].map((h) => normalizeText(h))
+        return terms.every((term) => haystacks.some((h) => h.includes(term)))
       })
     : recebimentos
 
