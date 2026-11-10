@@ -191,7 +191,7 @@ export default function SalaTriagem() {
 
       setSelectedVolume(updatedVol)
       setDialogOpen(true)
-      setTrackingCode('')
+      setTrackingCode(vol.codigo_rastreio || '')
       setVolumeType(volumeTypes.length > 0 ? volumeTypes[0].name : '')
       setShelfLocation(shelfLocations.length > 0 ? shelfLocations[0].name : '')
       setPhoto(null)

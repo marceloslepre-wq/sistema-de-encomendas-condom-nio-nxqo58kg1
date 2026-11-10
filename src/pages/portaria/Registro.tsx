@@ -86,6 +86,7 @@ type TableEntry = {
   unitId: string
   residentId: string
   volumes: number
+  trackingCode: string
   residents?: ResidentUser[]
   loadingResidents?: boolean
 }
@@ -253,6 +254,7 @@ export default function PortariaRegistro() {
       unitId: '',
       residentId: '',
       volumes: 1,
+      trackingCode: '',
       residents: [],
       loadingResidents: false,
     },
@@ -335,6 +337,7 @@ export default function PortariaRegistro() {
         unitId: '',
         residentId: '',
         volumes: 1,
+        trackingCode: '',
         residents: [],
         loadingResidents: false,
       },
@@ -537,6 +540,7 @@ export default function PortariaRegistro() {
         const moradorVinculado = await ensureUserVinculado(unit, group, residentCandidate)
 
         const moradorId = moradorVinculado.id
+        const trackingCode = (group.trackingCode || '').trim()
         const userPhone = moradorVinculado.phone
 
         const unidadeStr = `${unit.tower} - ${unit.apartment}`
@@ -591,7 +595,7 @@ export default function PortariaRegistro() {
 
           formData.append('entregador_nome', courierName)
           formData.append('entregador_cpf', courierCpf.replace(/\D/g, ''))
-          formData.append('codigo_rastreio', '')
+          formData.append('codigo_rastreio', trackingCode)
           formData.append('observacoes', observacaoAuditoria)
           formData.append('celular_validacao', courierPhone.replace(/\D/g, ''))
           formData.append('codigo_validacao', codValidado)
@@ -697,6 +701,7 @@ export default function PortariaRegistro() {
         unitId: '',
         residentId: '',
         volumes: 1,
+        trackingCode: '',
         residents: [],
         loadingResidents: false,
       },
@@ -929,6 +934,10 @@ export default function PortariaRegistro() {
                         <TableHead className="w-32">
                           Volume <span className="text-destructive">*</span>
                         </TableHead>
+                        <TableHead>
+                          Código de Rastreio{' '}
+                          <span className="text-muted-foreground font-normal">(Opcional)</span>
+                        </TableHead>
                         <TableHead className="w-[80px] text-center pr-4">Ação</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1021,6 +1030,18 @@ export default function PortariaRegistro() {
                                     volumes: parseInt(e.target.value, 10) || 0,
                                   }))
                                 }
+                                className="bg-background"
+                              />
+                            </TableCell>
+                            <TableCell className="align-top pt-4">
+                              <Input
+                                value={entry.trackingCode}
+                                onChange={(e) =>
+                                  updateEntry(entry.id, (curr) => ({
+                                    trackingCode: e.target.value,
+                                  }))
+                                }
+                                placeholder="Ex: AB123456789BR"
                                 className="bg-background"
                               />
                             </TableCell>
