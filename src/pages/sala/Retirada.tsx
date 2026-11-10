@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
-import { Search, Package, CheckCircle2, Loader2, Info } from 'lucide-react'
+import { Search, Package, CheckCircle2, Loader2, Info, ImageOff } from 'lucide-react'
 import { RecebimentoAuditoria } from '@/services/api'
 import useRealtime from '@/hooks/use-realtime'
 import { format } from 'date-fns'
@@ -48,6 +48,15 @@ export default function SalaRetirada() {
     const name = p.morador?.toLowerCase() || p.expand?.morador_id?.name?.toLowerCase() || ''
     return apt.includes(term) || name.includes(term)
   })
+
+  const getPhotoUrl = (p: any): string | null => {
+    if (!p?.photo) return null
+    try {
+      return pb.files.getURL(p, p.photo)
+    } catch {
+      return null
+    }
+  }
 
   const handleSelect = (p: any) => {
     setSelectedParcel(p)
@@ -175,6 +184,21 @@ export default function SalaRetirada() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-8 space-y-8 flex flex-col items-center">
+                <div className="w-full">
+                  {getPhotoUrl(selectedParcel) ? (
+                    <img
+                      src={getPhotoUrl(selectedParcel) as string}
+                      alt="Foto do pacote"
+                      className="w-full max-h-72 object-contain rounded-lg border bg-muted"
+                    />
+                  ) : (
+                    <div className="w-full h-32 flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/50 text-sm text-muted-foreground">
+                      <ImageOff className="h-6 w-6 opacity-50" />
+                      Sem foto do pacote registrada
+                    </div>
+                  )}
+                </div>
+
                 <div className="text-center space-y-1 w-full">
                   <p className="text-xl font-bold">
                     {selectedParcel.expand?.unidade_id
