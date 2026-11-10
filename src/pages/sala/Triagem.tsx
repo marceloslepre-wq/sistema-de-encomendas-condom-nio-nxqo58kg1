@@ -27,7 +27,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
-import { Package, Printer, CheckCircle2, Loader2, Settings } from 'lucide-react'
+import { Package, Printer, CheckCircle2, Loader2, Settings, Search, X } from 'lucide-react'
+import { normalizeText } from '@/lib/unitMatching'
 import {
   RecebimentoAuditoria,
   getVolumeTypes,
@@ -73,6 +74,7 @@ export default function SalaTriagem() {
   const [photo, setPhoto] = useState<File | null>(null)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const [volumeTypes, setVolumeTypes] = useState<any[]>([])
   const [shelfLocations, setShelfLocations] = useState<any[]>([])
@@ -249,6 +251,21 @@ export default function SalaTriagem() {
     window.print()
   }
 
+  // Busca inteligente (client-side, por inclusão, ignorando acentos/maiúsculas)
+  const filteredRecebimentos = searchQuery.trim()
+    ? recebimentos.filter((vol) => {
+        const q = normalizeText(searchQuery)
+        const haystacks = [
+          getDisplayName(vol),
+          vol.unidade || '',
+          vol.transportadora || '',
+          vol.status || '',
+          vol.codigo_rastreio || '',
+        ]
+        return haystacks.some((h) => normalizeText(h).includes(q))
+      })
+    : recebimentos
+
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20 animate-fade-in">
       <div className="print:hidden">
@@ -260,12 +277,40 @@ export default function SalaTriagem() {
 
       <Card className="print:hidden border-none shadow-none md:border md:shadow-sm">
         <CardHeader className="bg-muted/20 border-b">
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-primary" /> Fila de Volumes Pendentes
-          </CardTitle>
-          <CardDescription>
-            Defina o status de cada volume ou processe-os separadamente.
-          </CardDescription>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" /> Fila de Volumes Pendentes
+              </CardTitle>
+              <CardDescription className="mt-1.5">
+                Defina o status de cada volume ou processe-os separadamente.
+                {searchQuery.trim() && (
+                  <span className="ml-2 text-xs font-medium text-muted-foreground">
+                    ({filteredRecebimentos.length} de {recebimentos.length} volumes)
+                  </span>
+                )}
+              </CardDescription>
+            </div>
+            <div className="relative w-full md:w-72">
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar morador, unidade, transportadora..."
+                className="pl-8 pr-8 h-9 bg-background"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Limpar busca"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           <Table>
@@ -280,7 +325,7 @@ export default function SalaTriagem() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recebimentos.map((vol) => (
+              {filteredRecebimentos.map((vol) => (
                 <TableRow key={vol.id}>
                   <TableCell className="pl-6 font-medium">{vol.unidade || 'N/D'}</TableCell>
                   <TableCell>{getDisplayName(vol)}</TableCell>
@@ -330,6 +375,21 @@ export default function SalaTriagem() {
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     Nenhum volume na fila de triagem.
+                  </TableCell>
+                </TableRow>
+              )}
+              {recebimentos.length > 0 && filteredRecebimentos.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-12">
+                    <div className="flex flex-col items-center gap-2">
+                      <Package className="h-8 w-8 text-muted-foreground/50" />
+                      <p className="text-muted-foreground">
+                        Nenhum volume encontrado para &quot;{searchQuery.trim()}&quot;
+                      </p>
+                      <Button variant="outline" size="sm" onClick={() => setSearchQuery('')}>
+                        Limpar busca
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               )}
