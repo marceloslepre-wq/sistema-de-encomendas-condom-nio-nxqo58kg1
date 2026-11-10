@@ -30,7 +30,9 @@ import { useToast } from '@/hooks/use-toast'
 import { Package, Printer, CheckCircle2, Loader2, Settings, Search, X } from 'lucide-react'
 import { normalizeText } from '@/lib/unitMatching'
 import {
+  Carrier,
   RecebimentoAuditoria,
+  getCarriers,
   getVolumeTypes,
   getShelfLocations,
   updateRecebimentoAuditoria,
@@ -39,6 +41,7 @@ import useRealtime from '@/hooks/use-realtime'
 import { format } from 'date-fns'
 import pb from '@/lib/pocketbase/client'
 import { PackagePhotoPicker } from '@/components/sala/PackagePhotoPicker'
+import { CarrierInlineSelect } from '@/components/sala/CarrierInlineSelect'
 
 type ExpandedVolume = RecebimentoAuditoria & {
   _matchedMorador?: any
@@ -78,6 +81,7 @@ export default function SalaTriagem() {
 
   const [volumeTypes, setVolumeTypes] = useState<any[]>([])
   const [shelfLocations, setShelfLocations] = useState<any[]>([])
+  const [carriers, setCarriers] = useState<Carrier[]>([])
 
   const loadData = async () => {
     try {
@@ -137,8 +141,17 @@ export default function SalaTriagem() {
     }
   }
 
+  const loadCarriers = () => {
+    getCarriers()
+      .then((res) => setCarriers(res as unknown as Carrier[]))
+      .catch(() => {
+        /* intentionally ignored */
+      })
+  }
+
   useEffect(() => {
     loadData()
+    loadCarriers()
   }, [])
 
   useRealtime('recebimentos_auditoria', () => loadData())
@@ -339,7 +352,14 @@ export default function SalaTriagem() {
                   <TableCell className="font-mono text-muted-foreground whitespace-nowrap">
                     {vol.volume || '1'}
                   </TableCell>
-                  <TableCell>{vol.transportadora || 'N/D'}</TableCell>
+                  <TableCell>
+                    <CarrierInlineSelect
+                      recebimentoId={vol.id}
+                      value={vol.transportadora || ''}
+                      carriers={carriers}
+                      onChanged={loadData}
+                    />
+                  </TableCell>
                   <TableCell>
                     {[
                       'ENTRADA_PORTARIA',
