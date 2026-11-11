@@ -123,7 +123,7 @@ export default function MoradorDados() {
         return
       }
 
-      await updateUser(user.id, dataToUpdate)
+      const updatedUser = await updateUser(user.id, dataToUpdate)
       if (moradorData?.id) {
         try {
           await pb.collection('moradores').update(moradorData.id, {
@@ -149,6 +149,18 @@ export default function MoradorDados() {
           }
         }
       }
+
+      // Mantém o authStore em sincronia com o que foi salvo, para que a próxima
+      // montagem da tela recarregue as preferências do valor recém-gravado
+      // (evita que o snapshot antigo sobrescreva a escolha do morador).
+      const mergedUser = {
+        ...user,
+        ...((updatedUser as any) || {}),
+        phone,
+        permitir_retirada_terceiros: boolTerceiros,
+        notificacoes_whatsapp: boolNotificacoes,
+      }
+      pb.authStore.save(pb.authStore.token, mergedUser as any)
 
       setNewPassword('')
       toast({ title: 'Dados atualizados com sucesso.', className: 'bg-success text-white' })
