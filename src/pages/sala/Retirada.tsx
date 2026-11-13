@@ -3,8 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
-import { Search, Package, CheckCircle2, Loader2, Info, ImageOff } from 'lucide-react'
-import { RecebimentoAuditoria } from '@/services/api'
+import {
+  Search,
+  Package,
+  CheckCircle2,
+  Loader2,
+  Info,
+  ImageOff,
+  SendHorizontal,
+} from 'lucide-react'
 import useRealtime from '@/hooks/use-realtime'
 import { format } from 'date-fns'
 import pb from '@/lib/pocketbase/client'
@@ -19,6 +26,46 @@ export default function SalaRetirada() {
   const [enteredCode, setEnteredCode] = useState('')
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [resendingId, setResendingId] = useState<string | null>(null)
+
+  const handleResend = async (p: any) => {
+    if (resendingId) return
+    setResendingId(p.id)
+    try {
+      await pb.send('/backend/v1/reenviar-whatsapp-liberado', {
+        method: 'POST',
+        body: JSON.stringify({ recebimento_id: p.id }),
+        headers: { 'Content-Type': 'application/json' },
+      })
+      toast({
+        title: 'Mensagem reenviada com sucesso',
+        description: 'WhatsApp enviado ao morador novamente.',
+        className: 'bg-success text-white',
+      })
+    } catch (err: any) {
+      const data = err?.response?.data || err?.data || {}
+      const code = data.error || ''
+      const message: string = data.message || ''
+      let description = 'Não foi possível reenviar a mensagem agora. Tente novamente em instantes.'
+      if (code === 'WHATSAPP_DESCONECTADO' || message.indexOf('desconectado') !== -1) {
+        description = 'WhatsApp do condomínio desconectado. Reconecte em Configurações.'
+      } else if (message.indexOf('telefone') !== -1) {
+        description = 'Morador sem telefone cadastrado. Atualize o cadastro para reenviar.'
+      } else if (message.indexOf('código de retirada') !== -1) {
+        description = 'Esta encomenda não possui código de retirada gerado.'
+      } else if (message.indexOf('mensagem ativa') !== -1) {
+        description =
+          'Nenhuma mensagem ativa configurada para o estágio "Processado e Liberado para Retirada".'
+      }
+      toast({
+        title: 'Falha ao reenviar',
+        description,
+        variant: 'destructive',
+      })
+    } finally {
+      setResendingId(null)
+    }
+  }
 
   const loadData = async () => {
     try {
@@ -162,9 +209,29 @@ export default function SalaRetirada() {
                         )}
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm">
-                      Selecionar
-                    </Button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Reenviar mensagem por WhatsApp"
+                        title="Reenviar mensagem por WhatsApp"
+                        className="h-11 w-11 text-muted-foreground hover:text-primary"
+                        disabled={resendingId === p.id}
+                        onClick={(ev) => {
+                          ev.stopPropagation()
+                          handleResend(p)
+                        }}
+                      >
+                        {resendingId === p.id ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <SendHorizontal className="h-5 w-5" />
+                        )}
+                      </Button>
+                      <Button variant="ghost" size="sm">
+                        Selecionar
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
