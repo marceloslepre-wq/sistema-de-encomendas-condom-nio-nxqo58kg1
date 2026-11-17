@@ -185,14 +185,37 @@ onRecordAfterUpdateSuccess((e) => {
       cleanPhone = '55' + cleanPhone
     }
 
-    const payload = {
-      number: cleanPhone,
-      text: message,
+    // Foto do pacote tirada na triagem: se existir, enviar via sendMedia com a
+    // mensagem do template como legenda (caption); sem foto, texto puro.
+    let photoFilename = ''
+    try {
+      photoFilename = (record.getString('photo') || '').trim()
+    } catch (_) {}
+
+    let mediaEndpoint = ''
+    if (photoFilename) {
+      const baseUrl = ($os.getenv('PB_INSTANCE_URL') || $os.getenv('SITE_URL') || '').trim()
+      if (baseUrl) {
+        const cleanBase = baseUrl.replace(/\/+$/, '')
+        mediaEndpoint = `${cleanBase}/api/files/recebimentos_auditoria/${record.id}/${photoFilename}`
+      }
     }
 
-    let url = evolutionApiUrl
-    if (url.endsWith('/')) url = url.slice(0, -1)
-    const endpoint = `${url}/message/sendText/${targetInstance}`
+    let payload = { number: cleanPhone, text: message }
+    let urlBase = evolutionApiUrl
+    if (urlBase.endsWith('/')) urlBase = urlBase.slice(0, -1)
+    let endpoint = `${urlBase}/message/sendText/${targetInstance}`
+    if (mediaEndpoint) {
+      endpoint = `${urlBase}/message/sendMedia/${targetInstance}`
+      payload = {
+        number: cleanPhone,
+        mediatype: 'image',
+        media: mediaEndpoint,
+        caption: message,
+        mimetype: 'image/jpeg',
+        fileName: photoFilename,
+      }
+    }
 
     let success = false
     let responseBody = null

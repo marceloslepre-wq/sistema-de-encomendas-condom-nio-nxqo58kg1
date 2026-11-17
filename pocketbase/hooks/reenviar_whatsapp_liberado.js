@@ -169,7 +169,35 @@ routerAdd(
 
     let url = globalUrl
     if (url.endsWith('/')) url = url.slice(0, -1)
-    const endpoint = `${url}/message/sendText/${targetInstance}`
+
+    // Foto do pacote tirada na triagem: se existir, enviar via sendMedia com a
+    // mensagem do template como legenda (caption); sem foto, texto puro.
+    let photoFilename = ''
+    try {
+      photoFilename = (recebimento.getString('photo') || '').trim()
+    } catch (_) {}
+
+    let mediaEndpoint = ''
+    let textEndpoint = `${url}/message/sendText/${targetInstance}`
+    if (photoFilename) {
+      const baseUrl = ($os.getenv('PB_INSTANCE_URL') || $os.getenv('SITE_URL') || '').trim()
+      if (baseUrl) {
+        const cleanBase = baseUrl.replace(/\/+$/, '')
+        mediaEndpoint = `${cleanBase}/api/files/recebimentos_auditoria/${recebimento.id}/${photoFilename}`
+      }
+    }
+
+    let endpoint = mediaEndpoint || textEndpoint
+
+    // Log diagnóstico: URL pública que a Evolution vai baixar (e origem dela)
+    console.log(
+      '[reenviar] photo=' +
+        photoFilename +
+        ' mediaEndpoint=' +
+        (mediaEndpoint || '(nenhum - texto puro)') +
+        ' PB_INSTANCE_URL definido=' +
+        (Boolean(($os.getenv('PB_INSTANCE_URL') || '').trim()) ? 'sim' : 'nao'),
+    )
 
     let digits = String(phone).replace(/\D/g, '')
     digits = digits.replace(/^0+/, '')
@@ -184,6 +212,17 @@ routerAdd(
     let responseStatus = 500
 
     try {
+      let payload = { number: phoneNum, text: message }
+      if (mediaEndpoint) {
+        payload = {
+          number: phoneNum,
+          mediatype: 'image',
+          media: mediaEndpoint,
+          caption: message,
+          mimetype: 'image/jpeg',
+          fileName: photoFilename,
+        }
+      }
       const res = $http.send({
         url: endpoint,
         method: 'POST',
@@ -191,10 +230,7 @@ routerAdd(
           'Content-Type': 'application/json',
           apikey: globalApiKey,
         },
-        body: JSON.stringify({
-          number: phoneNum,
-          text: message,
-        }),
+        body: JSON.stringify(payload),
         timeout: 15,
       })
 
