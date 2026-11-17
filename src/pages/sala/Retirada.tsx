@@ -16,6 +16,7 @@ import useRealtime from '@/hooks/use-realtime'
 import { format } from 'date-fns'
 import pb from '@/lib/pocketbase/client'
 import { useAuth } from '@/hooks/use-auth'
+import { correspondeBusca } from '@/lib/buscaUnidade'
 
 export default function SalaRetirada() {
   const { toast } = useToast()
@@ -89,11 +90,14 @@ export default function SalaRetirada() {
   useRealtime('recebimentos_auditoria', () => loadData())
 
   const filteredParcels = parcels.filter((p) => {
-    const term = search.toLowerCase()
-    const apt = p.expand?.unidade_id?.apartment?.toLowerCase() || p.unidade?.toLowerCase() || ''
+    const apt = p.expand?.unidade_id?.apartment || p.unidade || ''
+    // Rótulo exibido na lista (ex.: "TORRE B (ACACIA)-703"), para casar torre + apartamento
+    const label = p.expand?.unidade_id
+      ? `${p.expand.unidade_id.tower}-${p.expand.unidade_id.apartment}`
+      : p.unidade || ''
     // O morador gravado na encomenda é a fonte primária
-    const name = p.morador?.toLowerCase() || p.expand?.morador_id?.name?.toLowerCase() || ''
-    return apt.includes(term) || name.includes(term)
+    const name = p.morador || p.expand?.morador_id?.name || ''
+    return correspondeBusca(search, [label, apt, name])
   })
 
   const getPhotoUrl = (p: any): string | null => {

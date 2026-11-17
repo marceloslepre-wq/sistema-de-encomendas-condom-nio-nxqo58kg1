@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import { Package, Printer, CheckCircle2, Loader2, Settings, Search, X } from 'lucide-react'
-import { normalizeText } from '@/lib/unitMatching'
+import { correspondeBusca } from '@/lib/buscaUnidade'
 import {
   Carrier,
   RecebimentoAuditoria,
@@ -273,22 +273,15 @@ export default function SalaTriagem() {
   // A consulta é dividida em palavras; o volume casa quando TODAS as palavras
   // aparecem em algum campo pesquisável (ex.: "torre d 601" acha "TORRE D (BROMELIA) - 601").
   const filteredRecebimentos = searchQuery.trim()
-    ? recebimentos.filter((vol) => {
-        // normalizeText remove espaços, então dividimos a consulta crua antes de normalizar cada termo
-        const terms = searchQuery
-          .trim()
-          .split(/\s+/)
-          .map((t) => normalizeText(t))
-          .filter(Boolean)
-        const haystacks = [
+    ? recebimentos.filter((vol) =>
+        correspondeBusca(searchQuery, [
           getDisplayName(vol),
           vol.unidade || '',
           vol.transportadora || '',
           vol.status || '',
           vol.codigo_rastreio || '',
-        ].map((h) => normalizeText(h))
-        return terms.every((term) => haystacks.some((h) => h.includes(term)))
-      })
+        ]),
+      )
     : recebimentos
 
   return (
