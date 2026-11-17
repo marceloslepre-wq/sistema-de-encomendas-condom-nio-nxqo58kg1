@@ -71,6 +71,7 @@ export default function SalaTriagem() {
   const [selectedVolume, setSelectedVolume] = useState<ExpandedVolume | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
 
+  const trackingInputRef = useRef<HTMLInputElement>(null)
   const [trackingCode, setTrackingCode] = useState('')
   const [volumeType, setVolumeType] = useState('')
   const [shelfLocation, setShelfLocation] = useState('')
@@ -207,9 +208,13 @@ export default function SalaTriagem() {
       setSelectedVolume(updatedVol)
       setDialogOpen(true)
       setTrackingCode(vol.codigo_rastreio || '')
-      setVolumeType(volumeTypes.length > 0 ? volumeTypes[0].name : '')
-      setShelfLocation(shelfLocations.length > 0 ? shelfLocations[0].name : '')
+      setVolumeType('')
+      setShelfLocation('')
       setPhoto(null)
+      // Foca o campo de rastreio para leitura por leitor de código de barras/QR
+      // (o scanner funciona como teclado: digita o código e envia Enter).
+      // O pequeno atraso evita que o Dialog (Radix) roube o foco ao abrir.
+      setTimeout(() => trackingInputRef.current?.focus(), 50)
     } catch (err: any) {
       toast({ title: 'Erro', description: 'Falha ao iniciar triagem.', variant: 'destructive' })
     }
@@ -441,9 +446,15 @@ export default function SalaTriagem() {
               <div className="space-y-2">
                 <Label>Código de Rastreio (Opcional)</Label>
                 <Input
+                  ref={trackingInputRef}
                   value={trackingCode}
                   onChange={(e) => setTrackingCode(e.target.value)}
                   placeholder="Ex: AB123456789BR"
+                  onKeyDown={(e) => {
+                    // Enter do leitor de código de barras apenas confirma o valor
+                    // digitado no campo; não submete o diálogo
+                    if (e.key === 'Enter') e.preventDefault()
+                  }}
                 />
               </div>
               <div className="space-y-2">
