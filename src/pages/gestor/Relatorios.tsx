@@ -12,8 +12,58 @@ import {
 import { Input } from '@/components/ui/input'
 import { FileText, Download } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { getParcels, Parcel } from '@/services/api'
-import { format, isValid } from 'date-fns'
+import { getParcels } from '@/services/api'
+import { format, isValid, startOfDay, addDays } from 'date-fns'
+
+/** Converte datas do PocketBase ("2026-11-13 12:20:54.078Z") ou ISO em Date válida, ou null. */
+const parseDate = (value?: string | null): Date | null => {
+  if (!value) return null
+  const d = new Date(value.replace(' ', 'T'))
+  return isValid(d) ? d : null
+}
+
+/** Linha do relatório, já com os campos reais da coleção recebimentos_auditoria. */
+type ReportRow = {
+  codigoRetirada: string
+  rastreio: string
+  torre: string
+  apto: string
+  morador: string
+  status: string
+  transportadora: string
+  entrada: Date | null
+  saida: Date | null
+}
+
+const splitUnidade = (unidade: string) => {
+  const idx = unidade.lastIndexOf(' - ')
+  if (idx === -1) return { torre: unidade, apto: '' }
+  return { torre: unidade.slice(0, idx), apto: unidade.slice(idx + 3) }
+}
+
+const toReportRow = (rec: any): ReportRow => {
+  const unit = rec.expand?.unidade_id
+  const resident = rec.expand?.morador_id
+  const fromUnidade = splitUnidade(rec.unidade || '')
+  const finalizada = rec.status === 'RETIRADO' || rec.status === 'ENTREGUE'
+  return {
+    codigoRetirada: rec.codigo_retirada || '',
+    rastreio: rec.codigo_rastreio || '',
+    torre: unit?.tower || fromUnidade.torre,
+    apto: unit?.apartment || fromUnidade.apto,
+    morador: rec.morador || resident?.name || '',
+    status: rec.status || '',
+    transportadora: rec.transportadora || '',
+    entrada: parseDate(rec.data_criacao),
+    // Não há campo de data de saída na coleção: usa a última atualização de encomenda já retirada/entregue.
+    saida: finalizada ? parseDate(rec.updated) : null,
+  }
+}
+
+const fmtDate = (d: Date | null) => (d ? format(d, 'dd/MM/yyyy HH:mm') : '-')
+const orDash = (v: string) => v || '-'
+
+const escapeCsv = (v: string) => (/[",\n;]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)
 
 export default function GestorRelatorios() {
   const [startDate, setStartDate] = useState('')
@@ -21,20 +71,29 @@ export default function GestorRelatorios() {
   const [tower, setTower] = useState('Todas')
   const [status, setStatus] = useState('Todos')
   const [loading, setLoading] = useState(false)
-  const [results, setResults] = useState<Parcel[] | null>(null)
+  const [results, setResults] = useState<ReportRow[] | null>(null)
   const { toast } = useToast()
 
   const handleFilter = async () => {
     setLoading(true)
     try {
       const all = await getParcels()
-      const filtered = (all as Parcel[]).filter((p) => {
-        let match = true
-        if (startDate && new Date(p.entry_date) < new Date(startDate)) match = false
-        if (endDate && new Date(p.entry_date) > new Date(endDate)) match = false
-        if (tower !== 'Todas' && p.expand?.unit_id?.tower !== tower) match = false
-        if (status !== 'Todos' && p.status !== status) match = false
-        return match
+      const rows = (all as any[]).map(toReportRow)
+
+      // Período: início às 00:00 do dia inicial e fim antes da meia-noite do dia final (inclusive).
+      const rangeStart = startDate ? startOfDay(new Date(`${startDate}T00:00:00`)) : null
+      const rangeEnd = endDate ? addDays(startOfDay(new Date(`${endDate}T00:00:00`)), 1) : null
+
+      const filtered = rows.filter((r) => {
+        if (rangeStart || rangeEnd) {
+          // Sem data de entrada válida não há como provar que está no período: fica de fora.
+          if (!r.entrada) return false
+          if (rangeStart && r.entrada < rangeStart) return false
+          if (rangeEnd && r.entrada >= rangeEnd) return false
+        }
+        if (tower !== 'Todas' && r.torre !== tower) return false
+        if (status !== 'Todos' && r.status !== status) return false
+        return true
       })
       setResults(filtered)
     } catch (e) {
@@ -50,20 +109,30 @@ export default function GestorRelatorios() {
 
   const exportCSV = () => {
     if (!results) return
-    const headers = ['Código', 'Torre', 'Apto', 'Status', 'Transportadora', 'Entrada', 'Saída']
-    const rows = results.map((p) => {
-      const entryDate = new Date(p.entry_date)
-      const exitDate = p.exit_date ? new Date(p.exit_date) : null
-      return [
-        p.tracking_code || '-',
-        p.expand?.unit_id?.tower || '-',
-        p.expand?.unit_id?.apartment || '-',
-        p.status,
-        p.carrier || '-',
-        isValid(entryDate) ? format(entryDate, 'dd/MM/yyyy HH:mm') : '-',
-        exitDate && isValid(exitDate) ? format(exitDate, 'dd/MM/yyyy HH:mm') : '-',
-      ]
-    })
+    const headers = [
+      'Código de Retirada',
+      'Rastreio',
+      'Torre',
+      'Apto',
+      'Morador',
+      'Status',
+      'Transportadora',
+      'Entrada',
+      'Saída',
+    ]
+    const rows = results.map((r) =>
+      [
+        orDash(r.codigoRetirada),
+        orDash(r.rastreio),
+        orDash(r.torre),
+        orDash(r.apto),
+        orDash(r.morador),
+        r.status,
+        orDash(r.transportadora),
+        fmtDate(r.entrada),
+        fmtDate(r.saida),
+      ].map(escapeCsv),
+    )
 
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
