@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input'
 import { FileText, Download } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { getParcels, Parcel } from '@/services/api'
-import { format } from 'date-fns'
+import { format, isValid } from 'date-fns'
 
 export default function GestorRelatorios() {
   const [startDate, setStartDate] = useState('')
@@ -51,15 +51,19 @@ export default function GestorRelatorios() {
   const exportCSV = () => {
     if (!results) return
     const headers = ['Código', 'Torre', 'Apto', 'Status', 'Transportadora', 'Entrada', 'Saída']
-    const rows = results.map((p) => [
-      p.tracking_code || '-',
-      p.expand?.unit_id?.tower || '-',
-      p.expand?.unit_id?.apartment || '-',
-      p.status,
-      p.carrier || '-',
-      format(new Date(p.entry_date), 'dd/MM/yyyy HH:mm'),
-      p.exit_date ? format(new Date(p.exit_date), 'dd/MM/yyyy HH:mm') : '-',
-    ])
+    const rows = results.map((p) => {
+      const entryDate = new Date(p.entry_date)
+      const exitDate = p.exit_date ? new Date(p.exit_date) : null
+      return [
+        p.tracking_code || '-',
+        p.expand?.unit_id?.tower || '-',
+        p.expand?.unit_id?.apartment || '-',
+        p.status,
+        p.carrier || '-',
+        isValid(entryDate) ? format(entryDate, 'dd/MM/yyyy HH:mm') : '-',
+        exitDate && isValid(exitDate) ? format(exitDate, 'dd/MM/yyyy HH:mm') : '-',
+      ]
+    })
 
     const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
