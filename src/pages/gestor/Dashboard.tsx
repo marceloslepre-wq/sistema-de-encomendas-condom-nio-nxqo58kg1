@@ -38,6 +38,7 @@ const normStatus = (s?: string | null) =>
     .toUpperCase()
     .replace(/[\s_-]+/g, '')
 const STATUS_LIBERADO = 'LIBERADORETIRADA'
+const STATUS_ENTREGUE = 'ENTREGUE'
 
 const matchTorreUnidade = (p: RecebimentoAuditoria, torre: string, unidade: string): boolean => {
   const rec = p as RecebimentoAuditoria & {
@@ -64,6 +65,10 @@ export default function GestorDashboard() {
   const [unidadePendentes, setUnidadePendentes] = useState(TODAS)
   const [torreRetiradas, setTorreRetiradas] = useState(TODAS)
   const [unidadeRetiradas, setUnidadeRetiradas] = useState(TODAS)
+
+  // Card "Encomendas Retiradas": período e filtros próprios
+  const [retiradasPeriodo, setRetiradasPeriodo] = useState<'hoje' | 'ontem' | 'custom'>('hoje')
+  const [retiradasDataCustom, setRetiradasDataCustom] = useState(format(new Date(), 'yyyy-MM-dd'))
 
   // Card "Triagens Concluídas": período e filtros próprios
   const [triagensPeriodo, setTriagensPeriodo] = useState<'hoje' | 'ontem' | 'custom'>('hoje')
@@ -152,7 +157,6 @@ export default function GestorDashboard() {
     let monthCount = 0
     let totalRetrievalTime = 0
     let retrievedCount = 0
-    let entreguesHojeCount = 0
 
     recebimentos.forEach((p) => {
       const entryStr = p.data_criacao || p.created
@@ -174,7 +178,6 @@ export default function GestorDashboard() {
         const exitStr = p.updated
         if (exitStr) {
           const exit = new Date(exitStr)
-          if (isSameDay(exit, today)) entreguesHojeCount++
           const diffHrs = (exit.getTime() - entry.getTime()) / (1000 * 60 * 60)
           totalRetrievalTime += Math.max(0, diffHrs)
           retrievedCount++
@@ -188,14 +191,6 @@ export default function GestorDashboard() {
         matchTorreUnidade(p, torrePendentes, unidadePendentes),
     ).length
 
-    const entreguesHojeFiltered = recebimentos.filter(
-      (p) =>
-        p.status?.toUpperCase() === 'ENTREGUE' &&
-        p.updated &&
-        isSameDay(new Date(p.updated), today) &&
-        matchTorreUnidade(p, torreRetiradas, unidadeRetiradas),
-    ).length
-
     const avgTime = retrievedCount > 0 ? (totalRetrievalTime / retrievedCount).toFixed(1) : '0'
 
     return {
@@ -203,11 +198,9 @@ export default function GestorDashboard() {
       pendingCount,
       avgTime,
       monthCount,
-      entreguesHojeCount,
       pendingFiltered,
-      entreguesHojeFiltered,
     }
-  }, [recebimentos, torrePendentes, unidadePendentes, torreRetiradas, unidadeRetiradas])
+  }, [recebimentos, torrePendentes, unidadePendentes])
 
   // Triagens Concluídas: liberações para retirada CONCLUÍDAS na data selecionada.
   // Fonte primária: eventos de "LIBERADO_RETIRADA" no Histórico de Validações
@@ -272,6 +265,79 @@ export default function GestorDashboard() {
     return { total, filtradas, target }
   }, [historico, recebimentos, triagensPeriodo, triagensDataCustom, torreTriagens, unidadeTriagens])
 
+  // Encomendas Retiradas: retiradas (transição para ENTREGUE) CONCLUÍDAS na data
+  // selecionada. Mesmo mecanismo do card "Triagens Concluídas": fonte primária é
+  // o EVENTO do dia no Histórico de Validações (historico_andamento) — uma
+  // encomenda liberada ontem e retirada hoje conta em HOJE (data da retirada),
+  // sem acúmulo entre dias. FALLBACK: encomendas retiradas antes de existir o
+  // Histórico usam a data de atualização da própria encomenda (updated, quando
+  // o status atual é entregue). Anti-dupla-contagem: encomenda que já tem
+  // registro de retirada no Histórico (qualquer dia) nunca cai no fallback.
+  const retiradas = useMemo(() => {
+    const hoje = new Date()
+    let target: Date
+    if (retiradasPeriodo === 'ontem') {
+      target = subDays(hoje, 1)
+    } else if (retiradasPeriodo === 'custom') {
+      // Valor do input de data é "yyyy-MM-dd": monta a data LOCAL (new Date com
+      // string interpretaria como UTC e deslocaria o dia no fuso de Brasília).
+      const [y, m, d] = (retiradasDataCustom || '').split('-').map(Number)
+      target = y && m && d ? new Date(y, m - 1, d) : hoje
+    } else {
+      target = hoje
+    }
+
+    const mesmoDia = (dateStr?: string | null) => {
+      if (!dateStr) return false
+      const dt = new Date(dateStr)
+      if (isNaN(dt.getTime())) return false
+      return (
+        dt.getFullYear() === target.getFullYear() &&
+        dt.getMonth() === target.getMonth() &&
+        dt.getDate() === target.getDate()
+      )
+    }
+
+    // Eventos de retirada registrados no Histórico de Validações na data alvo
+    const retiradasNoDia = historico.filter(
+      (h) => normStatus(h.status) === STATUS_ENTREGUE && mesmoDia(h.created || h.data_atualizacao),
+    )
+
+    // Encomendas que JÁ possuem registro de retirada no Histórico (qualquer dia)
+    // nunca caem no fallback — evita contar a mesma retirada duas vezes.
+    const comRetiradaNoHistorico = new Set<string>(
+      historico
+        .filter((h) => normStatus(h.status) === STATUS_ENTREGUE)
+        .map((h) => h.recebimento_id as string),
+    )
+
+    const fallbackNoDia = recebimentos.filter(
+      (p) =>
+        normStatus(p.status) === STATUS_ENTREGUE &&
+        !comRetiradaNoHistorico.has(p.id) &&
+        mesmoDia(p.updated),
+    )
+
+    const eventos: (RecebimentoAuditoria | undefined)[] = [
+      ...retiradasNoDia.map((h) => h.expand?.recebimento_id as RecebimentoAuditoria | undefined),
+      ...fallbackNoDia,
+    ]
+
+    const total = eventos.length
+    const filtradas = eventos.filter(
+      (rec) => rec && matchTorreUnidade(rec, torreRetiradas, unidadeRetiradas),
+    ).length
+
+    return { total, filtradas, target }
+  }, [
+    historico,
+    recebimentos,
+    retiradasPeriodo,
+    retiradasDataCustom,
+    torreRetiradas,
+    unidadeRetiradas,
+  ])
+
   const chartData = useMemo(() => {
     const data = []
     const today = new Date()
@@ -305,7 +371,7 @@ export default function GestorDashboard() {
   }
 
   const pendentesFiltrado = stats.pendingFiltered !== stats.pendingCount
-  const retiradasFiltrado = stats.entreguesHojeFiltered !== stats.entreguesHojeCount
+  const retiradasFiltrado = retiradas.filtradas !== retiradas.total
   const triagensFiltrado = triagens.filtradas !== triagens.total
 
   return (
@@ -401,20 +467,50 @@ export default function GestorDashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Encomendas Retiradas Hoje</CardTitle>
+            <CardTitle className="text-sm font-medium">Encomendas Retiradas</CardTitle>
             <PackageCheck className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent className="space-y-3">
             <div
               className={cn('text-2xl font-bold text-success', retiradasFiltrado && 'text-base')}
             >
-              {stats.entreguesHojeFiltered}
+              {retiradas.filtradas}
               {retiradasFiltrado && (
                 <span className="ml-1 text-sm font-normal text-muted-foreground">
-                  de {stats.entreguesHojeCount}
+                  de {retiradas.total}
                 </span>
               )}
             </div>
+            <p className="text-xs text-muted-foreground">
+              {retiradasPeriodo === 'hoje'
+                ? 'Hoje'
+                : retiradasPeriodo === 'ontem'
+                  ? 'Ontem'
+                  : 'Dia escolhido'}
+              : {format(retiradas.target, 'dd/MM/yyyy')}
+            </p>
+            <Select
+              value={retiradasPeriodo}
+              onValueChange={(v) => setRetiradasPeriodo(v as 'hoje' | 'ontem' | 'custom')}
+            >
+              <SelectTrigger className="h-8 w-full text-xs" aria-label="Período das retiradas">
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="hoje">Hoje</SelectItem>
+                <SelectItem value="ontem">Ontem</SelectItem>
+                <SelectItem value="custom">Escolher data</SelectItem>
+              </SelectContent>
+            </Select>
+            {retiradasPeriodo === 'custom' && (
+              <Input
+                type="date"
+                value={retiradasDataCustom}
+                onChange={(e) => setRetiradasDataCustom(e.target.value)}
+                className="h-8 text-xs"
+                aria-label="Escolher data das retiradas"
+              />
+            )}
             <div className="flex gap-2">
               <Select
                 value={torreRetiradas}
