@@ -21,6 +21,24 @@ import {
 } from '@/components/ui/table'
 import { useToast } from '@/hooks/use-toast'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { AlertTriangle } from 'lucide-react'
+import {
+  LIMITE_CONFIRMACAO_VOLUME,
+  MIN_INTERVALO_REGISTROS_MS,
+  mensagemConfirmacaoVolume,
+  formatarMilhar,
+} from '@/lib/volumeGuard'
+import { useRajadaGuard } from '@/hooks/useRajadaGuard'
+import {
   CheckCircle2,
   Package as PkgIcon,
   Loader2,
@@ -280,6 +298,15 @@ export default function PortariaRegistro() {
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [resetTableTrigger, setResetTableTrigger] = useState(0)
 
+  // Proteção contra rajada de registros (ex.: 100 registros em 40s em 26/11/2026)
+  const {
+    tentarRegistrar,
+    bloqueado: bloqueadoRajada,
+    segundosRestantes,
+  } = useRajadaGuard(MIN_INTERVALO_REGISTROS_MS)
+  const [confirmPendente, setConfirmPendente] = useState(false)
+  const [totalPendenteConfirmacao, setTotalPendenteConfirmacao] = useState(0)
+
   const loadUnits = () => {
     getUnits()
       .then((res) => setUnits(res as unknown as Unit[]))
@@ -484,7 +511,12 @@ export default function PortariaRegistro() {
     }
   }
 
-  const handleFinish = async (autoSaveCodeVerified = false) => {
+  const maiorVolumePendente = useMemo(
+    () => entries.reduce((max, e) => Math.max(max, e.volumes || 0), 0),
+    [entries],
+  )
+
+  const handleFinish = async (autoSaveCodeVerified = false, volumeAltoConfirmado = false) => {
     const isActuallyVerified = isCodeVerified || autoSaveCodeVerified
     const hasInvalidEntry = entries.some((e) => !e.unitId || !e.residentId || e.volumes < 1)
     const rawCpfDigits = courierCpf.replace(/\D/g, '')
@@ -498,6 +530,26 @@ export default function PortariaRegistro() {
       (isActuallyVerified || bypassValidation)
 
     if (!isValid) return
+
+    // (a) Confirmação de volume alto: se algum grupo ultrapassar o limite,
+    // abrir o diálogo e NÃO gravar até a confirmação explícita.
+    if (!volumeAltoConfirmado && maiorVolumePendente > LIMITE_CONFIRMACAO_VOLUME) {
+      setTotalPendenteConfirmacao(maiorVolumePendente)
+      setConfirmPendente(true)
+      return
+    }
+    setConfirmPendente(false)
+
+    // (b) Trava anti-rajada: um registro por gesto + intervalo mínimo entre registros.
+    if (!tentarRegistrar()) {
+      toast({
+        title: 'Aguarde um instante',
+        description: `Registro em andamento. Aguarde ${segundosRestantes}s antes de gravar novamente.`,
+        variant: 'destructive',
+      })
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
@@ -1373,14 +1425,14 @@ export default function PortariaRegistro() {
               className="w-full bg-success hover:bg-success/90 text-white mt-8 h-12 text-lg"
               size="lg"
               onClick={() => handleFinish()}
-              disabled={isSubmitting || !isFormValid}
+              disabled={isSubmitting || !isFormValid || bloqueadoRajada}
             >
               {isSubmitting ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               ) : (
                 <Plus className="mr-2 h-5 w-5" />
               )}
-              Adicionar Encomenda
+              {bloqueadoRajada ? `Aguarde ${segundosRestantes}s...` : 'Adicionar Encomenda'}
             </Button>
           </CardContent>
         </Card>
@@ -1389,6 +1441,46 @@ export default function PortariaRegistro() {
       <div className="pt-4">
         <RecebimentosTable key={resetTableTrigger} refreshTrigger={refreshTrigger} />
       </div>
+
+      <AlertDialog
+        open={confirmPendente}
+        onOpenChange={(open) => {
+          if (!open) setConfirmPendente(false) // cancelar: nada é gravado
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Confirmar volume alto
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p className="text-foreground font-medium">
+                  {mensagemConfirmacaoVolume(totalPendenteConfirmacao)}
+                </p>
+                <p className="text-sm">
+                  Cada volume vira uma encomenda separada na fila da Triagem. Verifique se o número
+                  digitado no campo Volume está correto antes de confirmar.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              onClick={(e) => {
+                e.preventDefault() // mantém o diálogo aberto até o fluxo decidir
+                setConfirmPendente(false)
+                handleFinish(true, true)
+              }}
+            >
+              Sim, confirmar registro
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
